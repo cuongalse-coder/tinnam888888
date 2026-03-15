@@ -1,5 +1,5 @@
 """
-🎰 TinNam AI - Phan Tich Du Lieu - Streamlit Cloud Edition
+📊 TinNam AI - Data Analysis Platform
 Premium dark-themed UI with 70+ prediction models.
 Deploy: streamlit run streamlit_app.py
 """
@@ -22,8 +22,8 @@ from scraper.data_manager import (
 # PAGE CONFIG
 # ============================================
 st.set_page_config(
-    page_title="🎰 TinNam AI",
-    page_icon="🎰",
+    page_title="📊 TinNam AI",
+    page_icon="📊",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -57,7 +57,7 @@ def check_password():
 
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        st.markdown("## 🎰 TinNam AI - Phan Tich Du Lieu")
+        st.markdown("## 📊 TinNam AI - Phân Tích Dữ Liệu")
         st.markdown("*Nhập mật khẩu để truy cập*")
         password = st.text_input("Mật khẩu", type="password", key="pw_input")
         if st.button("🔓 Đăng Nhập", use_container_width=True):
@@ -508,32 +508,114 @@ def render_master_result(data):
         st.markdown(f'<div style="text-align:center;font-size:0.75rem;color:#64748b;margin-top:8px;">{method}</div>', unsafe_allow_html=True)
 
 
+def render_dan_result(dan_data, ver):
+    """Render dàn prediction result."""
+    cands = dan_data["candidates"]
+    total = dan_data["total"]
+    info = dan_data["info"]
+    combos = dan_data.get("combos", [])
+
+    ver_label = "V1 - ĐẦY ĐỦ" if ver == "v1" else "V2 - TỐI ƯU"
+    ver_icon = "📊" if ver == "v1" else "⚡"
+    ver_color = "#6366f1" if ver == "v1" else "#22c55e"
+    ver_desc = "Block + Direction + S/L" if ver == "v1" else "Block + Direction + S/L + Gap + Sum"
+
+    # Candidates per column
+    cols_html = ""
+    for p, nums in enumerate(cands):
+        balls = ""
+        for n in nums:
+            balls += f'<span style="display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,{ver_color},#8b5cf6);color:white;font-weight:700;font-size:0.9rem;font-family:JetBrains Mono,monospace;margin:3px;">{str(n).zfill(2)}</span>'
+        cols_html += f'''
+        <div style="margin-bottom:12px;">
+            <div style="font-size:0.85rem;font-weight:700;color:#94a3b8;margin-bottom:6px;">Cột {p+1} ({len(nums)} số)</div>
+            <div style="display:flex;flex-wrap:wrap;gap:2px;">{balls}</div>
+        </div>'''
+
+    # Cost estimate
+    cost = total * 10000
+    if cost >= 1_000_000_000:
+        cost_str = f"{cost/1_000_000_000:.1f} tỷ"
+    elif cost >= 1_000_000:
+        cost_str = f"{cost/1_000_000:.0f} triệu"
+    else:
+        cost_str = f"{cost/1000:.0f}K"
+
+    # Sample combos
+    sample_html = ""
+    show_n = min(10, len(combos))
+    for i in range(show_n):
+        c = combos[i]
+        row_balls = " ".join(
+            f'<span style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:rgba(99,102,241,0.2);border:1px solid rgba(99,102,241,0.4);color:#e2e8f0;font-weight:600;font-size:0.75rem;font-family:JetBrains Mono,monospace;">{str(n).zfill(2)}</span>'
+            for n in c
+        )
+        sample_html += f'<div style="margin:4px 0;padding:6px 10px;background:rgba(0,0,0,0.2);border-radius:8px;display:flex;align-items:center;gap:6px;"><span style="color:#64748b;font-size:0.7rem;min-width:24px;">#{i+1}</span>{row_balls}</div>'
+
+    st.markdown(f"""
+    <div class="glass-card" style="border-color:{ver_color};box-shadow:0 0 40px {ver_color}22;">
+        <div class="card-title-row">{ver_icon} DÀN {ver_label}</div>
+        <div style="display:flex;justify-content:center;gap:24px;margin-bottom:16px;flex-wrap:wrap;">
+            <div style="text-align:center;padding:12px 20px;background:rgba(255,255,255,0.03);border-radius:12px;">
+                <div style="font-size:1.8rem;font-weight:900;color:{ver_color};font-family:JetBrains Mono,monospace;">{total:,}</div>
+                <div style="font-size:0.75rem;color:#64748b;">Tổng dãy số</div>
+            </div>
+            <div style="text-align:center;padding:12px 20px;background:rgba(255,255,255,0.03);border-radius:12px;">
+                <div style="font-size:1.8rem;font-weight:900;color:#f59e0b;font-family:JetBrains Mono,monospace;">{cost_str}</div>
+                <div style="font-size:0.75rem;color:#64748b;">Chi phí (10K/vé)</div>
+            </div>
+        </div>
+        <div style="font-size:0.8rem;color:#64748b;text-align:center;margin-bottom:16px;">Bộ lọc: {ver_desc}</div>
+        {cols_html}
+    </div>
+    """, unsafe_allow_html=True)
+
+    if sample_html:
+        st.markdown(f"""
+        <div class="glass-card">
+            <div class="card-title-row">🎫 Mẫu Dãy Số (10/{total:,})</div>
+            {sample_html}
+        </div>
+        """, unsafe_allow_html=True)
+
+
 def render_history_table(rows, lottery_type):
     """Render history table as HTML."""
     is_power = lottery_type == "power"
-    header = "<th>#</th><th>Ngày</th><th>Kết Quả</th>"
-    if is_power:
-        header += "<th>Số ĐB</th>"
-    header += "<th>Jackpot</th>"
 
     body = ""
     for idx, row in enumerate(rows):
         numbers = [row['n1'], row['n2'], row['n3'], row['n4'], row['n5'], row['n6']]
-        balls = " ".join(f'<span class="data-ball small">{str(n).zfill(2)}</span>' for n in numbers)
-        bonus_td = f'<td><span class="data-ball small bonus">{str(row.get("bonus", 0)).zfill(2)}</span></td>' if is_power else ""
-        body += f"""<tr>
-            <td style="color:#64748b;">{idx + 1}</td>
-            <td class="date-cell">{row.get('draw_date', '')}</td>
-            <td><div style="display:flex;gap:6px;flex-wrap:wrap;">{balls}</div></td>
-            {bonus_td}
-            <td class="jackpot-cell">{row.get('jackpot', '-')}</td>
-        </tr>"""
+        balls = ""
+        for n in numbers:
+            balls += f'<span style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;font-weight:700;font-size:0.85rem;font-family:JetBrains Mono,monospace;margin:2px;">{str(n).zfill(2)}</span>'
+        bonus_html = ""
+        if is_power:
+            bn = row.get('bonus', 0)
+            bonus_html = f'<td style="padding:8px;"><span style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#f59e0b,#ef4444);color:white;font-weight:700;font-size:0.85rem;font-family:JetBrains Mono,monospace;">{str(bn).zfill(2)}</span></td>'
+        jackpot = row.get('jackpot', '-')
+        if jackpot and len(str(jackpot)) > 15:
+            jackpot = str(jackpot).split('≈')[-1].strip() if '≈' in str(jackpot) else str(jackpot)[-15:]
+        body += f'''<tr>
+            <td style="color:#64748b;padding:8px;text-align:center;">{idx + 1}</td>
+            <td style="color:#94a3b8;padding:8px;font-family:JetBrains Mono,monospace;font-size:0.85rem;white-space:nowrap;">{row.get('draw_date', '')}</td>
+            <td style="padding:8px;"><div style="display:flex;gap:4px;flex-wrap:wrap;">{balls}</div></td>
+            {bonus_html}
+            <td style="color:#f59e0b;font-weight:600;padding:8px;font-family:JetBrains Mono,monospace;font-size:0.85rem;">{jackpot}</td>
+        </tr>'''
+
+    header = '<th style="background:rgba(99,102,241,0.1);padding:12px;color:#06b6d4;font-weight:700;border-bottom:2px solid rgba(255,255,255,0.1);">#</th>'
+    header += '<th style="background:rgba(99,102,241,0.1);padding:12px;color:#06b6d4;font-weight:700;border-bottom:2px solid rgba(255,255,255,0.1);">Ngày</th>'
+    header += '<th style="background:rgba(99,102,241,0.1);padding:12px;color:#06b6d4;font-weight:700;border-bottom:2px solid rgba(255,255,255,0.1);">Kết Quả</th>'
+    if is_power:
+        header += '<th style="background:rgba(99,102,241,0.1);padding:12px;color:#06b6d4;font-weight:700;border-bottom:2px solid rgba(255,255,255,0.1);">Số ĐB</th>'
+    header += '<th style="background:rgba(99,102,241,0.1);padding:12px;color:#06b6d4;font-weight:700;border-bottom:2px solid rgba(255,255,255,0.1);">Jackpot</th>'
 
     st.markdown(f"""
     <div class="glass-card">
         <div class="card-title-row">📋 Lịch Sử Kết Quả {'Bộ B (6/55)' if is_power else 'Bộ A (6/45)'}</div>
         <div style="overflow-x:auto;border-radius:10px;">
-            <table class="hist-table">
+            <table style="width:100%;border-collapse:collapse;">
                 <thead><tr>{header}</tr></thead>
                 <tbody>{body}</tbody>
             </table>
@@ -726,10 +808,10 @@ def render_stats(analysis, lottery_type):
 
 
 # ============================================
-# LOTTERY TAB CONTENT
+# DATA TAB CONTENT
 # ============================================
 def render_lottery_tab(lottery_type):
-    """Render a full lottery tab."""
+    """Render a full data analysis tab."""
     type_name = "Bộ A (6/45)" if lottery_type == "mega" else "Bộ B (6/55)"
     max_num = 45 if lottery_type == "mega" else 55
     pick = 6
@@ -756,23 +838,65 @@ def render_lottery_tab(lottery_type):
 
     st.markdown("</div>", unsafe_allow_html=True)
 
+    # ---- DÀN PREDICTION ----
+    dan_col1, dan_col2 = st.columns(2)
+    with dan_col1:
+        if st.button("📊 DÀN V1 - ĐẦY ĐỦ", key=f"dan_v1_{lottery_type}", use_container_width=True):
+            with st.spinner("📊 Đang tạo dàn V1..."):
+                try:
+                    from models.dan_predictor import predict_dan
+                    nums = get_mega645_numbers() if lottery_type == "mega" else get_power655_numbers()
+                    is_mega = (lottery_type == "mega")
+                    cands, combos, info = predict_dan(nums, max_num, pick, is_mega, version="v1")
+                    st.session_state[f"dan_v1_{lottery_type}"] = {
+                        "candidates": cands, "combos": combos[:200], "info": info,
+                        "total": len(combos)
+                    }
+                except Exception as e:
+                    st.error(f"❌ {e}")
+    with dan_col2:
+        if st.button("⚡ DÀN V2 - TỐI ƯU", key=f"dan_v2_{lottery_type}", use_container_width=True):
+            with st.spinner("⚡ Đang tạo dàn V2 tối ưu..."):
+                try:
+                    from models.dan_predictor import predict_dan
+                    nums = get_mega645_numbers() if lottery_type == "mega" else get_power655_numbers()
+                    is_mega = (lottery_type == "mega")
+                    cands, combos, info = predict_dan(nums, max_num, pick, is_mega, version="v2")
+                    st.session_state[f"dan_v2_{lottery_type}"] = {
+                        "candidates": cands, "combos": combos[:200], "info": info,
+                        "total": len(combos)
+                    }
+                except Exception as e:
+                    st.error(f"❌ {e}")
+
+    # Show dàn results
+    for ver in ["v1", "v2"]:
+        skey = f"dan_{ver}_{lottery_type}"
+        if skey in st.session_state:
+            dan_data = st.session_state[skey]
+            render_dan_result(dan_data, ver)
+
     # ---- PHASE TOOLS (collapsed) ----
-    with st.expander("🛠️ Công cụ phân tích chi tiết..."):
+    with st.expander("🛠️ Công cụ phân tích chi tiết (Phase 1-7)..."):
         phase_cols = st.columns(4)
 
-        # Phase buttons (only tested & proven models)
+        # Phase buttons
         phases = [
             ("🔮 Dự Đoán Cơ Bản", "predict", "models.ensemble_model", "EnsembleModel"),
             ("📈 Thống Kê", "stats", None, None),
-            ("🎯 Phase 4 Exploit", "phase4", "models.phase4_exploit", "ExploitEngine"),
-            ("🚀 Super Predictor V2", "super", "models.super_predictor", "SuperPredictor"),
-            ("🎯 Middle 4 (cot 2-5)", "middle4", "models.middle4_predictor", "Middle4Predictor"),
-            ("👑 Ultimate V3", "ultimate", "models.ultimate_predictor", "UltimatePredictor"),
+            ("🔓 PRNG Cracker", "crack", "models.prng_cracker", "PRNGCracker"),
+            ("📅 Temporal", "temporal", "models.temporal_analyzer", "DeepTemporalAnalyzer"),
+            ("🚀 Phase 2", "phase2", "models.phase2_cracker", "Phase2Cracker"),
+            ("🔍 Phase 3", "phase3", "models.phase3_forensic", "ForensicAnalyzer"),
+            ("🎯 Phase 4", "phase4", "models.phase4_exploit", "ExploitEngine"),
+            ("🏆 Phase 5", "phase5", "models.phase5_ultra", "UltraOptimizer"),
+            ("🧠 Phase 6", "phase6", "models.phase6_deep", "DeepIntelligenceEngine"),
+            ("👑 Phase 7", "phase7", "models.phase7_ultimate", "UltimatePredictor"),
         ]
 
-        cols = st.columns(3)  # 6 buttons in 2 rows of 3
+        cols = st.columns(5)
         for i, (label, key, module, cls_name) in enumerate(phases):
-            with cols[i % 3]:
+            with cols[i % 5]:
                 if st.button(label, key=f"{key}_{lottery_type}", use_container_width=True):
                     if key == "stats":
                         # Stats uses different flow
@@ -856,10 +980,14 @@ def render_lottery_tab(lottery_type):
             render_stats(st.session_state[f"stats_result_{lottery_type}"], lottery_type)
 
         for phase_key, phase_label, phase_icon, phase_color in [
+            ("crack", "PRNG CRACKER", "🔓", "#dc2626"),
+            ("temporal", "TEMPORAL ANALYZER", "📅", "#6366f1"),
+            ("phase2", "PHASE 2 CRACKER", "🚀", "#7c3aed"),
+            ("phase3", "PHASE 3 FORENSIC", "🔍", "#059669"),
             ("phase4", "PHASE 4 EXPLOIT", "🎯", "#ea580c"),
-            ("super", "SUPER PREDICTOR V2", "🚀", "#6366f1"),
-            ("middle4", "MIDDLE 4 OPTIMIZER", "🎯", "#059669"),
-            ("ultimate", "ULTIMATE V3", "👑", "#d4af37"),
+            ("phase5", "PHASE 5 ULTRA", "🏆", "#d4af37"),
+            ("phase6", "PHASE 6 DEEP INTELLIGENCE", "🧠", "#6366f1"),
+            ("phase7", "PHASE 7 ULTIMATE", "👑", "#f43f5e"),
         ]:
             result_key = f"{phase_key}_result_{lottery_type}"
             if result_key in st.session_state:
@@ -897,7 +1025,7 @@ def main():
     power_count = get_count("power")
     mega_latest = get_latest_date("mega")
 
-    st.markdown('<div class="main-title">🎰 TinNam AI - Phan Tich Du Lieu</div>', unsafe_allow_html=True)
+    st.markdown('<div class="main-title">📊 TinNam AI - Phân Tích Dữ Liệu</div>', unsafe_allow_html=True)
     st.markdown('<div class="subtitle">70+ Phương pháp AI & ML: PRNG Cracker, Bayesian, Genetic, HMM, Graph Neural, Simulated Annealing, Ultimate Fusion</div>', unsafe_allow_html=True)
 
     st.markdown(f"""
@@ -937,7 +1065,7 @@ def main():
     # ---- FOOTER ----
     st.markdown("""
     <div class="footer-text">
-        📊 TinNam AI - Phân Tích Dữ Liệu © 2026 | AI & ML Prediction Engine
+        📊 TinNam AI - Phân Tích Dữ Liệu © 2026 | Hệ thống phân tích dữ liệu đa chiều
         <div class="warn">⚠️ Lưu ý: Dự đoán dựa trên phân tích dữ liệu lịch sử, chỉ mang tính tham khảo.</div>
     </div>
     """, unsafe_allow_html=True)
