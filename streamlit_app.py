@@ -757,26 +757,19 @@ def render_lottery_tab(lottery_type):
     st.markdown("</div>", unsafe_allow_html=True)
 
     # ---- PHASE TOOLS (collapsed) ----
-    with st.expander("🛠️ Công cụ phân tích chi tiết (Phase 1-7)..."):
+    with st.expander("🛠️ Công cụ phân tích chi tiết..."):
         phase_cols = st.columns(4)
 
-        # Phase buttons
+        # Phase buttons (only tested & proven models)
         phases = [
             ("🔮 Dự Đoán Cơ Bản", "predict", "models.ensemble_model", "EnsembleModel"),
             ("📈 Thống Kê", "stats", None, None),
-            ("🔓 PRNG Cracker", "crack", "models.prng_cracker", "PRNGCracker"),
-            ("📅 Temporal", "temporal", "models.temporal_analyzer", "DeepTemporalAnalyzer"),
-            ("🚀 Phase 2", "phase2", "models.phase2_cracker", "Phase2Cracker"),
-            ("🔍 Phase 3", "phase3", "models.phase3_forensic", "ForensicAnalyzer"),
-            ("🎯 Phase 4", "phase4", "models.phase4_exploit", "ExploitEngine"),
-            ("🏆 Phase 5", "phase5", "models.phase5_ultra", "UltraOptimizer"),
-            ("🧠 Phase 6", "phase6", "models.phase6_deep", "DeepIntelligenceEngine"),
-            ("👑 Phase 7", "phase7", "models.phase7_ultimate", "UltimatePredictor"),
+            ("🎯 Phase 4 Exploit", "phase4", "models.phase4_exploit", "ExploitEngine"),
         ]
 
-        cols = st.columns(5)
+        cols = st.columns(3)
         for i, (label, key, module, cls_name) in enumerate(phases):
-            with cols[i % 5]:
+            with cols[i % 3]:
                 if st.button(label, key=f"{key}_{lottery_type}", use_container_width=True):
                     if key == "stats":
                         # Stats uses different flow
@@ -860,14 +853,7 @@ def render_lottery_tab(lottery_type):
             render_stats(st.session_state[f"stats_result_{lottery_type}"], lottery_type)
 
         for phase_key, phase_label, phase_icon, phase_color in [
-            ("crack", "PRNG CRACKER", "🔓", "#dc2626"),
-            ("temporal", "TEMPORAL ANALYZER", "📅", "#6366f1"),
-            ("phase2", "PHASE 2 CRACKER", "🚀", "#7c3aed"),
-            ("phase3", "PHASE 3 FORENSIC", "🔍", "#059669"),
             ("phase4", "PHASE 4 EXPLOIT", "🎯", "#ea580c"),
-            ("phase5", "PHASE 5 ULTRA", "🏆", "#d4af37"),
-            ("phase6", "PHASE 6 DEEP INTELLIGENCE", "🧠", "#6366f1"),
-            ("phase7", "PHASE 7 ULTIMATE", "👑", "#f43f5e"),
         ]:
             result_key = f"{phase_key}_result_{lottery_type}"
             if result_key in st.session_state:
@@ -945,7 +931,7 @@ def main():
     # ---- FOOTER ----
     st.markdown("""
     <div class="footer-text">
-        🎰 TinNam AI - Phan Tich Du Lieu © 2026 | 70+ Methods across 7 Phases
+        📊 TinNam AI - Phân Tích Dữ Liệu © 2026 | AI & ML Prediction Engine
         <div class="warn">⚠️ Lưu ý: Dự đoán dựa trên phân tích dữ liệu lịch sử, chỉ mang tính tham khảo.</div>
     </div>
     """, unsafe_allow_html=True)
