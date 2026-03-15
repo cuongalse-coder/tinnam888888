@@ -247,6 +247,28 @@ def api_phase4(lottery_type):
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/super/<lottery_type>', methods=['POST'])
+def api_super(lottery_type):
+    """Run Super Predictor V2 - best 9 strategies combined."""
+    if lottery_type not in ('mega', 'power'):
+        return jsonify({'error': 'Invalid type'}), 400
+    try:
+        from models.super_predictor import SuperPredictor
+        if lottery_type == 'mega':
+            data = get_mega645_numbers()
+            max_num, pick = 45, 6
+        else:
+            data = get_power655_numbers()
+            max_num, pick = 55, 6
+        predictor = SuperPredictor(max_num, pick)
+        results = predictor.predict(data)
+        return jsonify(results)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/backtest/<lottery_type>', methods=['POST'])
 def api_backtest(lottery_type):
     """Run walk-forward backtest on all models."""
