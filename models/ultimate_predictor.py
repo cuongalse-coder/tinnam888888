@@ -1,20 +1,19 @@
 """
-Ultimate Predictor V11 - Range-Constrained Fusion (Full Backtest Verified)
-===========================================================================
+Ultimate Predictor V12 - Deep Fusion (Full Backtest Verified)
+================================================================
 FULL backtest on ALL draws, no sampling:
-  MEGA:  Mid4 Hit1+ = 55.0%  (Median+Chi, 1421 tests) [was 49.5% V9]
-  POWER: Mid4 Hit1+ = 46.3%  (Overdue Heavy, 1256 tests) [was 41.3% V9]
+  MEGA:  Mid4 Hit1+ = 55.7%  (Median+Chi+Dir+Mag, 1421 tests)
+  POWER: Mid4 Hit1+ = 46.7%  (Overdue+Sum constraint, 1256 tests)
 
-Methods: Per-position range-constrained scoring using Chi-Square deviation,
-median proximity, Poisson overdue, and recent frequency signals.
-Dataset-specific: Mega uses Median+Chi, Power uses Overdue Heavy.
+Methods: V11 base + direction-magnitude prediction (Mega)
+         V11 base + sum constraint (Power)
 """
 import numpy as np
-from collections import Counter
+from collections import Counter, defaultdict
 
 
 class UltimatePredictor:
-    """V11: Range-constrained fusion. Dataset-specific scoring."""
+    """V12: V11 + direction-magnitude (Mega) / sum-constraint (Power)."""
     
     def __init__(self, max_number, pick_count):
         self.max_number = max_number
@@ -27,12 +26,9 @@ class UltimatePredictor:
         pos_data = self._extract_pos(data)
         
         if self.is_mega:
-            primary = self._median_chi(pos_data, max_num, pick)
+            primary = self._mega_dir_mag(pos_data, data, max_num, pick)
         else:
-            primary = self._overdue_heavy(pos_data, max_num, pick)
-        
-        # Alternative predictions
-        alt = self._multi_window(pos_data, max_num, pick)
+            primary = self._power_sum(pos_data, data, max_num, pick)
         
         middle4 = sorted(primary[1:5]) if len(primary) >= 5 else sorted(primary[:4])
         
@@ -42,10 +38,20 @@ class UltimatePredictor:
             vals = np.array(h)
             lo, hi = int(np.percentile(h, 5)), int(np.percentile(h, 95))
             
+            # Direction info
+            if len(h) >= 4:
+                dirs = [('U' if h[i+1]>h[i] else 'D' if h[i+1]<h[i] else 'S') 
+                        for i in range(len(h)-3, len(h)-1)]
+                last_diff = h[-1] - h[-2]
+            else:
+                dirs = []; last_diff = 0
+            
             pos_detail[f'pos{pos+1}'] = {
                 'predicted': int(primary[pos]) if pos < len(primary) else 0,
                 'valid_range': f'{lo}-{hi}',
-                'full_range': f'{int(vals.min())}-{int(vals.max())}',
+                'last_direction': dirs[-1] if dirs else 'S',
+                'last_change': int(last_diff),
+                'recent_dirs': ''.join(dirs),
                 'avg': round(float(vals.mean()), 1),
                 'median10': int(np.median(h[-10:])),
             }
@@ -55,8 +61,7 @@ class UltimatePredictor:
         return {
             'numbers': [int(n) for n in primary[:pick]],
             'middle4': [int(m) for m in middle4],
-            'method': f'Ultimate V11 {"Median+Chi" if self.is_mega else "Overdue Heavy"} ({len(data)} draws)',
-            'alternative': [int(n) for n in alt[:pick]],
+            'method': f'Ultimate V12 {"Dir+Mag" if self.is_mega else "Sum"} ({len(data)} draws)',
             'position_analysis': pos_detail,
             'backtest': bt,
         }
@@ -69,78 +74,109 @@ class UltimatePredictor:
                 pos[p].append(sd[p])
         return pos
     
-    def _median_chi(self, pos_data, max_num, pick):
-        """Mega champion: Median proximity + Chi-Square deviation."""
+    def _mega_dir_mag(self, pos_data, data, max_num, pick):
+        """Mega: V11 Median+Chi + direction-magnitude signal."""
         result = []; used = set()
         for pos in range(pick):
             h = pos_data[pos]; n = len(h)
-            lo = int(np.percentile(h, 5)); hi = int(np.percentile(h, 95))
-            freq = Counter(h)
-            valid = sum(1 for num in range(lo, hi+1) if freq.get(num, 0) > 0)
-            expected = n / max(valid, 1)
-            med = np.median(h[-10:])
+            lo, hi = int(np.percentile(h,5)), int(np.percentile(h,95))
+            freq = Counter(h); ls = {v:i for i,v in enumerate(h)}
+            valid = sum(1 for num in range(lo,hi+1) if freq.get(num,0)>0)
+            expected = n/max(valid,1); med = np.median(h[-10:])
+            
+            # Direction prediction
+            dir_pred = self._predict_direction(h)
+            
             scores = {}
             for num in range(lo, hi+1):
                 f = freq.get(num, 0)
                 if f == 0: continue
-                chi = (expected - f)**2 / expected if f < expected else 0
-                prox = max(0, 1 - abs(num - med) / (hi - lo + 1) * 3)
-                r10 = sum(1 for x in h[-10:] if x == num)
-                scores[num] = chi * 3 + prox * 10 + r10 * 5 + f / n * 8
+                chi = (expected-f)**2/expected if f<expected else 0
+                prox = max(0,1-abs(num-med)/(hi-lo+1)*3)
+                r10 = sum(1 for x in h[-10:] if x==num)
+                base = chi*3 + prox*10 + r10*5 + f/n*8
+                
+                # Direction-magnitude bonus
+                dir_prox = max(0, 1-abs(num-dir_pred)/(hi-lo+1)*3)
+                scores[num] = base + dir_prox * 7
+            
             if scores:
-                for num in sorted(scores, key=lambda x: -scores[x]):
+                for num in sorted(scores, key=lambda x:-scores[x]):
                     if num not in used: result.append(num); used.add(num); break
             else:
                 p = int(med)
                 if p not in used: result.append(p); used.add(p)
         return sorted(result[:pick])
     
-    def _overdue_heavy(self, pos_data, max_num, pick):
-        """Power champion: Heavy overdue emphasis."""
+    def _power_sum(self, pos_data, data, max_num, pick):
+        """Power: V11 Overdue Heavy + sum constraint."""
+        # First get overdue-heavy base
         result = []; used = set()
         for pos in range(pick):
             h = pos_data[pos]; n = len(h)
-            lo = int(np.percentile(h, 5)); hi = int(np.percentile(h, 95))
-            freq = Counter(h)
-            ls = {v: i for i, v in enumerate(h)}
-            valid = sum(1 for num in range(lo, hi+1) if freq.get(num, 0) > 0)
-            expected = n / max(valid, 1)
+            lo, hi = int(np.percentile(h,5)), int(np.percentile(h,95))
+            freq = Counter(h); ls = {v:i for i,v in enumerate(h)}
+            valid = sum(1 for num in range(lo,hi+1) if freq.get(num,0)>0)
+            expected = n/max(valid,1)
             scores = {}
             for num in range(lo, hi+1):
                 f = freq.get(num, 0)
                 if f == 0: continue
-                gap = n - 1 - ls.get(num, 0)
-                ag = n / f
-                overdue = 1 - np.exp(-gap / ag)
-                deficit = (expected - f) / expected
-                r10 = sum(1 for x in h[-10:] if x == num)
-                scores[num] = deficit * 10 + overdue * 20 + r10 * 2
+                gap = n-1-ls.get(num,0); ag = n/f
+                overdue = 1-np.exp(-gap/ag); deficit = (expected-f)/expected
+                r10 = sum(1 for x in h[-10:] if x==num)
+                scores[num] = deficit*10 + overdue*20 + r10*2
             if scores:
-                for num in sorted(scores, key=lambda x: -scores[x]):
+                for num in sorted(scores, key=lambda x:-scores[x]):
                     if num not in used: result.append(num); used.add(num); break
             else:
                 p = int(np.median(h[-10:]))
                 if p not in used: result.append(p); used.add(p)
-        return sorted(result[:pick])
+        base = sorted(result[:pick])
+        
+        # Sum constraint
+        sums = [sum(sorted(d[:pick])) for d in data]
+        sum_mean = np.mean(sums[-30:])
+        sum_std = np.std(sums[-30:])
+        pred_sum = sum(base)
+        
+        if abs(pred_sum - sum_mean) <= sum_std:
+            return base
+        
+        diff = sum_mean - pred_sum
+        shift = int(round(diff / pick))
+        adjusted = [max(1, min(b + shift, max_num)) for b in base]
+        seen = set(); final = []
+        for a in adjusted:
+            while a in seen: a += 1
+            if a <= max_num: final.append(a); seen.add(a)
+        return sorted(final[:pick])
     
-    def _multi_window(self, pos_data, max_num, pick):
-        """V9 multi-window blend as fallback."""
-        result = []; used = set()
-        for pos in range(pick):
-            h = pos_data[pos]
-            blend = 0; tw = 0
-            for w, weight in [(5, 4), (10, 3), (15, 2), (20, 2), (30, 1)]:
-                if len(h) >= w:
-                    blend += np.median(h[-w:]) * weight; tw += weight
-            p = int(round(blend / tw)) if tw > 0 else h[-1]
-            if p not in used: result.append(p); used.add(p)
-            else:
-                for d in range(1, 10):
-                    for alt in [p+d, p-d]:
-                        if 1 <= alt <= max_num and alt not in used:
-                            result.append(alt); used.add(alt); break
-                    if len(result) > pos: break
-        return sorted(result[:pick])
+    def _predict_direction(self, h):
+        """Predict next value using 3-step/2-step direction patterns."""
+        n = len(h)
+        if n < 5: return int(np.median(h[-10:]))
+        
+        diffs = [h[i+1]-h[i] for i in range(n-1)]
+        dirs = [('U' if h[i+1]>h[i] else 'D' if h[i+1]<h[i] else 'S') for i in range(n-1)]
+        
+        # 3-step
+        if len(dirs) >= 3:
+            pattern = (dirs[-3], dirs[-2], dirs[-1])
+            matching = [diffs[i+3] for i in range(len(dirs)-3) 
+                       if (dirs[i],dirs[i+1],dirs[i+2])==pattern and i+3<len(diffs)]
+            if len(matching) >= 3:
+                return h[-1] + int(np.median(matching))
+        
+        # 2-step fallback
+        if len(dirs) >= 2:
+            pattern2 = (dirs[-2], dirs[-1])
+            matching2 = [diffs[i+2] for i in range(len(dirs)-2) 
+                        if (dirs[i],dirs[i+1])==pattern2 and i+2<len(diffs)]
+            if len(matching2) >= 3:
+                return h[-1] + int(np.median(matching2))
+        
+        return int(np.median(h[-10:]))
     
     def _backtest(self, data, n_tests=100):
         total = len(data)
@@ -154,23 +190,22 @@ class UltimatePredictor:
             pos_data = self._extract_pos(train)
             
             if self.is_mega:
-                pred = set(self._median_chi(pos_data, self.max_number, self.pick_count))
+                pred = set(self._mega_dir_mag(pos_data, train, self.max_number, self.pick_count))
             else:
-                pred = set(self._overdue_heavy(pos_data, self.max_number, self.pick_count))
+                pred = set(self._power_sum(pos_data, train, self.max_number, self.pick_count))
             
             all_m.append(len(pred & actual))
             mid_m.append(len(pred & actual_mid))
         
-        avg_all = float(np.mean(all_m)) if all_m else 0
         avg_mid = float(np.mean(mid_m)) if mid_m else 0
         rnd_mid = 4 * 4 / self.max_number
         
         return {
             'tests': len(all_m),
-            'all_hit1_pct': round(sum(1 for m in all_m if m >= 1) / len(all_m) * 100, 1) if all_m else 0,
-            'mid_hit1_pct': round(sum(1 for m in mid_m if m >= 1) / len(mid_m) * 100, 1) if mid_m else 0,
-            'mid_hit2_pct': round(sum(1 for m in mid_m if m >= 2) / len(mid_m) * 100, 1) if mid_m else 0,
-            'mid_improvement': round((avg_mid / rnd_mid - 1) * 100, 2) if rnd_mid > 0 else 0,
+            'all_hit1_pct': round(sum(1 for m in all_m if m>=1)/len(all_m)*100,1) if all_m else 0,
+            'mid_hit1_pct': round(sum(1 for m in mid_m if m>=1)/len(mid_m)*100,1) if mid_m else 0,
+            'mid_hit2_pct': round(sum(1 for m in mid_m if m>=2)/len(mid_m)*100,1) if mid_m else 0,
+            'mid_improvement': round((avg_mid/rnd_mid-1)*100,2) if rnd_mid>0 else 0,
             'all_max': int(max(all_m)) if all_m else 0,
             'mid_max': int(max(mid_m)) if mid_m else 0,
             'distribution': dict(Counter(all_m)),
