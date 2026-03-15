@@ -1,0 +1,220 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎰 TinNam AI - Dự Đoán Xổ Số Thông Minh</title>
+    <meta name="description" content="Hệ thống AI dự đoán kết quả xổ số TinNam Mega 6/45 và Power 6/55 sử dụng LSTM, Transformer, và phân tích tần suất.">
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+</head>
+<body>
+
+<div class="container">
+    <!-- HEADER -->
+    <header class="header">
+        <h1>🎰 TinNam AI - Phan Tich Du Lieu</h1>
+        <p class="subtitle">70+ Phương pháp AI & ML: PRNG Cracker, Bayesian, Genetic, HMM, Graph Neural, Simulated Annealing, Ultimate Fusion</p>
+        <div class="stats-bar">
+            <div class="stat-badge">
+                📊 Mega 6/45: <span class="value" id="mega-count">{{ mega_count }}</span> kỳ
+            </div>
+            <div class="stat-badge">
+                ⚡ Power 6/55: <span class="value" id="power-count">{{ power_count }}</span> kỳ
+            </div>
+            <div class="stat-badge">
+                🕐 Cập nhật: <span class="value" id="last-update">{{ mega_latest or 'Chưa có' }}</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- TABS -->
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('mega')" id="tab-mega">
+            🟢 Mega 6/45
+        </button>
+        <button class="tab-btn" onclick="switchTab('power')" id="tab-power">
+            🔴 Power 6/55
+        </button>
+    </div>
+
+    <!-- MEGA 6/45 TAB -->
+    <div class="tab-content active" id="content-mega">
+        <!-- MASTER PREDICTION - MAIN BUTTON -->
+        <div style="text-align:center;margin:20px 0;">
+            <button class="btn" onclick="runMaster('mega')" id="btn-master-mega" style="background:linear-gradient(135deg,#f43f5e,#7c3aed);font-size:1.3rem;padding:18px 40px;box-shadow:0 6px 25px rgba(244,63,94,0.4);width:100%;max-width:500px;animation:pulse-glow 2s infinite;">
+                🎯 DỰ ĐOÁN KỲ TIẾP THEO
+            </button>
+            <div id="master-mega" style="margin-top:16px;"></div>
+        </div>
+
+        <!-- Other Tools (collapsed) -->
+        <details style="margin:16px 0;">
+            <summary style="cursor:pointer;color:var(--text-muted);font-size:0.85rem;padding:8px;">🛠️ Công cụ phân tích chi tiết (Phase 1-7)...</summary>
+            <div class="section-actions" style="margin-top:10px;">
+                <button class="btn btn-gold" onclick="predict('mega')" id="btn-predict-mega">🔮 Dự Đoán (cơ bản)</button>
+                <button class="btn btn-primary" onclick="predict('mega', true)" id="btn-deep-mega">🧠 Dự Đoán Sâu</button>
+                <button class="btn btn-secondary" onclick="loadStats('mega')">📈 Thống Kê</button>
+                <button class="btn btn-danger" onclick="loadAdvanced('mega')">⚡ Chuyên Sâu</button>
+                <button class="btn btn-gold" onclick="runBacktest('mega')" id="btn-backtest-mega">🧪 Backtest</button>
+                <button class="btn btn-danger" onclick="runCracker('mega')" id="btn-crack-mega" style="background:linear-gradient(135deg,#dc2626,#991b1b);">🔓 PRNG Cracker</button>
+                <button class="btn btn-primary" onclick="runTemporal('mega')" id="btn-temporal-mega">📅 Temporal</button>
+                <button class="btn" onclick="runPhase2('mega')" id="btn-phase2-mega" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);">🚀 Phase 2</button>
+                <button class="btn" onclick="runPhase3('mega')" id="btn-phase3-mega" style="background:linear-gradient(135deg,#059669,#047857);">🔍 Phase 3</button>
+                <button class="btn" onclick="runPhase4('mega')" id="btn-phase4-mega" style="background:linear-gradient(135deg,#ea580c,#dc2626);">🎯 Phase 4</button>
+                <button class="btn" onclick="runPhase5('mega')" id="btn-phase5-mega" style="background:linear-gradient(135deg,#d4af37,#b8860b);">🏆 Phase 5</button>
+                <button class="btn" onclick="runPhase6('mega')" id="btn-phase6-mega" style="background:linear-gradient(135deg,#0ea5e9,#6366f1);">🧠 Phase 6</button>
+                <button class="btn" onclick="runPhase7('mega')" id="btn-phase7-mega" style="background:linear-gradient(135deg,#f43f5e,#7c3aed);">👑 Phase 7</button>
+                <button class="btn btn-secondary" onclick="scrapeData()">🔄 Cập Nhật Dữ Liệu</button>
+            </div>
+        </details>
+
+        <!-- Prediction Results -->
+        <div id="prediction-mega" style="display:none;"></div>
+
+        <!-- Advanced Analysis -->
+        <div id="advanced-mega" style="display:none;"></div>
+
+        <!-- Backtest Results -->
+        <div id="backtest-mega" style="display:none;"></div>
+
+        <!-- PRNG Cracker Results -->
+        <div id="crack-mega" style="display:none;"></div>
+
+        <!-- Temporal Analysis -->
+        <div id="temporal-mega" style="display:none;"></div>
+
+        <!-- Phase 2 -->
+        <div id="phase2-mega" style="display:none;"></div>
+        <!-- Phase 3 -->
+        <div id="phase3-mega" style="display:none;"></div>
+        <!-- Phase 4 -->
+        <div id="phase4-mega" style="display:none;"></div>
+        <!-- Phase 5 -->
+        <div id="phase5-mega" style="display:none;"></div>
+        <!-- Phase 6 -->
+        <div id="phase6-mega" style="display:none;"></div>
+        <!-- Phase 7 -->
+        <div id="phase7-mega" style="display:none;"></div>
+
+        <!-- Stats -->
+        <div id="stats-mega" style="display:none;"></div>
+
+        <!-- History Table -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">
+                    <span class="icon">📋</span> Lịch Sử Kết Quả Mega 6/45
+                </div>
+                <div class="toggle-group">
+                    <button class="toggle-btn active" onclick="loadData('mega', 20, this)">20</button>
+                    <button class="toggle-btn" onclick="loadData('mega', 50, this)">50</button>
+                    <button class="toggle-btn" onclick="loadData('mega', 200, this)">200</button>
+                    <button class="toggle-btn" onclick="loadData('mega', 9999, this)">Tất cả</button>
+                </div>
+            </div>
+            <div id="table-mega">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <span class="loading-text">Đang tải dữ liệu...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- POWER 6/55 TAB -->
+    <div class="tab-content" id="content-power">
+        <!-- MASTER PREDICTION - MAIN BUTTON -->
+        <div style="text-align:center;margin:20px 0;">
+            <button class="btn" onclick="runMaster('power')" id="btn-master-power" style="background:linear-gradient(135deg,#f43f5e,#7c3aed);font-size:1.3rem;padding:18px 40px;box-shadow:0 6px 25px rgba(244,63,94,0.4);width:100%;max-width:500px;animation:pulse-glow 2s infinite;">
+                🎯 DỰ ĐOÁN KỲ TIẾP THEO
+            </button>
+            <div id="master-power" style="margin-top:16px;"></div>
+        </div>
+
+        <!-- Other Tools (collapsed) -->
+        <details style="margin:16px 0;">
+            <summary style="cursor:pointer;color:var(--text-muted);font-size:0.85rem;padding:8px;">🛠️ Công cụ phân tích chi tiết (Phase 1-7)...</summary>
+            <div class="section-actions" style="margin-top:10px;">
+                <button class="btn btn-gold" onclick="predict('power')" id="btn-predict-power">🔮 Dự Đoán (cơ bản)</button>
+                <button class="btn btn-primary" onclick="predict('power', true)" id="btn-deep-power">🧠 Dự Đoán Sâu</button>
+                <button class="btn btn-secondary" onclick="loadStats('power')">📈 Thống Kê</button>
+                <button class="btn btn-danger" onclick="loadAdvanced('power')">⚡ Chuyên Sâu</button>
+                <button class="btn btn-gold" onclick="runBacktest('power')" id="btn-backtest-power">🧪 Backtest</button>
+                <button class="btn btn-danger" onclick="runCracker('power')" id="btn-crack-power" style="background:linear-gradient(135deg,#dc2626,#991b1b);">🔓 PRNG Cracker</button>
+                <button class="btn btn-primary" onclick="runTemporal('power')" id="btn-temporal-power">📅 Temporal</button>
+                <button class="btn" onclick="runPhase2('power')" id="btn-phase2-power" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);">🚀 Phase 2</button>
+                <button class="btn" onclick="runPhase3('power')" id="btn-phase3-power" style="background:linear-gradient(135deg,#059669,#047857);">🔍 Phase 3</button>
+                <button class="btn" onclick="runPhase4('power')" id="btn-phase4-power" style="background:linear-gradient(135deg,#ea580c,#dc2626);">🎯 Phase 4</button>
+                <button class="btn" onclick="runPhase5('power')" id="btn-phase5-power" style="background:linear-gradient(135deg,#d4af37,#b8860b);">🏆 Phase 5</button>
+                <button class="btn" onclick="runPhase6('power')" id="btn-phase6-power" style="background:linear-gradient(135deg,#0ea5e9,#6366f1);">🧠 Phase 6</button>
+                <button class="btn" onclick="runPhase7('power')" id="btn-phase7-power" style="background:linear-gradient(135deg,#f43f5e,#7c3aed);">👑 Phase 7</button>
+                <button class="btn btn-secondary" onclick="scrapeData()">🔄 Cập Nhật Dữ Liệu</button>
+            </div>
+        </details>
+
+        <!-- Prediction Results -->
+        <div id="prediction-power" style="display:none;"></div>
+
+        <!-- Advanced Analysis -->
+        <div id="advanced-power" style="display:none;"></div>
+
+        <!-- Backtest Results -->
+        <div id="backtest-power" style="display:none;"></div>
+
+        <!-- PRNG Cracker Results -->
+        <div id="crack-power" style="display:none;"></div>
+
+        <!-- Temporal Analysis -->
+        <div id="temporal-power" style="display:none;"></div>
+
+        <!-- Phase 2 -->
+        <div id="phase2-power" style="display:none;"></div>
+        <!-- Phase 3 -->
+        <div id="phase3-power" style="display:none;"></div>
+        <!-- Phase 4 -->
+        <div id="phase4-power" style="display:none;"></div>
+        <!-- Phase 5 -->
+        <div id="phase5-power" style="display:none;"></div>
+        <!-- Phase 6 -->
+        <div id="phase6-power" style="display:none;"></div>
+        <!-- Phase 7 -->
+        <div id="phase7-power" style="display:none;"></div>
+
+        <!-- Stats -->
+        <div id="stats-power" style="display:none;"></div>
+
+        <!-- History Table -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">
+                    <span class="icon">📋</span> Lịch Sử Kết Quả Power 6/55
+                </div>
+                <div class="toggle-group">
+                    <button class="toggle-btn active" onclick="loadData('power', 20, this)">20</button>
+                    <button class="toggle-btn" onclick="loadData('power', 50, this)">50</button>
+                    <button class="toggle-btn" onclick="loadData('power', 200, this)">200</button>
+                    <button class="toggle-btn" onclick="loadData('power', 9999, this)">Tất cả</button>
+                </div>
+            </div>
+            <div id="table-power">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <span class="loading-text">Đang tải dữ liệu...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>🎰 TinNam AI - Phan Tich Du Lieu &copy; 2026 | 70+ Methods across 7 Phases</p>
+        <p style="margin-top:8px; color: var(--accent-3); font-size: 0.75rem;">
+            ⚠️ Lưu ý: Dự đoán dựa trên phân tích dữ liệu lịch sử, chỉ mang tính tham khảo.
+        </p>
+    </footer>
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
