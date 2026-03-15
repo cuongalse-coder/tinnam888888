@@ -269,6 +269,28 @@ def api_super(lottery_type):
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/middle4/<lottery_type>', methods=['POST'])
+def api_middle4(lottery_type):
+    """Run Middle 4 Predictor - optimize positions 2-5."""
+    if lottery_type not in ('mega', 'power'):
+        return jsonify({'error': 'Invalid type'}), 400
+    try:
+        from models.middle4_predictor import Middle4Predictor
+        if lottery_type == 'mega':
+            data = get_mega645_numbers()
+            max_num, pick = 45, 6
+        else:
+            data = get_power655_numbers()
+            max_num, pick = 55, 6
+        predictor = Middle4Predictor(max_num, pick)
+        results = predictor.predict(data)
+        return jsonify(results)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/backtest/<lottery_type>', methods=['POST'])
 def api_backtest(lottery_type):
     """Run walk-forward backtest on all models."""
