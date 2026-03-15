@@ -291,6 +291,28 @@ def api_middle4(lottery_type):
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/ultimate/<lottery_type>', methods=['POST'])
+def api_ultimate(lottery_type):
+    """Run Ultimate Predictor V3 - Genetic + 8 strategies + Markov."""
+    if lottery_type not in ('mega', 'power'):
+        return jsonify({'error': 'Invalid type'}), 400
+    try:
+        from models.ultimate_predictor import UltimatePredictor
+        if lottery_type == 'mega':
+            data = get_mega645_numbers()
+            max_num, pick = 45, 6
+        else:
+            data = get_power655_numbers()
+            max_num, pick = 55, 6
+        predictor = UltimatePredictor(max_num, pick)
+        results = predictor.predict(data)
+        return jsonify(results)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/backtest/<lottery_type>', methods=['POST'])
 def api_backtest(lottery_type):
     """Run walk-forward backtest on all models."""

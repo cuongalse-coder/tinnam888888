@@ -767,11 +767,12 @@ def render_lottery_tab(lottery_type):
             ("🎯 Phase 4 Exploit", "phase4", "models.phase4_exploit", "ExploitEngine"),
             ("🚀 Super Predictor V2", "super", "models.super_predictor", "SuperPredictor"),
             ("🎯 Middle 4 (cot 2-5)", "middle4", "models.middle4_predictor", "Middle4Predictor"),
+            ("👑 Ultimate V3", "ultimate", "models.ultimate_predictor", "UltimatePredictor"),
         ]
 
-        cols = st.columns(5)
+        cols = st.columns(3)  # 6 buttons in 2 rows of 3
         for i, (label, key, module, cls_name) in enumerate(phases):
-            with cols[i % 5]:
+            with cols[i % 3]:
                 if st.button(label, key=f"{key}_{lottery_type}", use_container_width=True):
                     if key == "stats":
                         # Stats uses different flow
@@ -858,6 +859,7 @@ def render_lottery_tab(lottery_type):
             ("phase4", "PHASE 4 EXPLOIT", "🎯", "#ea580c"),
             ("super", "SUPER PREDICTOR V2", "🚀", "#6366f1"),
             ("middle4", "MIDDLE 4 OPTIMIZER", "🎯", "#059669"),
+            ("ultimate", "ULTIMATE V3", "👑", "#d4af37"),
         ]:
             result_key = f"{phase_key}_result_{lottery_type}"
             if result_key in st.session_state:
