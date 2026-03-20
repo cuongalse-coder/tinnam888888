@@ -313,8 +313,23 @@ CUSTOM_CSS = """
         color: #e2e8f0;
         white-space: nowrap;
     }
-    .hist-table tr:hover td {
+    .hist-table tr:hover td,
+    table tr:hover .hist-td {
         background: rgba(99, 102, 241, 0.05);
+    }
+    .hist-th {
+        background: rgba(99, 102, 241, 0.1);
+        padding: 12px;
+        color: #06b6d4;
+        font-weight: 700;
+        border-bottom: 2px solid rgba(255,255,255,0.1);
+        white-space: nowrap;
+    }
+    .hist-td {
+        padding: 10px 14px;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+        color: #e2e8f0;
+        white-space: nowrap;
     }
     .date-cell {
         color: #94a3b8;
@@ -580,36 +595,26 @@ def render_dan_result(dan_data, ver):
 
 
 def render_history_table(rows, lottery_type):
-    """Render history table as HTML."""
+    """Render history table as HTML using CSS classes for compact output."""
     is_power = lottery_type == "power"
 
     body = ""
     for idx, row in enumerate(rows):
         numbers = [row['n1'], row['n2'], row['n3'], row['n4'], row['n5'], row['n6']]
-        balls = ""
-        for n in numbers:
-            balls += f'<span style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;font-weight:700;font-size:0.85rem;font-family:JetBrains Mono,monospace;margin:2px;">{str(n).zfill(2)}</span>'
+        balls = " ".join(f'<span class="data-ball small">{str(n).zfill(2)}</span>' for n in numbers)
         bonus_html = ""
         if is_power:
             bn = row.get('bonus', 0)
-            bonus_html = f'<td style="padding:8px;"><span style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#f59e0b,#ef4444);color:white;font-weight:700;font-size:0.85rem;font-family:JetBrains Mono,monospace;">{str(bn).zfill(2)}</span></td>'
+            bonus_html = f'<td class="hist-td"><span class="data-ball small bonus">{str(bn).zfill(2)}</span></td>'
         jackpot = row.get('jackpot', '-')
         if jackpot and len(str(jackpot)) > 15:
             jackpot = str(jackpot).split('≈')[-1].strip() if '≈' in str(jackpot) else str(jackpot)[-15:]
-        body += f'''<tr>
-            <td style="color:#64748b;padding:8px;text-align:center;">{idx + 1}</td>
-            <td style="color:#94a3b8;padding:8px;font-family:JetBrains Mono,monospace;font-size:0.85rem;white-space:nowrap;">{row.get('draw_date', '')}</td>
-            <td style="padding:8px;"><div style="display:flex;gap:4px;flex-wrap:wrap;">{balls}</div></td>
-            {bonus_html}
-            <td style="color:#f59e0b;font-weight:600;padding:8px;font-family:JetBrains Mono,monospace;font-size:0.85rem;">{jackpot}</td>
-        </tr>'''
+        body += f'<tr><td class="hist-td" style="color:#64748b;">{idx + 1}</td><td class="hist-td date-cell">{row.get("draw_date", "")}</td><td class="hist-td"><div style="display:flex;gap:4px;flex-wrap:wrap;">{balls}</div></td>{bonus_html}<td class="hist-td jackpot-cell">{jackpot}</td></tr>'
 
-    header = '<th style="background:rgba(99,102,241,0.1);padding:12px;color:#06b6d4;font-weight:700;border-bottom:2px solid rgba(255,255,255,0.1);">#</th>'
-    header += '<th style="background:rgba(99,102,241,0.1);padding:12px;color:#06b6d4;font-weight:700;border-bottom:2px solid rgba(255,255,255,0.1);">Ngày</th>'
-    header += '<th style="background:rgba(99,102,241,0.1);padding:12px;color:#06b6d4;font-weight:700;border-bottom:2px solid rgba(255,255,255,0.1);">Kết Quả</th>'
+    header = '<th class="hist-th">#</th><th class="hist-th">Ngày</th><th class="hist-th">Kết Quả</th>'
     if is_power:
-        header += '<th style="background:rgba(99,102,241,0.1);padding:12px;color:#06b6d4;font-weight:700;border-bottom:2px solid rgba(255,255,255,0.1);">Số ĐB</th>'
-    header += '<th style="background:rgba(99,102,241,0.1);padding:12px;color:#06b6d4;font-weight:700;border-bottom:2px solid rgba(255,255,255,0.1);">Jackpot</th>'
+        header += '<th class="hist-th">Số ĐB</th>'
+    header += '<th class="hist-th">Jackpot</th>'
 
     st.markdown(f"""
     <div class="glass-card">
@@ -874,7 +879,8 @@ def render_lottery_tab(lottery_type):
         skey = f"dan_{ver}_{lottery_type}"
         if skey in st.session_state:
             dan_data = st.session_state[skey]
-            render_dan_result(dan_data, ver)
+            if isinstance(dan_data, dict):
+                render_dan_result(dan_data, ver)
 
     # ---- PHASE TOOLS (collapsed) ----
     with st.expander("🛠️ Công cụ phân tích chi tiết (Phase 1-7)..."):
