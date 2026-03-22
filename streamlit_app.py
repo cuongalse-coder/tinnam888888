@@ -617,7 +617,7 @@ def render_history_table(rows, lottery_type):
         header += '<th style="background:rgba(99,102,241,0.1);padding:12px;color:#06b6d4;font-weight:700;border-bottom:2px solid rgba(255,255,255,0.1);">Số ĐB</th>'
     header += '<th style="background:rgba(99,102,241,0.1);padding:12px;color:#06b6d4;font-weight:700;border-bottom:2px solid rgba(255,255,255,0.1);">Jackpot</th>'
 
-    st.markdown(f"""
+    html_content = f"""
     <div class="glass-card">
         <div class="card-title-row">📋 Lịch Sử Kết Quả {'Bộ B (6/55)' if is_power else 'Bộ A (6/45)'}</div>
         <div style="overflow-x:auto;border-radius:10px;">
@@ -627,7 +627,11 @@ def render_history_table(rows, lottery_type):
             </table>
         </div>
     </div>
-    """, unsafe_allow_html=True)
+    """
+    try:
+        st.html(html_content)
+    except AttributeError:
+        st.markdown(html_content, unsafe_allow_html=True)
 
 
 def render_phase_result(data, phase_name, phase_icon, phase_color):
@@ -875,11 +879,14 @@ def render_lottery_tab(lottery_type):
                 except Exception as e:
                     st.error(f"❌ {e}")
 
-    # Show dàn results
+    # Show dàn results (with stale data cleanup)
     for ver in ["v1", "v2"]:
         skey = f"dan_{ver}_{lottery_type}"
         if skey in st.session_state:
             dan_data = st.session_state[skey]
+            if not isinstance(dan_data, dict) or "candidates" not in dan_data:
+                del st.session_state[skey]
+                continue
             render_dan_result(dan_data, ver)
 
     # ---- PHASE TOOLS (collapsed) ----
