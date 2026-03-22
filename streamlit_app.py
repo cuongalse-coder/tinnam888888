@@ -510,10 +510,16 @@ def render_master_result(data):
 
 def render_dan_result(dan_data, ver):
     """Render dàn prediction result."""
-    cands = dan_data["candidates"]
-    total = dan_data["total"]
-    info = dan_data["info"]
+    if not isinstance(dan_data, dict):
+        st.warning(f"⚠️ Dữ liệu dàn {ver} không hợp lệ. Vui lòng bấm lại nút tạo dàn.")
+        return
+    cands = dan_data.get("candidates", [])
+    total = dan_data.get("total", 0)
+    info = dan_data.get("info", "")
     combos = dan_data.get("combos", [])
+    if not cands:
+        st.warning(f"⚠️ Dàn {ver} không có dữ liệu candidates. Vui lòng bấm lại nút tạo dàn.")
+        return
 
     ver_label = "V1 - ĐẦY ĐỦ" if ver == "v1" else "V2 - TỐI ƯU"
     ver_icon = "📊" if ver == "v1" else "⚡"
