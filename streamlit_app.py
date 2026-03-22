@@ -858,7 +858,7 @@ def render_lottery_tab(lottery_type):
                     nums = get_mega645_numbers() if lottery_type == "mega" else get_power655_numbers()
                     is_mega = (lottery_type == "mega")
                     cands, combos, info = predict_dan(nums, max_num, pick, is_mega, version="v1")
-                    st.session_state[f"dan_v1_{lottery_type}"] = {
+                    st.session_state[f"dan_result_v1_{lottery_type}"] = {
                         "candidates": cands, "combos": combos[:200], "info": info,
                         "total": len(combos)
                     }
@@ -872,22 +872,20 @@ def render_lottery_tab(lottery_type):
                     nums = get_mega645_numbers() if lottery_type == "mega" else get_power655_numbers()
                     is_mega = (lottery_type == "mega")
                     cands, combos, info = predict_dan(nums, max_num, pick, is_mega, version="v2")
-                    st.session_state[f"dan_v2_{lottery_type}"] = {
+                    st.session_state[f"dan_result_v2_{lottery_type}"] = {
                         "candidates": cands, "combos": combos[:200], "info": info,
                         "total": len(combos)
                     }
                 except Exception as e:
                     st.error(f"❌ {e}")
 
-    # Show dàn results (with stale data cleanup)
+    # Show dàn results
     for ver in ["v1", "v2"]:
-        skey = f"dan_{ver}_{lottery_type}"
+        skey = f"dan_result_{ver}_{lottery_type}"
         if skey in st.session_state:
             dan_data = st.session_state[skey]
-            if not isinstance(dan_data, dict) or "candidates" not in dan_data:
-                del st.session_state[skey]
-                continue
-            render_dan_result(dan_data, ver)
+            if isinstance(dan_data, dict) and "candidates" in dan_data:
+                render_dan_result(dan_data, ver)
 
     # ---- PHASE TOOLS (collapsed) ----
     with st.expander("🛠️ Công cụ phân tích chi tiết (Phase 1-7)..."):
