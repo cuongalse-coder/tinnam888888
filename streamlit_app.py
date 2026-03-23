@@ -1,6 +1,6 @@
 """
-📊 TinNam AI - Data Analysis Platform V15
-Premium dark-themed UI with 70+ prediction models + Ensemble Voting.
+📊 TinNam AI - Data Analysis Platform V20
+Premium dark-themed UI with Attention + Regime Detection + Stacking Meta-Learner + Monte Carlo.
 Deploy: streamlit run streamlit_app.py
 """
 import streamlit as st
@@ -493,24 +493,108 @@ def render_master_result(data):
     """
     st.markdown(html, unsafe_allow_html=True)
 
-    # V15 Ensemble Info
+    # V20 Regime Detection Card
+    regime = data.get("regime", {})
+    if regime:
+        r_type = regime.get('type', 'Transition')
+        r_icon = '🔴' if r_type == 'Hot' else ('🔵' if r_type == 'Cold' else '🟡')
+        r_color = '#ef4444' if r_type == 'Hot' else ('#3b82f6' if r_type == 'Cold' else '#f59e0b')
+        r_desc = 'Số lặp lại nhiều → ưu tiên frequency' if r_type == 'Hot' else ('Số phân tán → ưu tiên gap/run-length' if r_type == 'Cold' else 'Chuyển tiếp → ưu tiên ensemble/genetic')
+        st.markdown(f"""
+        <div class="glass-card" style="border-color:{r_color};">
+            <div class="card-title-row">{r_icon} Regime: {r_type} — V20 Adaptive</div>
+            <div style="display:flex;justify-content:center;gap:20px;flex-wrap:wrap;">
+                <div style="text-align:center;padding:8px 14px;background:rgba(255,255,255,0.03);border-radius:10px;">
+                    <div style="font-size:1.1rem;font-weight:800;color:{r_color};font-family:JetBrains Mono,monospace;">{regime.get('repeat_rate', 0)}</div>
+                    <div style="font-size:0.6rem;color:#64748b;">Repeat Rate</div>
+                </div>
+                <div style="text-align:center;padding:8px 14px;background:rgba(255,255,255,0.03);border-radius:10px;">
+                    <div style="font-size:1.1rem;font-weight:800;color:#8b5cf6;font-family:JetBrains Mono,monospace;">{regime.get('entropy', 0)}</div>
+                    <div style="font-size:0.6rem;color:#64748b;">Entropy</div>
+                </div>
+                <div style="text-align:center;padding:8px 14px;background:rgba(255,255,255,0.03);border-radius:10px;">
+                    <div style="font-size:1.1rem;font-weight:800;color:#06b6d4;font-family:JetBrains Mono,monospace;">{regime.get('momentum', 0)}</div>
+                    <div style="font-size:0.6rem;color:#64748b;">Momentum</div>
+                </div>
+            </div>
+            <div style="text-align:center;font-size:0.75rem;color:#94a3b8;margin-top:8px;">{r_desc}</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # V20 Method Selection Card
     ens_info = data.get("ensemble_info", {})
     if ens_info:
+        method_items = [
+            ('Signal', 'base_avg', '#6366f1'),
+            ('Ensemble', 'ensemble_avg', '#22c55e'),
+            ('SA', 'constraint_avg', '#f59e0b'),
+            ('Position', 'position_avg', '#ec4899'),
+            ('Context', 'context_avg', '#06b6d4'),
+            ('Corr', 'corr_avg', '#a78bfa'),
+            ('Genetic', 'genetic_avg', '#f43f5e'),
+            ('DE', 'de_avg', '#84cc16'),
+            ('Cluster', 'cluster_avg', '#fb923c'),
+            ('Stacking', 'stacking_avg', '#14b8a6'),
+            ('Monte Carlo', 'monte_carlo_avg', '#d946ef'),
+        ]
+        method_html = '<div class="glass-card" style="border-color:#8b5cf6;">'
+        method_html += '<div class="card-title-row">🧠 V20 Auto-Selection (9 Core + Genetic + Stacking + Monte Carlo)</div>'
+        method_html += '<div style="display:flex;justify-content:center;gap:10px;flex-wrap:wrap;">'
+        for label, key, color in method_items:
+            val = ens_info.get(key, 0)
+            method_html += f'<div style="text-align:center;padding:5px 10px;background:rgba(255,255,255,0.03);border-radius:8px;">'
+            method_html += f'<div style="font-size:0.95rem;font-weight:800;color:{color};font-family:JetBrains Mono,monospace;">{val}/6</div>'
+            method_html += f'<div style="font-size:0.55rem;color:#64748b;">{label}</div></div>'
+        chosen = ens_info.get('chosen', '')
+        method_html += f'<div style="text-align:center;padding:5px 10px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:8px;">'
+        method_html += f'<div style="font-size:0.8rem;font-weight:700;color:#22c55e;">✅ {chosen}</div>'
+        method_html += f'<div style="font-size:0.55rem;color:#64748b;">Winner</div></div>'
+        method_html += '</div></div>'
+        st.markdown(method_html, unsafe_allow_html=True)
+
+    # V18 Portfolio Display (15 sets with confidence)
+    portfolio = data.get("portfolio", [])
+    portfolio_conf = data.get("portfolio_confidence", [])
+    if portfolio:
+        portfolio_html = '<div class="glass-card" style="border-color:#f59e0b;">'
+        portfolio_html += '<div class="card-title-row">🎯 Portfolio %d Bộ Số — Maximum Coverage</div>' % len(portfolio)
+        portfolio_html += '<div style="font-size:0.65rem;color:#94a3b8;text-align:center;margin-bottom:8px;">Sắp xếp theo độ tin cậy | Mỗi bộ khác nhau ≥2 số + thỏa mãn ràng buộc</div>'
+        for idx, pset in enumerate(portfolio):
+            badge = '⭐' if idx == 0 else f'#{idx+1}'
+            balls = ''.join(f'<span class="ball">{n}</span>' for n in pset)
+            color = '#f59e0b' if idx == 0 else ('#22c55e' if idx < 3 else '#334155')
+            conf = portfolio_conf[idx] if idx < len(portfolio_conf) else 0
+            conf_bar = f'<div style="width:{min(conf,100)}%;height:3px;background:{color};border-radius:2px;margin-top:3px;"></div>' if conf > 0 else ''
+            portfolio_html += f'<div style="display:flex;align-items:center;gap:8px;margin:3px 0;padding:5px 10px;background:rgba(255,255,255,0.02);border-radius:8px;border-left:3px solid {color};">'
+            portfolio_html += f'<span style="font-size:0.7rem;min-width:22px;color:{color};">{badge}</span>'
+            portfolio_html += f'<div style="flex:1;">{balls}{conf_bar}</div>'
+            portfolio_html += f'<span style="font-size:0.6rem;color:#64748b;min-width:35px;text-align:right;">{conf}%</span></div>'
+        portfolio_html += '</div>'
+        st.markdown(portfolio_html, unsafe_allow_html=True)
+    
+    # Portfolio Backtest
+    pbt = data.get("portfolio_backtest", {})
+    if pbt and pbt.get('tests', 0) > 0:
         st.markdown(f"""
-        <div class="glass-card" style="border-color:#8b5cf6;">
-            <div class="card-title-row">🧠 V15 Ensemble Selection</div>
-            <div style="display:flex;justify-content:center;gap:24px;flex-wrap:wrap;">
-                <div style="text-align:center;padding:8px 16px;background:rgba(255,255,255,0.03);border-radius:10px;">
-                    <div style="font-size:1.2rem;font-weight:800;color:#6366f1;font-family:JetBrains Mono,monospace;">{ens_info.get('base_avg', 0)}/6</div>
-                    <div style="font-size:0.7rem;color:#64748b;">Signal Optimizer</div>
+        <div class="glass-card" style="border-color:#06b6d4;">
+            <div class="card-title-row">📊 Portfolio Backtest ({pbt.get('tests',0)} kỳ)</div>
+            <div style="font-size:0.65rem;color:#94a3b8;text-align:center;margin-bottom:8px;">Kết quả tốt nhất từ bất kỳ bộ nào trong portfolio</div>
+            <div style="display:flex;justify-content:center;gap:14px;flex-wrap:wrap;">
+                <div style="text-align:center;padding:8px 12px;background:rgba(255,255,255,0.03);border-radius:10px;">
+                    <div style="font-size:1.2rem;font-weight:800;color:#06b6d4;font-family:JetBrains Mono,monospace;">{pbt.get('avg_best',0)}/6</div>
+                    <div style="font-size:0.6rem;color:#64748b;">Best Avg</div>
                 </div>
-                <div style="text-align:center;padding:8px 16px;background:rgba(255,255,255,0.03);border-radius:10px;">
-                    <div style="font-size:1.2rem;font-weight:800;color:#22c55e;font-family:JetBrains Mono,monospace;">{ens_info.get('ensemble_avg', 0)}/6</div>
-                    <div style="font-size:0.7rem;color:#64748b;">Ensemble Vote</div>
+                <div style="text-align:center;padding:8px 12px;background:rgba(255,255,255,0.03);border-radius:10px;">
+                    <div style="font-size:1.2rem;font-weight:800;color:#22c55e;">{pbt.get('max',0)}/6</div>
+                    <div style="font-size:0.6rem;color:#64748b;">Max</div>
                 </div>
-                <div style="text-align:center;padding:8px 16px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:10px;">
-                    <div style="font-size:0.9rem;font-weight:700;color:#22c55e;">✅ {ens_info.get('chosen', '')}</div>
-                    <div style="font-size:0.7rem;color:#64748b;">Auto-Selected</div>
+                <div style="text-align:center;padding:8px 12px;background:rgba(255,255,255,0.03);border-radius:10px;">
+                    <div style="font-size:1.2rem;font-weight:800;color:#f59e0b;">{pbt.get('match_3plus',0)}</div>
+                    <div style="font-size:0.6rem;color:#64748b;">3+</div>
+                </div>
+                <div style="text-align:center;padding:8px 12px;background:rgba(255,255,255,0.03);border-radius:10px;">
+                    <div style="font-size:1.2rem;font-weight:800;color:#f43f5e;">{pbt.get('match_4plus',0)}</div>
+                    <div style="font-size:0.6rem;color:#64748b;">4+</div>
                 </div>
             </div>
         </div>
@@ -1075,7 +1159,7 @@ def render_lottery_tab(lottery_type):
     # ---- MASTER PREDICTION ----
     st.markdown("<div style='text-align:center;'>", unsafe_allow_html=True)
     if st.button(f"🎯 DỰ ĐOÁN KỲ TIẾP THEO", key=f"master_{lottery_type}", type="primary", use_container_width=True):
-        with st.spinner("🎯 AI V15 đang phân tích 25 tín hiệu + Ensemble Voting... Vui lòng chờ 2-5 phút."):
+        with st.spinner("🎯 V20: Attention + Regime + Stacking Meta + Monte Carlo + Portfolio 20 bộ... Vui lòng chờ 5-12 phút."):
             try:
                 from models.master_predictor import MasterPredictor
                 if lottery_type == "mega":
@@ -1366,7 +1450,7 @@ def main():
     mega_latest = get_latest_date("mega")
 
     st.markdown('<div class="main-title">📊 TinNam AI - Phân Tích Dữ Liệu</div>', unsafe_allow_html=True)
-    st.markdown('<div class="subtitle">V15 — 25 Tín Hiệu + Ensemble Voting | PRNG Cracker, Bayesian, Genetic, HMM, Graph, SA, Ultimate Fusion</div>', unsafe_allow_html=True)
+    st.markdown('<div class="subtitle">V20 — Attention + Regime Detection + Stacking Meta-Learner + Monte Carlo | 12 Competing Engines</div>', unsafe_allow_html=True)
 
     st.markdown(f"""
     <div class="stat-row">
