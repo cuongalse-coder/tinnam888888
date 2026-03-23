@@ -1,6 +1,6 @@
 """
-📊 TinNam AI - Data Analysis Platform
-Premium dark-themed UI with 70+ prediction models.
+📊 TinNam AI - Data Analysis Platform V15
+Premium dark-themed UI with 70+ prediction models + Ensemble Voting.
 Deploy: streamlit run streamlit_app.py
 """
 import streamlit as st
@@ -372,6 +372,57 @@ CUSTOM_CSS = """
         box-shadow: 0 6px 25px rgba(244, 63, 94, 0.4) !important;
     }
 
+    /* ---- Match Balls ---- */
+    .match-ball {
+        width: 36px; height: 36px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 0.85rem;
+        font-family: 'JetBrains Mono', monospace;
+        margin: 2px;
+        color: white;
+        background: linear-gradient(135deg, #22c55e, #16a34a);
+        box-shadow: 0 2px 8px rgba(34, 197, 94, 0.4);
+    }
+    .nomatch-ball {
+        width: 36px; height: 36px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 0.85rem;
+        font-family: 'JetBrains Mono', monospace;
+        margin: 2px;
+        color: #64748b;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .pred-ball {
+        width: 36px; height: 36px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 0.85rem;
+        font-family: 'JetBrains Mono', monospace;
+        margin: 2px;
+        color: white;
+    }
+    .pred-ball.hit {
+        background: linear-gradient(135deg, #22c55e, #16a34a);
+        box-shadow: 0 2px 8px rgba(34, 197, 94, 0.4);
+    }
+    .pred-ball.miss {
+        background: rgba(239, 68, 68, 0.2);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        color: #f87171;
+    }
+
     /* ---- Footer ---- */
     .footer-text {
         text-align: center;
@@ -442,6 +493,29 @@ def render_master_result(data):
     """
     st.markdown(html, unsafe_allow_html=True)
 
+    # V15 Ensemble Info
+    ens_info = data.get("ensemble_info", {})
+    if ens_info:
+        st.markdown(f"""
+        <div class="glass-card" style="border-color:#8b5cf6;">
+            <div class="card-title-row">🧠 V15 Ensemble Selection</div>
+            <div style="display:flex;justify-content:center;gap:24px;flex-wrap:wrap;">
+                <div style="text-align:center;padding:8px 16px;background:rgba(255,255,255,0.03);border-radius:10px;">
+                    <div style="font-size:1.2rem;font-weight:800;color:#6366f1;font-family:JetBrains Mono,monospace;">{ens_info.get('base_avg', 0)}/6</div>
+                    <div style="font-size:0.7rem;color:#64748b;">Signal Optimizer</div>
+                </div>
+                <div style="text-align:center;padding:8px 16px;background:rgba(255,255,255,0.03);border-radius:10px;">
+                    <div style="font-size:1.2rem;font-weight:800;color:#22c55e;font-family:JetBrains Mono,monospace;">{ens_info.get('ensemble_avg', 0)}/6</div>
+                    <div style="font-size:0.7rem;color:#64748b;">Ensemble Vote</div>
+                </div>
+                <div style="text-align:center;padding:8px 16px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:10px;">
+                    <div style="font-size:0.9rem;font-weight:700;color:#22c55e;">✅ {ens_info.get('chosen', '')}</div>
+                    <div style="font-size:0.7rem;color:#64748b;">Auto-Selected</div>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
     # Backtest details
     if bt.get("tests"):
         st.markdown(f"""
@@ -510,10 +584,16 @@ def render_master_result(data):
 
 def render_dan_result(dan_data, ver):
     """Render dàn prediction result."""
-    cands = dan_data["candidates"]
-    total = dan_data["total"]
-    info = dan_data["info"]
+    if not isinstance(dan_data, dict):
+        st.warning(f"⚠️ Dữ liệu dàn {ver} không hợp lệ. Vui lòng bấm lại nút tạo dàn.")
+        return
+    cands = dan_data.get("candidates", [])
+    total = dan_data.get("total", 0)
+    info = dan_data.get("info", "")
     combos = dan_data.get("combos", [])
+    if not cands:
+        st.warning(f"⚠️ Dàn {ver} không có dữ liệu candidates. Vui lòng bấm lại nút tạo dàn.")
+        return
 
     ver_label = "V1 - ĐẦY ĐỦ" if ver == "v1" else "V2 - TỐI ƯU"
     ver_icon = "📊" if ver == "v1" else "⚡"
@@ -611,7 +691,7 @@ def render_history_table(rows, lottery_type):
         header += '<th style="background:rgba(99,102,241,0.1);padding:12px;color:#06b6d4;font-weight:700;border-bottom:2px solid rgba(255,255,255,0.1);">Số ĐB</th>'
     header += '<th style="background:rgba(99,102,241,0.1);padding:12px;color:#06b6d4;font-weight:700;border-bottom:2px solid rgba(255,255,255,0.1);">Jackpot</th>'
 
-    st.markdown(f"""
+    html_content = f"""
     <div class="glass-card">
         <div class="card-title-row">📋 Lịch Sử Kết Quả {'Bộ B (6/55)' if is_power else 'Bộ A (6/45)'}</div>
         <div style="overflow-x:auto;border-radius:10px;">
@@ -621,7 +701,11 @@ def render_history_table(rows, lottery_type):
             </table>
         </div>
     </div>
-    """, unsafe_allow_html=True)
+    """
+    try:
+        st.html(html_content)
+    except AttributeError:
+        st.markdown(html_content, unsafe_allow_html=True)
 
 
 def render_phase_result(data, phase_name, phase_icon, phase_color):
@@ -808,6 +892,178 @@ def render_stats(analysis, lottery_type):
 
 
 # ============================================
+# BACKTEST RESULTS RENDERER
+# ============================================
+def render_backtest_results(bt_results, lottery_type):
+    """Render backtest results with ranking, distribution, and detail view."""
+    if 'error' in bt_results:
+        st.error(f"❌ {bt_results['error']}")
+        return
+
+    models = bt_results.get('models', [])
+    best = bt_results.get('best_model', {})
+    total_iters = bt_results.get('total_iterations', 0)
+
+    if not models:
+        st.warning("Không có kết quả.")
+        return
+
+    # ---- Summary Card ----
+    best_name = best.get('model', 'N/A')
+    best_avg = best.get('avg_matches', 0)
+    best_max = best.get('best_score', 0)
+    best_3plus = best.get('at_least_3', 0)
+
+    st.markdown(f"""
+    <div class="result-card" style="border-color:rgba(99,102,241,0.3);box-shadow:0 0 50px rgba(99,102,241,0.15);">
+        <div style="font-size:0.9rem;color:#94a3b8;margin-bottom:8px;">🧪 Backtest: {total_iters} kỳ kiểm tra</div>
+        <div style="font-size:1.2rem;font-weight:700;color:#22c55e;margin-bottom:12px;">🏆 Phương pháp tốt nhất: {best_name}</div>
+        <div class="metric-row">
+            <div class="metric-item">
+                <div class="metric-value" style="color:#6366f1;">{best_avg:.2f}/6</div>
+                <div class="metric-label">TB Trùng</div>
+            </div>
+            <div class="metric-item">
+                <div class="metric-value" style="color:#f59e0b;">{best_max}/6</div>
+                <div class="metric-label">Max Trùng</div>
+            </div>
+            <div class="metric-item">
+                <div class="metric-value" style="color:#22c55e;">{best_3plus}%</div>
+                <div class="metric-label">Trùng 3+ số</div>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ---- Ranking Table ----
+    rows_html = ""
+    random_model = next((x for x in models if x['model'] == 'Random Baseline'), None)
+    random_avg = random_model['avg_matches'] if random_model else 0.8
+
+    for m in models:
+        rank = m.get('rank', 0)
+        medal = ["🥇", "🥈", "🥉"][rank - 1] if rank <= 3 else str(rank)
+        name = m.get('model', '')
+        avg = m.get('avg_matches', 0)
+        best_s = m.get('best_score', 0)
+        a3 = m.get('at_least_3', 0)
+        a2 = m.get('at_least_2', 0)
+
+        improvement = ((avg - random_avg) / random_avg * 100) if random_avg > 0 else 0
+        imp_cls = "good" if improvement > 0 else "bad"
+        imp_sign = "+" if improvement > 0 else ""
+
+        bg = "background:rgba(34,197,94,0.06);" if rank <= 3 else ""
+        is_random = "opacity:0.5;" if name == 'Random Baseline' else ""
+
+        rows_html += f"""<tr style="{bg}{is_random}">
+            <td style="padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.06);color:#e2e8f0;text-align:center;">{medal}</td>
+            <td style="padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.06);color:#e2e8f0;font-weight:600;">{name}</td>
+            <td style="padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.06);color:#6366f1;font-weight:700;font-family:JetBrains Mono,monospace;">{avg:.3f}</td>
+            <td style="padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.06);color:#f59e0b;font-weight:700;">{best_s}/6</td>
+            <td style="padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.06);color:#22c55e;">{a3}%</td>
+            <td style="padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.06);color:#94a3b8;">{a2}%</td>
+            <td style="padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.06);"><span class="{imp_cls}">{imp_sign}{improvement:.1f}%</span></td>
+        </tr>"""
+
+    th_style = 'style="background:rgba(99,102,241,0.1);padding:12px 14px;color:#06b6d4;font-weight:700;border-bottom:2px solid rgba(255,255,255,0.1);white-space:nowrap;"'
+    st.markdown(f"""
+    <div class="glass-card">
+        <div class="card-title-row">🏆 Xếp Hạng Phương Pháp Dự Đoán</div>
+        <div style="overflow-x:auto;border-radius:10px;">
+            <table style="width:100%;border-collapse:collapse;">
+                <thead><tr>
+                    <th {th_style}>#</th>
+                    <th {th_style}>Phương Pháp</th>
+                    <th {th_style}>TB/6</th>
+                    <th {th_style}>Max</th>
+                    <th {th_style}>3+</th>
+                    <th {th_style}>2+</th>
+                    <th {th_style}>vs Random</th>
+                </tr></thead>
+                <tbody>{rows_html}</tbody>
+            </table>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ---- Distribution Grid ----
+    if models and models[0].get('match_distribution'):
+        best_dist = models[0]['match_distribution']
+        total_tests = models[0].get('total_tests', 1)
+        dist_html = ""
+        colors = ['#ef4444', '#f97316', '#f59e0b', '#22c55e', '#06b6d4', '#6366f1', '#ec4899']
+        for i in range(7):
+            count = int(best_dist.get(str(i), 0))
+            pct = count / total_tests * 100 if total_tests > 0 else 0
+            color = colors[i]
+            dist_html += f'''<div style="text-align:center;padding:12px 8px;background:rgba(255,255,255,0.03);border-radius:10px;border:1px solid {color}33;">
+                <div style="font-size:1.3rem;font-weight:800;color:{color};font-family:JetBrains Mono,monospace;">{count}</div>
+                <div style="font-size:0.7rem;color:#64748b;margin-top:2px;">{pct:.1f}%</div>
+                <div style="font-size:0.75rem;font-weight:600;color:#94a3b8;margin-top:4px;">Trùng {i}</div>
+            </div>'''
+
+        st.markdown(f"""
+        <div class="glass-card">
+            <div class="card-title-row">📊 Phân Bố Trùng Số — {models[0].get('model', '')}</div>
+            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:10px;">{dist_html}</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # ---- Detail View: Recent Tests ----
+    recent = models[0].get('recent_results', []) if models else []
+    if recent:
+        detail_rows = ""
+        for idx, test in enumerate(reversed(recent)):
+            predicted = set(test.get('predicted', []))
+            actual = set(test.get('actual', []))
+            matches = test.get('matches', 0)
+
+            # Actual balls with match highlight
+            actual_balls = ""
+            for n in sorted(actual):
+                if n in predicted:
+                    actual_balls += f'<span class="match-ball">{str(n).zfill(2)}</span>'
+                else:
+                    actual_balls += f'<span class="nomatch-ball">{str(n).zfill(2)}</span>'
+
+            # Predicted balls with hit/miss
+            pred_balls = ""
+            for n in sorted(predicted):
+                if n in actual:
+                    pred_balls += f'<span class="pred-ball hit">{str(n).zfill(2)}</span>'
+                else:
+                    pred_balls += f'<span class="pred-ball miss">{str(n).zfill(2)}</span>'
+
+            match_color = '#22c55e' if matches >= 3 else '#f59e0b' if matches >= 2 else '#ef4444'
+
+            detail_rows += f'''<tr>
+                <td style="padding:8px;border-bottom:1px solid rgba(255,255,255,0.06);color:#64748b;text-align:center;">{test.get('draw_index', '')}</td>
+                <td style="padding:8px;border-bottom:1px solid rgba(255,255,255,0.06);"><div style="display:flex;gap:2px;flex-wrap:wrap;">{actual_balls}</div></td>
+                <td style="padding:8px;border-bottom:1px solid rgba(255,255,255,0.06);"><div style="display:flex;gap:2px;flex-wrap:wrap;">{pred_balls}</div></td>
+                <td style="padding:8px;border-bottom:1px solid rgba(255,255,255,0.06);text-align:center;font-weight:800;font-size:1.1rem;color:{match_color};font-family:JetBrains Mono,monospace;">{matches}/6</td>
+            </tr>'''
+
+        dth = 'style="background:rgba(99,102,241,0.1);padding:10px 14px;color:#06b6d4;font-weight:700;border-bottom:2px solid rgba(255,255,255,0.1);"'
+        st.markdown(f"""
+        <div class="glass-card">
+            <div class="card-title-row">🔍 Chi Tiết Các Kỳ Gần Nhất — {models[0].get('model', '')}</div>
+            <div style="overflow-x:auto;border-radius:10px;">
+                <table style="width:100%;border-collapse:collapse;">
+                    <thead><tr>
+                        <th {dth}>Kỳ</th>
+                        <th {dth}>Kết Quả Thực</th>
+                        <th {dth}>Dự Đoán</th>
+                        <th {dth}>Trùng</th>
+                    </tr></thead>
+                    <tbody>{detail_rows}</tbody>
+                </table>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+
+# ============================================
 # DATA TAB CONTENT
 # ============================================
 def render_lottery_tab(lottery_type):
@@ -819,7 +1075,7 @@ def render_lottery_tab(lottery_type):
     # ---- MASTER PREDICTION ----
     st.markdown("<div style='text-align:center;'>", unsafe_allow_html=True)
     if st.button(f"🎯 DỰ ĐOÁN KỲ TIẾP THEO", key=f"master_{lottery_type}", type="primary", use_container_width=True):
-        with st.spinner("🎯 AI đang phân tích 70+ thuật toán... Vui lòng chờ 1-3 phút."):
+        with st.spinner("🎯 AI V15 đang phân tích 25 tín hiệu + Ensemble Voting... Vui lòng chờ 2-5 phút."):
             try:
                 from models.master_predictor import MasterPredictor
                 if lottery_type == "mega":
@@ -848,7 +1104,7 @@ def render_lottery_tab(lottery_type):
                     nums = get_mega645_numbers() if lottery_type == "mega" else get_power655_numbers()
                     is_mega = (lottery_type == "mega")
                     cands, combos, info = predict_dan(nums, max_num, pick, is_mega, version="v1")
-                    st.session_state[f"dan_v1_{lottery_type}"] = {
+                    st.session_state[f"dan_result_v1_{lottery_type}"] = {
                         "candidates": cands, "combos": combos[:200], "info": info,
                         "total": len(combos)
                     }
@@ -862,7 +1118,7 @@ def render_lottery_tab(lottery_type):
                     nums = get_mega645_numbers() if lottery_type == "mega" else get_power655_numbers()
                     is_mega = (lottery_type == "mega")
                     cands, combos, info = predict_dan(nums, max_num, pick, is_mega, version="v2")
-                    st.session_state[f"dan_v2_{lottery_type}"] = {
+                    st.session_state[f"dan_result_v2_{lottery_type}"] = {
                         "candidates": cands, "combos": combos[:200], "info": info,
                         "total": len(combos)
                     }
@@ -871,10 +1127,61 @@ def render_lottery_tab(lottery_type):
 
     # Show dàn results
     for ver in ["v1", "v2"]:
-        skey = f"dan_{ver}_{lottery_type}"
+        skey = f"dan_result_{ver}_{lottery_type}"
         if skey in st.session_state:
             dan_data = st.session_state[skey]
-            render_dan_result(dan_data, ver)
+            if isinstance(dan_data, dict) and "candidates" in dan_data:
+                render_dan_result(dan_data, ver)
+
+    # ---- BACKTEST: KIỂM TRA PHƯƠNG PHÁP ----
+    with st.expander("🧪 Kiểm Tra Độ Chính Xác Các Phương Pháp (Backtest các kỳ trước)..."):
+        bt_col1, bt_col2 = st.columns([3, 1])
+        with bt_col1:
+            bt_tests = st.selectbox(
+                "Số kỳ kiểm tra",
+                [50, 100, 200, 500],
+                index=1,
+                key=f"bt_tests_{lottery_type}",
+                help="Số kỳ quá khứ để kiểm tra. Nhiều hơn = chính xác hơn nhưng chạy lâu hơn."
+            )
+        with bt_col2:
+            st.markdown("<br>", unsafe_allow_html=True)
+            run_bt = st.button(
+                "🚀 Chạy Backtest",
+                key=f"run_bt_{lottery_type}",
+                use_container_width=True
+            )
+
+        if run_bt:
+            with st.spinner(f"🧪 Đang chạy backtest {bt_tests} kỳ... Vui lòng chờ 1-3 phút."):
+                try:
+                    from models.backtester import BacktestEngine
+                    if lottery_type == "mega":
+                        data = get_mega645_numbers()
+                        bt_engine = BacktestEngine(45, 6)
+                    else:
+                        data = get_power655_numbers()
+                        # Power data has 7 elements (6 + bonus), slice to 6
+                        data = [d[:6] for d in data]
+                        bt_engine = BacktestEngine(55, 6)
+
+                    step_size = max(1, (len(data) - 50) // bt_tests)
+                    result = bt_engine.run_backtest(
+                        data,
+                        start_from=50,
+                        step=step_size,
+                        max_tests=bt_tests
+                    )
+                    st.session_state[f"backtest_result_{lottery_type}"] = result
+                except Exception as e:
+                    st.error(f"❌ Lỗi backtest: {e}")
+
+        # Show stored backtest result
+        if f"backtest_result_{lottery_type}" in st.session_state:
+            render_backtest_results(
+                st.session_state[f"backtest_result_{lottery_type}"],
+                lottery_type
+            )
 
     # ---- PHASE TOOLS (collapsed) ----
     with st.expander("🛠️ Công cụ phân tích chi tiết (Phase 1-7)..."):
@@ -1020,13 +1327,46 @@ def main():
     # Inject CSS
     st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 
+    # ---- AUTO-UPDATE DATA ON FIRST LOAD ----
+    if "auto_update_done" not in st.session_state:
+        st.session_state.auto_update_done = False
+        st.session_state.auto_update_result = None
+
+    if not st.session_state.auto_update_done:
+        with st.spinner("🔄 Đang kiểm tra & cập nhật dữ liệu mới nhất..."):
+            try:
+                from scraper.auto_updater import auto_update_data
+                result = auto_update_data()
+                st.session_state.auto_update_result = result
+                st.session_state.auto_update_done = True
+                if result['status'] == 'updated' and (result['mega_new'] > 0 or result['power_new'] > 0):
+                    st.rerun()  # Rerun to show fresh data in header
+            except Exception as e:
+                st.session_state.auto_update_result = {
+                    'status': 'error',
+                    'message': f'⚠️ Auto-update error: {str(e)[:100]}',
+                }
+                st.session_state.auto_update_done = True
+
+    # Show auto-update status notification
+    update_result = st.session_state.get("auto_update_result")
+    if update_result:
+        status = update_result.get('status', '')
+        msg = update_result.get('message', '')
+        if status == 'updated' and (update_result.get('mega_new', 0) > 0 or update_result.get('power_new', 0) > 0):
+            st.success(f"🔄 {msg}")
+        elif status == 'error':
+            st.warning(f"{msg}")
+        else:
+            st.info(f"📊 {msg}")
+
     # ---- HEADER ----
     mega_count = get_count("mega")
     power_count = get_count("power")
     mega_latest = get_latest_date("mega")
 
     st.markdown('<div class="main-title">📊 TinNam AI - Phân Tích Dữ Liệu</div>', unsafe_allow_html=True)
-    st.markdown('<div class="subtitle">70+ Phương pháp AI & ML: PRNG Cracker, Bayesian, Genetic, HMM, Graph Neural, Simulated Annealing, Ultimate Fusion</div>', unsafe_allow_html=True)
+    st.markdown('<div class="subtitle">V15 — 25 Tín Hiệu + Ensemble Voting | PRNG Cracker, Bayesian, Genetic, HMM, Graph, SA, Ultimate Fusion</div>', unsafe_allow_html=True)
 
     st.markdown(f"""
     <div class="stat-row">
@@ -1045,15 +1385,18 @@ def main():
     with tab_power:
         render_lottery_tab("power")
 
-    # ---- SIDEBAR: Scrape ----
+    # ---- SIDEBAR ----
     with st.sidebar:
         st.markdown("### ⚙️ Cài Đặt")
-        if st.button("🔄 Cập Nhật Dữ Liệu", use_container_width=True):
+        if st.button("🔄 Cập Nhật Dữ Liệu (Thủ Công)", use_container_width=True):
             with st.spinner("Đang thu thập dữ liệu mới..."):
                 try:
                     from scraper.scraper import scrape_all
                     scrape_all()
                     st.success(f"✅ Mega: {get_count('mega')} | Power: {get_count('power')}")
+                    # Reset auto-update state so next rerun shows fresh counts
+                    st.session_state.auto_update_done = False
+                    st.session_state.auto_update_result = None
                     st.rerun()
                 except Exception as e:
                     st.error(f"❌ {e}")
