@@ -1,6 +1,6 @@
 """
-📊 TinNam AI - Data Analysis Platform
-Premium dark-themed UI with 70+ prediction models.
+📊 TinNam AI - Data Analysis Platform V15
+Premium dark-themed UI with 70+ prediction models + Ensemble Voting.
 Deploy: streamlit run streamlit_app.py
 """
 import streamlit as st
@@ -492,6 +492,29 @@ def render_master_result(data):
     </div>
     """
     st.markdown(html, unsafe_allow_html=True)
+
+    # V15 Ensemble Info
+    ens_info = data.get("ensemble_info", {})
+    if ens_info:
+        st.markdown(f"""
+        <div class="glass-card" style="border-color:#8b5cf6;">
+            <div class="card-title-row">🧠 V15 Ensemble Selection</div>
+            <div style="display:flex;justify-content:center;gap:24px;flex-wrap:wrap;">
+                <div style="text-align:center;padding:8px 16px;background:rgba(255,255,255,0.03);border-radius:10px;">
+                    <div style="font-size:1.2rem;font-weight:800;color:#6366f1;font-family:JetBrains Mono,monospace;">{ens_info.get('base_avg', 0)}/6</div>
+                    <div style="font-size:0.7rem;color:#64748b;">Signal Optimizer</div>
+                </div>
+                <div style="text-align:center;padding:8px 16px;background:rgba(255,255,255,0.03);border-radius:10px;">
+                    <div style="font-size:1.2rem;font-weight:800;color:#22c55e;font-family:JetBrains Mono,monospace;">{ens_info.get('ensemble_avg', 0)}/6</div>
+                    <div style="font-size:0.7rem;color:#64748b;">Ensemble Vote</div>
+                </div>
+                <div style="text-align:center;padding:8px 16px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:10px;">
+                    <div style="font-size:0.9rem;font-weight:700;color:#22c55e;">✅ {ens_info.get('chosen', '')}</div>
+                    <div style="font-size:0.7rem;color:#64748b;">Auto-Selected</div>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
     # Backtest details
     if bt.get("tests"):
@@ -1052,7 +1075,7 @@ def render_lottery_tab(lottery_type):
     # ---- MASTER PREDICTION ----
     st.markdown("<div style='text-align:center;'>", unsafe_allow_html=True)
     if st.button(f"🎯 DỰ ĐOÁN KỲ TIẾP THEO", key=f"master_{lottery_type}", type="primary", use_container_width=True):
-        with st.spinner("🎯 AI đang phân tích 70+ thuật toán... Vui lòng chờ 1-3 phút."):
+        with st.spinner("🎯 AI V15 đang phân tích 25 tín hiệu + Ensemble Voting... Vui lòng chờ 2-5 phút."):
             try:
                 from models.master_predictor import MasterPredictor
                 if lottery_type == "mega":
@@ -1343,7 +1366,7 @@ def main():
     mega_latest = get_latest_date("mega")
 
     st.markdown('<div class="main-title">📊 TinNam AI - Phân Tích Dữ Liệu</div>', unsafe_allow_html=True)
-    st.markdown('<div class="subtitle">70+ Phương pháp AI & ML: PRNG Cracker, Bayesian, Genetic, HMM, Graph Neural, Simulated Annealing, Ultimate Fusion</div>', unsafe_allow_html=True)
+    st.markdown('<div class="subtitle">V15 — 25 Tín Hiệu + Ensemble Voting | PRNG Cracker, Bayesian, Genetic, HMM, Graph, SA, Ultimate Fusion</div>', unsafe_allow_html=True)
 
     st.markdown(f"""
     <div class="stat-row">

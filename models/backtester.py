@@ -1,4 +1,4 @@
-﻿"""
+"""
 Backtesting Engine - Walk-Forward Validation System.
 Tests each model against REAL historical data to find which approach works best.
 
@@ -77,6 +77,8 @@ class BacktestEngine:
             {'name': 'Pattern Match', 'func': self._predict_pattern},
             {'name': 'Sliding Window', 'func': self._predict_sliding_window},
             {'name': 'Anti-Repeat', 'func': self._predict_anti_repeat},
+            {'name': 'Ensemble Vote (V15)', 'func': self._predict_ensemble_vote},
+            {'name': 'Momentum+Regime', 'func': self._predict_momentum_regime},
             {'name': 'Random Baseline', 'func': self._predict_random},
         ]
         
@@ -437,6 +439,82 @@ class BacktestEngine:
         scores = {n: freq.get(n, 0) for n in non_last}
         top = sorted(scores, key=lambda x: -scores[x])[:self.pick_count]
         return top
+    
+    def _predict_ensemble_vote(self, data):
+        """Ensemble of 5 sub-strategies with weighted voting (V15 core)."""
+        n_draws = len(data)
+        last = set(data[-1])
+        votes = Counter()
+        
+        # Sub-strategy A: Weighted frequency (last 50)
+        for j, d in enumerate(data[-50:]):
+            w = 1 + j / 50
+            for n in d:
+                votes[n] += w * 0.3
+        
+        # Sub-strategy B: KNN similarity
+        for i in range(len(data) - 2):
+            overlap = len(set(data[i]) & last)
+            if overlap >= 2:
+                for n in data[i+1]:
+                    votes[n] += overlap * 0.6
+        
+        # Sub-strategy C: Gap overdue
+        last_seen = {}
+        for i, d in enumerate(data):
+            for n in d:
+                last_seen[n] = i
+        exp_gap = self.max_number / self.pick_count
+        for n in range(1, self.max_number + 1):
+            gap = n_draws - last_seen.get(n, 0)
+            if gap > exp_gap * 1.2:
+                votes[n] += (gap / exp_gap) * 1.8
+        
+        # Sub-strategy D: Pair network
+        pair_scores = Counter()
+        for d in data[-60:]:
+            for pair in combinations(sorted(d[:self.pick_count]), 2):
+                pair_scores[pair] += 1
+        for n in last:
+            for pair, c in pair_scores.most_common(100):
+                if n in pair:
+                    partner = pair[0] if pair[1] == n else pair[1]
+                    if partner not in last:
+                        votes[partner] += c * 0.1
+        
+        # Sub-strategy E: Momentum
+        if n_draws > 20:
+            r10 = Counter(n for d in data[-10:] for n in d)
+            p10 = Counter(n for d in data[-20:-10] for n in d)
+            for n in range(1, self.max_number + 1):
+                mom = r10.get(n, 0) - p10.get(n, 0)
+                if mom > 0:
+                    votes[n] += mom * 1.5
+        
+        # Anti-repeat
+        for n in last:
+            votes[n] -= 8
+        
+        return [n for n, _ in votes.most_common(self.pick_count)]
+    
+    def _predict_momentum_regime(self, data):
+        """Momentum + Regime detection strategy."""
+        n_draws = len(data)
+        scores = {}
+        for num in range(1, self.max_number + 1):
+            f5 = sum(1 for d in data[-5:] if num in d) / 5
+            f15 = sum(1 for d in data[-15:] if num in d) / 15
+            f30 = sum(1 for d in data[-30:] if num in d) / 30
+            v1 = f5 - f15
+            v2 = f15 - f30
+            accel = v1 - v2
+            f_r = f15
+            f_o = sum(1 for d in data[-45:-15] if num in d) / 30 if n_draws > 45 else f_r
+            trend = f_r - f_o
+            scores[num] = f5 * 4 + v1 * 8 + accel * 4 + max(0, trend) * 15
+            if num in data[-1]:
+                scores[num] -= 3
+        return sorted(scores, key=lambda x: -scores[x])[:self.pick_count]
     
     def _predict_random(self, data):
         """Random baseline for comparison."""
