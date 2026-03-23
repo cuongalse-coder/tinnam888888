@@ -1,6 +1,6 @@
 """
-📊 TinNam AI - Data Analysis Platform V16
-Premium dark-themed UI with 70+ prediction models + Constraint Engine + Multi-Set Portfolio.
+📊 TinNam AI - Data Analysis Platform V17
+Premium dark-themed UI with 70+ models + Ultimate 6/6 Hunter Engine.
 Deploy: streamlit run streamlit_app.py
 """
 import streamlit as st
@@ -493,48 +493,84 @@ def render_master_result(data):
     """
     st.markdown(html, unsafe_allow_html=True)
 
-    # V16 Method Selection Card
+    # V17 Method Selection Card
     ens_info = data.get("ensemble_info", {})
     if ens_info:
         st.markdown(f"""
         <div class="glass-card" style="border-color:#8b5cf6;">
-            <div class="card-title-row">🧠 V16 Method Auto-Selection</div>
-            <div style="display:flex;justify-content:center;gap:16px;flex-wrap:wrap;">
-                <div style="text-align:center;padding:8px 14px;background:rgba(255,255,255,0.03);border-radius:10px;">
-                    <div style="font-size:1.1rem;font-weight:800;color:#6366f1;font-family:JetBrains Mono,monospace;">{ens_info.get('base_avg', 0)}/6</div>
-                    <div style="font-size:0.65rem;color:#64748b;">Signal V16</div>
+            <div class="card-title-row">🧠 V17 Auto-Selection (5 Methods)</div>
+            <div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap;">
+                <div style="text-align:center;padding:6px 12px;background:rgba(255,255,255,0.03);border-radius:10px;">
+                    <div style="font-size:1rem;font-weight:800;color:#6366f1;font-family:JetBrains Mono,monospace;">{ens_info.get('base_avg', 0)}/6</div>
+                    <div style="font-size:0.6rem;color:#64748b;">Signal</div>
                 </div>
-                <div style="text-align:center;padding:8px 14px;background:rgba(255,255,255,0.03);border-radius:10px;">
-                    <div style="font-size:1.1rem;font-weight:800;color:#22c55e;font-family:JetBrains Mono,monospace;">{ens_info.get('ensemble_avg', 0)}/6</div>
-                    <div style="font-size:0.65rem;color:#64748b;">Ensemble V16</div>
+                <div style="text-align:center;padding:6px 12px;background:rgba(255,255,255,0.03);border-radius:10px;">
+                    <div style="font-size:1rem;font-weight:800;color:#22c55e;font-family:JetBrains Mono,monospace;">{ens_info.get('ensemble_avg', 0)}/6</div>
+                    <div style="font-size:0.6rem;color:#64748b;">Ensemble</div>
                 </div>
-                <div style="text-align:center;padding:8px 14px;background:rgba(255,255,255,0.03);border-radius:10px;">
-                    <div style="font-size:1.1rem;font-weight:800;color:#f59e0b;font-family:JetBrains Mono,monospace;">{ens_info.get('constraint_avg', 0)}/6</div>
-                    <div style="font-size:0.65rem;color:#64748b;">Constraint AI</div>
+                <div style="text-align:center;padding:6px 12px;background:rgba(255,255,255,0.03);border-radius:10px;">
+                    <div style="font-size:1rem;font-weight:800;color:#f59e0b;font-family:JetBrains Mono,monospace;">{ens_info.get('constraint_avg', 0)}/6</div>
+                    <div style="font-size:0.6rem;color:#64748b;">SA Optimizer</div>
                 </div>
-                <div style="text-align:center;padding:8px 14px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:10px;">
+                <div style="text-align:center;padding:6px 12px;background:rgba(255,255,255,0.03);border-radius:10px;">
+                    <div style="font-size:1rem;font-weight:800;color:#ec4899;font-family:JetBrains Mono,monospace;">{ens_info.get('position_avg', 0)}/6</div>
+                    <div style="font-size:0.6rem;color:#64748b;">Position</div>
+                </div>
+                <div style="text-align:center;padding:6px 12px;background:rgba(255,255,255,0.03);border-radius:10px;">
+                    <div style="font-size:1rem;font-weight:800;color:#06b6d4;font-family:JetBrains Mono,monospace;">{ens_info.get('context_avg', 0)}/6</div>
+                    <div style="font-size:0.6rem;color:#64748b;">Context</div>
+                </div>
+                <div style="text-align:center;padding:6px 12px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:10px;">
                     <div style="font-size:0.85rem;font-weight:700;color:#22c55e;">✅ {ens_info.get('chosen', '')}</div>
-                    <div style="font-size:0.65rem;color:#64748b;">Best Method</div>
+                    <div style="font-size:0.6rem;color:#64748b;">Winner</div>
                 </div>
             </div>
         </div>
         """, unsafe_allow_html=True)
 
-    # V16 Portfolio Display
+    # V17 Portfolio Display (10 sets)
     portfolio = data.get("portfolio", [])
     if portfolio:
         portfolio_html = '<div class="glass-card" style="border-color:#f59e0b;">'
-        portfolio_html += '<div class="card-title-row">🎯 Multi-Set Portfolio (%d bộ số)</div>' % len(portfolio)
-        portfolio_html += '<div style="font-size:0.75rem;color:#94a3b8;text-align:center;margin-bottom:12px;">Mỗi bộ được tối ưu hóa độc lập - đa dạng hóa cơ hội trúng</div>'
+        portfolio_html += '<div class="card-title-row">🎯 Portfolio %d Bộ Số — Đa Dạng Hóa Cơ Hội</div>' % len(portfolio)
+        portfolio_html += '<div style="font-size:0.7rem;color:#94a3b8;text-align:center;margin-bottom:10px;">Mỗi bộ thỏa mãn ràng buộc thống kê + khác nhau ≥2 số</div>'
         for idx, pset in enumerate(portfolio):
             badge = '⭐' if idx == 0 else f'#{idx+1}'
             balls = ''.join(f'<span class="ball">{n}</span>' for n in pset)
-            portfolio_html += f'<div style="display:flex;align-items:center;gap:10px;margin:6px 0;padding:8px 12px;background:rgba(255,255,255,0.02);border-radius:10px;border-left:3px solid {"#f59e0b" if idx==0 else "#334155"};">'
-            portfolio_html += f'<span style="font-size:0.8rem;min-width:28px;color:{"#f59e0b" if idx==0 else "#64748b"};">{badge}</span>'
-            portfolio_html += f'<div>{balls}</div>'
-            portfolio_html += '</div>'
+            color = '#f59e0b' if idx == 0 else '#334155'
+            portfolio_html += f'<div style="display:flex;align-items:center;gap:10px;margin:4px 0;padding:6px 12px;background:rgba(255,255,255,0.02);border-radius:8px;border-left:3px solid {color};">'
+            portfolio_html += f'<span style="font-size:0.75rem;min-width:24px;color:{color};">{badge}</span>'
+            portfolio_html += f'<div>{balls}</div></div>'
         portfolio_html += '</div>'
         st.markdown(portfolio_html, unsafe_allow_html=True)
+    
+    # V17 Portfolio Backtest
+    pbt = data.get("portfolio_backtest", {})
+    if pbt and pbt.get('tests', 0) > 0:
+        st.markdown(f"""
+        <div class="glass-card" style="border-color:#06b6d4;">
+            <div class="card-title-row">📊 Portfolio Backtest ({pbt.get('tests',0)} kỳ)</div>
+            <div style="font-size:0.7rem;color:#94a3b8;text-align:center;margin-bottom:8px;">Kết quả tốt nhất từ bất kỳ bộ nào trong portfolio</div>
+            <div style="display:flex;justify-content:center;gap:16px;flex-wrap:wrap;">
+                <div style="text-align:center;padding:8px 14px;background:rgba(255,255,255,0.03);border-radius:10px;">
+                    <div style="font-size:1.3rem;font-weight:800;color:#06b6d4;font-family:JetBrains Mono,monospace;">{pbt.get('avg_best',0)}/6</div>
+                    <div style="font-size:0.65rem;color:#64748b;">Best Avg</div>
+                </div>
+                <div style="text-align:center;padding:8px 14px;background:rgba(255,255,255,0.03);border-radius:10px;">
+                    <div style="font-size:1.3rem;font-weight:800;color:#22c55e;">{pbt.get('max',0)}/6</div>
+                    <div style="font-size:0.65rem;color:#64748b;">Max Match</div>
+                </div>
+                <div style="text-align:center;padding:8px 14px;background:rgba(255,255,255,0.03);border-radius:10px;">
+                    <div style="font-size:1.3rem;font-weight:800;color:#f59e0b;">{pbt.get('match_3plus',0)}</div>
+                    <div style="font-size:0.65rem;color:#64748b;">Trúng 3+</div>
+                </div>
+                <div style="text-align:center;padding:8px 14px;background:rgba(255,255,255,0.03);border-radius:10px;">
+                    <div style="font-size:1.3rem;font-weight:800;color:#f43f5e;">{pbt.get('match_4plus',0)}</div>
+                    <div style="font-size:0.65rem;color:#64748b;">Trúng 4+</div>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
     # Backtest details
     if bt.get("tests"):
@@ -1095,7 +1131,7 @@ def render_lottery_tab(lottery_type):
     # ---- MASTER PREDICTION ----
     st.markdown("<div style='text-align:center;'>", unsafe_allow_html=True)
     if st.button(f"🎯 DỰ ĐOÁN KỲ TIẾP THEO", key=f"master_{lottery_type}", type="primary", use_container_width=True):
-        with st.spinner("🎯 AI V16 đang phân tích: Constraint Engine + N-gram + Ensemble + Portfolio... Vui lòng chờ 3-6 phút."):
+        with st.spinner("🎯 V17 Ultimate 6/6 Hunter: 5 engines + Portfolio 10 bộ... Vui lòng chờ 3-8 phút."):
             try:
                 from models.master_predictor import MasterPredictor
                 if lottery_type == "mega":
@@ -1386,7 +1422,7 @@ def main():
     mega_latest = get_latest_date("mega")
 
     st.markdown('<div class="main-title">📊 TinNam AI - Phân Tích Dữ Liệu</div>', unsafe_allow_html=True)
-    st.markdown('<div class="subtitle">V16 — Constraint Engine + N-gram Mining + Multi-Set Portfolio | Maximum Accuracy AI</div>', unsafe_allow_html=True)
+    st.markdown('<div class="subtitle">V17 — Ultimate 6/6 Hunter | Position AI + Cycle FFT + Simulated Annealing + Context Match + Portfolio 10</div>', unsafe_allow_html=True)
 
     st.markdown(f"""
     <div class="stat-row">
