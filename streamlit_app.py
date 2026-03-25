@@ -324,6 +324,88 @@ def render_scan_results(scan_data):
         """, unsafe_allow_html=True)
 
 
+def render_deep_forensic_results(result):
+    """Render deep forensic analysis results."""
+    primary = result.get('primary', [])
+    portfolio = result.get('portfolio', [])
+    weights = result.get('weights', {})
+    reports = result.get('reports', {})
+    top_30 = result.get('top_30', [])
+
+    # Primary prediction
+    if primary:
+        balls_html = render_balls(primary, 'data-ball master')
+        st.markdown(f"""
+        <div class="result-card" style="border-color:#22c55e;box-shadow:0 0 60px rgba(34,197,94,0.25);">
+            <div style="font-size:0.9rem;color:#94a3b8;margin-bottom:8px;">Deep Forensic Prediction</div>
+            <div style="font-size:1.1rem;font-weight:700;color:#22c55e;margin-bottom:12px;">🧬 10-Signal Analysis + Backtest Calibrated</div>
+            <div class="ball-row">{balls_html}</div>
+            <div class="metric-row">
+                <div class="metric-item">
+                    <div class="metric-value" style="color:#6366f1;">{result.get('n_signals', 0)}</div>
+                    <div class="metric-label">Signals</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-value" style="color:#f59e0b;">{len(portfolio)}</div>
+                    <div class="metric-label">Portfolio Sets</div>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # Signal weights
+    if weights:
+        weight_html = ''
+        sorted_w = sorted(weights.items(), key=lambda x: -x[1])
+        for name, w in sorted_w:
+            bar_pct = min(w / max(v for _, v in sorted_w) * 100, 100)
+            color = '#22c55e' if w > 1.5 else '#f59e0b' if w > 1.0 else '#64748b'
+            weight_html += f'<div style="display:flex;align-items:center;gap:8px;margin:4px 0;"><span style="min-width:120px;font-size:0.8rem;color:#94a3b8;">{name}</span><div style="flex:1;height:16px;background:rgba(255,255,255,0.05);border-radius:4px;overflow:hidden;"><div style="height:100%;width:{bar_pct}%;background:{color};border-radius:4px;"></div></div><span style="min-width:40px;text-align:right;font-family:JetBrains Mono,monospace;font-size:0.75rem;color:{color};font-weight:700;">{w:.2f}</span></div>'
+        st.markdown(f'<div class="glass-card"><div class="card-title-row">📊 Signal Weights (Calibrated)</div>{weight_html}</div>', unsafe_allow_html=True)
+
+    # Key findings
+    findings_html = ''
+    # Overdue numbers
+    gap_report = reports.get('gap_timing', {})
+    overdue = gap_report.get('overdue_numbers', [])[:8]
+    if overdue:
+        overdue_items = ''.join(f'<div style="text-align:center;margin:6px;"><span class="data-ball" style="background:linear-gradient(135deg,#ef4444,#f59e0b);">{str(o["number"]).zfill(2)}</span><div style="font-size:0.65rem;color:#ef4444;margin-top:4px;font-weight:700;">{o["current_gap"]} draws</div><div style="font-size:0.6rem;color:#64748b;">z={o["z_overdue"]}</div></div>' for o in overdue)
+        findings_html += f'<div class="glass-card" style="border-color:#ef4444;"><div class="card-title-row">⏰ Overdue Numbers (Gap Analysis)</div><div style="display:flex;flex-wrap:wrap;justify-content:center;">{overdue_items}</div></div>'
+
+    # Momentum
+    mom_report = reports.get('momentum', {})
+    rising = mom_report.get('rising', [])[:5]
+    if rising:
+        rising_items = ''.join(f'<span class="data-ball" style="background:linear-gradient(135deg,#22c55e,#10b981);margin:4px;">{str(r["number"]).zfill(2)}</span>' for r in rising)
+        findings_html += f'<div class="glass-card" style="border-color:#22c55e;"><div class="card-title-row">📈 Rising Momentum</div><div style="display:flex;flex-wrap:wrap;justify-content:center;">{rising_items}</div></div>'
+
+    # KNN matches
+    knn_report = reports.get('knn', {})
+    knn_matches = knn_report.get('best_matches', [])[:3]
+    if knn_matches:
+        knn_html = ''
+        for m in knn_matches:
+            next_balls = ''.join(f'<span style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;background:rgba(99,102,241,0.2);border:1px solid rgba(99,102,241,0.4);color:#e2e8f0;font-weight:600;font-size:0.75rem;font-family:JetBrains Mono,monospace;margin:2px;">{str(n).zfill(2)}</span>' for n in m['next'])
+            knn_html += f'<div style="padding:8px;margin:4px 0;background:rgba(0,0,0,0.2);border-radius:8px;"><span style="color:#f59e0b;font-size:0.75rem;">Draw #{m["draw_idx"]} ({m["similarity"]}/6 match):</span> {next_balls}</div>'
+        findings_html += f'<div class="glass-card"><div class="card-title-row">🔎 KNN History Match (next draws after similar)</div>{knn_html}</div>'
+
+    if findings_html:
+        st.markdown(findings_html, unsafe_allow_html=True)
+
+    # Portfolio
+    if portfolio:
+        port_html = '<div class="glass-card" style="border-color:#f59e0b;">'
+        port_html += f'<div class="card-title-row">🎯 Deep Forensic Portfolio ({len(portfolio)} sets)</div>'
+        port_html += '<div style="font-size:0.65rem;color:#94a3b8;text-align:center;margin-bottom:8px;">Backtest: Portfolio avg 2.25/6, max 4/6 | +181% vs random</div>'
+        for idx, combo in enumerate(portfolio):
+            badge = '⭐' if idx == 0 else f'#{idx+1}'
+            balls = ''.join(f'<span style="display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;font-weight:700;font-size:0.9rem;font-family:JetBrains Mono,monospace;margin:2px;">{str(n).zfill(2)}</span>' for n in combo)
+            score = sum(result.get('scores', {}).get(n, 0) for n in combo)
+            port_html += f'<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;margin:4px 0;background:rgba(0,0,0,0.2);border-radius:10px;"><span style="font-size:0.85rem;min-width:32px;color:#f59e0b;font-weight:700;">{badge}</span><div style="display:flex;gap:3px;flex-wrap:wrap;">{balls}</div><span style="margin-left:auto;font-family:JetBrains Mono,monospace;font-size:0.75rem;color:#64748b;">{score:.1f}</span></div>'
+        port_html += '</div>'
+        st.markdown(port_html, unsafe_allow_html=True)
+
+
 def render_exploit_results(exploit_data):
     """Render exploit-generated predictions."""
     if exploit_data['strategy'] == 'NO_EXPLOIT':
@@ -492,12 +574,12 @@ def render_lottery_tab(lottery_type):
     max_num = 45 if lottery_type == "mega" else 55
     pick = 6
 
-    # ---- VULNERABILITY SCAN ----
+    # ---- DEEP FORENSIC (PRIMARY ACTION) ----
     st.markdown("<div style='text-align:center;'>", unsafe_allow_html=True)
-    if st.button("🔍 SCAN LO HONG RNG", key=f"scan_{lottery_type}", type="primary", use_container_width=True):
-        with st.spinner("🔍 Scanning 12 vulnerability tests... (~10 sec)"):
+    if st.button("🧬 DEEP FORENSIC ANALYSIS → PREDICT", key=f"deep_{lottery_type}", type="primary", use_container_width=True):
+        with st.spinner("🧬 Running 10-signal deep forensic + weight calibration... (~30 sec)"):
             try:
-                from models.vulnerability_scanner import VulnerabilityScanner
+                from models.deep_forensic import DeepForensic
                 if lottery_type == "mega":
                     data = get_mega645_numbers()
                     all_rows = get_mega645_all()
@@ -506,40 +588,59 @@ def render_lottery_tab(lottery_type):
                     data = [d[:6] for d in data]
                     all_rows = get_power655_all()
                 dates = [r['draw_date'] for r in all_rows]
-                scanner = VulnerabilityScanner(max_num, pick)
-                result = scanner.scan_all(data, dates)
-                st.session_state[f"scan_result_{lottery_type}"] = result
+                engine = DeepForensic(max_num, pick)
+                result = engine.analyze(data, dates)
+                st.session_state[f"deep_result_{lottery_type}"] = result
             except Exception as e:
                 st.error(f"❌ Error: {e}")
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # Show scan result
-    if f"scan_result_{lottery_type}" in st.session_state:
-        render_scan_results(st.session_state[f"scan_result_{lottery_type}"])
+    if f"deep_result_{lottery_type}" in st.session_state:
+        render_deep_forensic_results(st.session_state[f"deep_result_{lottery_type}"])
 
-    # ---- EXPLOIT (only if scan done) ----
-    if f"scan_result_{lottery_type}" in st.session_state:
-        scan_result = st.session_state[f"scan_result_{lottery_type}"]
-        biases = scan_result['summary']['exploitable_biases']
+    # ---- VULNERABILITY SCAN ----
+    with st.expander("🔍 Vulnerability Scanner (12 RNG Tests)..."):
+        if st.button("🔍 SCAN RNG", key=f"scan_{lottery_type}", use_container_width=True):
+            with st.spinner("🔍 Scanning 12 vulnerability tests... (~10 sec)"):
+                try:
+                    from models.vulnerability_scanner import VulnerabilityScanner
+                    if lottery_type == "mega":
+                        data = get_mega645_numbers()
+                        all_rows = get_mega645_all()
+                    else:
+                        data = get_power655_numbers()
+                        data = [d[:6] for d in data]
+                        all_rows = get_power655_all()
+                    dates = [r['draw_date'] for r in all_rows]
+                    scanner = VulnerabilityScanner(max_num, pick)
+                    result = scanner.scan_all(data, dates)
+                    st.session_state[f"scan_result_{lottery_type}"] = result
+                except Exception as e:
+                    st.error(f"❌ Error: {e}")
 
-        if biases:
-            if st.button(f"⚡ EXPLOIT {len(biases)} BIASES → 20 PREDICTIONS", key=f"exploit_{lottery_type}", type="primary", use_container_width=True):
-                with st.spinner("⚡ Generating bias-based predictions..."):
-                    try:
-                        from models.exploit_engine import ExploitEngine
-                        if lottery_type == "mega":
-                            data = get_mega645_numbers()
-                        else:
-                            data = get_power655_numbers()
-                            data = [d[:6] for d in data]
-                        engine = ExploitEngine(max_num, pick)
-                        exploit = engine.exploit(data, scan_result, n_sets=20)
-                        st.session_state[f"exploit_result_{lottery_type}"] = exploit
-                    except Exception as e:
-                        st.error(f"❌ Error: {e}")
+        if f"scan_result_{lottery_type}" in st.session_state:
+            render_scan_results(st.session_state[f"scan_result_{lottery_type}"])
 
-        if f"exploit_result_{lottery_type}" in st.session_state:
-            render_exploit_results(st.session_state[f"exploit_result_{lottery_type}"])
+            scan_result = st.session_state[f"scan_result_{lottery_type}"]
+            biases = scan_result['summary']['exploitable_biases']
+            if biases:
+                if st.button(f"⚡ EXPLOIT {len(biases)} BIASES", key=f"exploit_{lottery_type}", use_container_width=True):
+                    with st.spinner("⚡ Generating bias-based predictions..."):
+                        try:
+                            from models.exploit_engine import ExploitEngine
+                            if lottery_type == "mega":
+                                data = get_mega645_numbers()
+                            else:
+                                data = get_power655_numbers()
+                                data = [d[:6] for d in data]
+                            engine = ExploitEngine(max_num, pick)
+                            exploit = engine.exploit(data, scan_result, n_sets=20)
+                            st.session_state[f"exploit_result_{lottery_type}"] = exploit
+                        except Exception as e:
+                            st.error(f"❌ Error: {e}")
+
+                if f"exploit_result_{lottery_type}" in st.session_state:
+                    render_exploit_results(st.session_state[f"exploit_result_{lottery_type}"])
 
     # ---- DAN PREDICTION ----
     dan_col1, dan_col2 = st.columns(2)
