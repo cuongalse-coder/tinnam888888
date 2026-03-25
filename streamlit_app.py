@@ -1,6 +1,7 @@
 """
-📊 TinNam AI - Data Analysis Platform V20
-Premium dark-themed UI with Attention + Regime Detection + Stacking Meta-Learner + Monte Carlo.
+📊 TinNam AI - Data Analysis Platform V21
+Premium dark-themed UI with True Attention + Regime + Triplet Mining + Sequential Pattern
++ Entropy-Guided + Reinforcement Method Selection + Coverage Portfolio ≥90%.
 Deploy: streamlit run streamlit_app.py
 """
 import streamlit as st
@@ -493,7 +494,7 @@ def render_master_result(data):
     """
     st.markdown(html, unsafe_allow_html=True)
 
-    # V20 Regime Detection Card
+    # V21 Regime Detection Card
     regime = data.get("regime", {})
     if regime:
         r_type = regime.get('type', 'Transition')
@@ -502,7 +503,7 @@ def render_master_result(data):
         r_desc = 'Số lặp lại nhiều → ưu tiên frequency' if r_type == 'Hot' else ('Số phân tán → ưu tiên gap/run-length' if r_type == 'Cold' else 'Chuyển tiếp → ưu tiên ensemble/genetic')
         st.markdown(f"""
         <div class="glass-card" style="border-color:{r_color};">
-            <div class="card-title-row">{r_icon} Regime: {r_type} — V20 Adaptive</div>
+            <div class="card-title-row">{r_icon} Regime: {r_type} — V21 Adaptive</div>
             <div style="display:flex;justify-content:center;gap:20px;flex-wrap:wrap;">
                 <div style="text-align:center;padding:8px 14px;background:rgba(255,255,255,0.03);border-radius:10px;">
                     <div style="font-size:1.1rem;font-weight:800;color:{r_color};font-family:JetBrains Mono,monospace;">{regime.get('repeat_rate', 0)}</div>
@@ -521,7 +522,7 @@ def render_master_result(data):
         </div>
         """, unsafe_allow_html=True)
 
-    # V20 Method Selection Card
+    # V21 Method Selection Card (with Reinforcement + Variance penalty)
     ens_info = data.get("ensemble_info", {})
     if ens_info:
         method_items = [
@@ -538,7 +539,7 @@ def render_master_result(data):
             ('Monte Carlo', 'monte_carlo_avg', '#d946ef'),
         ]
         method_html = '<div class="glass-card" style="border-color:#8b5cf6;">'
-        method_html += '<div class="card-title-row">🧠 V20 Auto-Selection (9 Core + Genetic + Stacking + Monte Carlo)</div>'
+        method_html += '<div class="card-title-row">🧠 V21 Reinforcement Selection (9 Core + Genetic + Stacking + MC)</div>'
         method_html += '<div style="display:flex;justify-content:center;gap:10px;flex-wrap:wrap;">'
         for label, key, color in method_items:
             val = ens_info.get(key, 0)
@@ -552,13 +553,14 @@ def render_master_result(data):
         method_html += '</div></div>'
         st.markdown(method_html, unsafe_allow_html=True)
 
-    # V18 Portfolio Display (15 sets with confidence)
+    # V21 Portfolio Display (20 sets with coverage ≥90%, differ ≥3)
     portfolio = data.get("portfolio", [])
     portfolio_conf = data.get("portfolio_confidence", [])
+    coverage_pct = data.get("coverage_pct", 0)
     if portfolio:
         portfolio_html = '<div class="glass-card" style="border-color:#f59e0b;">'
-        portfolio_html += '<div class="card-title-row">🎯 Portfolio %d Bộ Số — Maximum Coverage</div>' % len(portfolio)
-        portfolio_html += '<div style="font-size:0.65rem;color:#94a3b8;text-align:center;margin-bottom:8px;">Sắp xếp theo độ tin cậy | Mỗi bộ khác nhau ≥2 số + thỏa mãn ràng buộc</div>'
+        portfolio_html += '<div class="card-title-row">🎯 Portfolio %d Bộ Số — Coverage %s%%</div>' % (len(portfolio), coverage_pct)
+        portfolio_html += '<div style="font-size:0.65rem;color:#94a3b8;text-align:center;margin-bottom:8px;">V21: Mỗi bộ khác nhau ≥3 số | Coverage ≥90%% top 30 | Covering Design + Diversity</div>'
         for idx, pset in enumerate(portfolio):
             badge = '⭐' if idx == 0 else f'#{idx+1}'
             balls = ''.join(f'<span class="ball">{n}</span>' for n in pset)
@@ -661,6 +663,22 @@ def render_master_result(data):
             {bars_html}
         </div>
         """, unsafe_allow_html=True)
+
+    # V21 Attention Weights Card
+    attn_weights = data.get("attention_weights", {})
+    if attn_weights:
+        top_signals = sorted(attn_weights.items(), key=lambda x: -x[1])[:8]
+        attn_html = '<div class="glass-card" style="border-color:#a78bfa;">'
+        attn_html += '<div class="card-title-row">🎯 V21 Attention Weights (Signal Importance)</div>'
+        attn_html += '<div style="display:flex;justify-content:center;gap:8px;flex-wrap:wrap;">'
+        for sig_name, weight in top_signals:
+            bar_w = min(weight / 2.0 * 100, 100)
+            sig_color = '#22c55e' if weight >= 1.5 else ('#f59e0b' if weight >= 1.0 else '#ef4444')
+            attn_html += f'<div style="text-align:center;padding:6px 10px;background:rgba(255,255,255,0.03);border-radius:8px;min-width:70px;">'
+            attn_html += f'<div style="font-size:0.9rem;font-weight:800;color:{sig_color};font-family:JetBrains Mono,monospace;">{weight}</div>'
+            attn_html += f'<div style="font-size:0.5rem;color:#64748b;">{sig_name}</div></div>'
+        attn_html += '</div></div>'
+        st.markdown(attn_html, unsafe_allow_html=True)
 
     if method:
         st.markdown(f'<div style="text-align:center;font-size:0.75rem;color:#64748b;margin-top:8px;">{method}</div>', unsafe_allow_html=True)
@@ -1159,7 +1177,7 @@ def render_lottery_tab(lottery_type):
     # ---- MASTER PREDICTION ----
     st.markdown("<div style='text-align:center;'>", unsafe_allow_html=True)
     if st.button(f"🎯 DỰ ĐOÁN KỲ TIẾP THEO", key=f"master_{lottery_type}", type="primary", use_container_width=True):
-        with st.spinner("🎯 V20: Attention + Regime + Stacking Meta + Monte Carlo + Portfolio 20 bộ... Vui lòng chờ 5-12 phút."):
+        with st.spinner("🎯 V21: Attention + Triplet + Entropy + Reinforcement + Coverage Portfolio ≥90%... Vui lòng chờ 5-12 phút."):
             try:
                 from models.master_predictor import MasterPredictor
                 if lottery_type == "mega":
@@ -1450,7 +1468,7 @@ def main():
     mega_latest = get_latest_date("mega")
 
     st.markdown('<div class="main-title">📊 TinNam AI - Phân Tích Dữ Liệu</div>', unsafe_allow_html=True)
-    st.markdown('<div class="subtitle">V20 — Attention + Regime Detection + Stacking Meta-Learner + Monte Carlo | 12 Competing Engines</div>', unsafe_allow_html=True)
+    st.markdown('<div class="subtitle">V21 — True Attention + Triplet Mining + Sequential Pattern + Entropy-Guided + Reinforcement | 12 Engines</div>', unsafe_allow_html=True)
 
     st.markdown(f"""
     <div class="stat-row">
