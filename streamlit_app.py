@@ -60,7 +60,7 @@ def check_password():
         st.markdown('<div style="text-align:center;font-size:1.2rem;font-weight:700;color:#f1f5f9;margin-bottom:20px;">TinNam AI</div>', unsafe_allow_html=True)
         pwd = st.text_input("Password", type="password", key="login_pw")
         if st.button("Đăng nhập", use_container_width=True): 
-            if pwd == "tinnam2024":
+            if pwd == "1991":
                 st.session_state.authenticated = True
                 st.rerun()
             else:
