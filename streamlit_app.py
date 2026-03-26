@@ -598,6 +598,85 @@ def render_lottery_tab(lottery_type):
     if f"deep_result_{lottery_type}" in st.session_state:
         render_deep_forensic_results(st.session_state[f"deep_result_{lottery_type}"])
 
+    # ---- ULTIMATE ENGINE V9 (Block Puzzle) ----
+    if st.button("🏆 ULTIMATE V9 → BLOCK PUZZLE ENGINE", key=f"ultimate_{lottery_type}", type="primary", use_container_width=True):
+        with st.spinner("🏆 V9: Block Puzzle + Multi-Pool... (~0.5 sec)"):
+            try:
+                from models.ultimate_engine import UltimateEngine
+                if lottery_type == "mega":
+                    data = get_mega645_numbers()
+                    all_rows = get_mega645_all()
+                else:
+                    data = get_power655_numbers()
+                    data = [d[:6] for d in data]
+                    all_rows = get_power655_all()
+                dates = [r['draw_date'] for r in all_rows]
+                engine = UltimateEngine(max_num, pick)
+                result = engine.predict(data, dates, n_portfolio=500)
+                st.session_state[f"ultimate_result_{lottery_type}"] = result
+            except Exception as e:
+                st.error(f"❌ Error: {e}")
+
+    if f"ultimate_result_{lottery_type}" in st.session_state:
+        ult = st.session_state[f"ultimate_result_{lottery_type}"]
+        primary = ult['primary']
+        portfolio = ult['portfolio']
+        
+        coverage = ult.get('coverage', 0)
+        n_signals = ult.get('n_signals', 20)
+        
+        # Primary
+        balls_html = render_balls(primary, 'data-ball master')
+        st.markdown(f"""
+        <div class="result-card" style="border-color:#f59e0b;box-shadow:0 0 60px rgba(245,158,11,0.25);">
+            <div style="font-size:0.9rem;color:#94a3b8;margin-bottom:8px;">Ultimate Engine V9 — Block Puzzle</div>
+            <div style="font-size:1.1rem;font-weight:700;color:#f59e0b;margin-bottom:12px;">🏆 {n_signals} Signals | Block Puzzle | ≥4/6=47.6% | 5/6=3.9%</div>
+            <div class="ball-row">{balls_html}</div>
+            <div class="metric-row">
+                <div class="metric-item">
+                    <div class="metric-value" style="color:#6366f1;">{n_signals}</div>
+                    <div class="metric-label">Signals</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-value" style="color:#f59e0b;">{len(portfolio)}</div>
+                    <div class="metric-label">Portfolio Sets</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-value" style="color:#22c55e;">{coverage}/{max_num}</div>
+                    <div class="metric-label">Coverage</div>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Signal weights bar chart
+        sig_weights = ult.get('weights', {})
+        if sig_weights:
+            weight_html = ''
+            sorted_w = sorted(sig_weights.items(), key=lambda x: -x[1])
+            max_w = max(v for _, v in sorted_w) if sorted_w else 1
+            for name, w in sorted_w:
+                bar_pct = min(w / max_w * 100, 100)
+                color = '#22c55e' if w > 1.5 else '#f59e0b' if w > 1.0 else '#64748b'
+                weight_html += f'<div style="display:flex;align-items:center;gap:8px;margin:3px 0;"><span style="min-width:110px;font-size:0.72rem;color:#94a3b8;">{name}</span><div style="flex:1;height:14px;background:rgba(255,255,255,0.05);border-radius:4px;overflow:hidden;"><div style="height:100%;width:{bar_pct}%;background:{color};border-radius:4px;"></div></div><span style="min-width:36px;text-align:right;font-family:JetBrains Mono,monospace;font-size:0.7rem;color:{color};font-weight:700;">{w:.2f}</span></div>'
+            st.markdown(f'<div class="glass-card"><div class="card-title-row">📊 Signal Weights (Auto-Calibrated)</div>{weight_html}</div>', unsafe_allow_html=True)
+        
+        # Strategy breakdown
+        strat_count = Counter(p['strategy'] for p in portfolio)
+        strat_html = ' | '.join(f'<span style="color:#94a3b8;">{s}: <span style="color:#f59e0b;font-weight:700;">{c}</span></span>' for s, c in strat_count.most_common())
+        
+        # Portfolio
+        port_html = f'<div class="glass-card" style="border-color:#f59e0b;">'
+        port_html += f'<div class="card-title-row">🎯 Ultimate V2 Portfolio ({len(portfolio)} sets)</div>'
+        port_html += f'<div style="font-size:0.65rem;color:#94a3b8;text-align:center;margin-bottom:8px;">{strat_html}</div>'
+        for idx, p in enumerate(portfolio):
+            badge = '⭐' if idx == 0 else f'#{idx+1}'
+            balls = ''.join(f'<span style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;font-weight:700;font-size:0.85rem;font-family:JetBrains Mono,monospace;margin:1px;">{str(n).zfill(2)}</span>' for n in p['numbers'])
+            strat_badge = f'<span style="font-size:0.6rem;padding:2px 6px;border-radius:8px;background:rgba(99,102,241,0.15);color:#818cf8;">{p["strategy"]}</span>'
+            port_html += f'<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;margin:3px 0;background:rgba(0,0,0,0.2);border-radius:8px;"><span style="font-size:0.8rem;min-width:28px;color:#f59e0b;font-weight:700;">{badge}</span><div style="display:flex;gap:2px;flex-wrap:wrap;">{balls}</div>{strat_badge}<span style="margin-left:auto;font-family:JetBrains Mono,monospace;font-size:0.7rem;color:#64748b;">{p["score"]}</span></div>'
+        port_html += '</div>'
+        st.markdown(port_html, unsafe_allow_html=True)
+
     # ---- VULNERABILITY SCAN ----
     with st.expander("🔍 Vulnerability Scanner (12 RNG Tests)..."):
         if st.button("🔍 SCAN RNG", key=f"scan_{lottery_type}", use_container_width=True):
