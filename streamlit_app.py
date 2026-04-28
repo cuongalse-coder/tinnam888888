@@ -75,7 +75,7 @@ def fetch_real_data(game_type):
     
     urls = [
         # Ưu tiên lấy TOÀN BỘ từ trước tới nay từ ketquadientoan
-        f"https://www.ketquadientoan.com/tat-ca-ky-xo-so-mega-6-45.html?datef=18-07-2016&datet={today_str}" if game_type == "Mega 6/45" else f"https://www.ketquadientoan.com/tat-ca-ky-xo-so-power-655.html?datef=01-08-2017&datet={today_str}",
+        f"https://www.ketquadientoan.com/tat-ca-ky-xo-so-mega-6-45.html?datef=18-07-2016&datet={today_str}" if game_type == "Mega 6/45" else f"https://www.ketquadientoan.com/tat-ca-ky-xo-so-power-655.html?datef=01-01-2018&datet={today_str}",
         "https://xskt.com.vn/ket-qua-xo-so-vietlott-mega-6-45" if game_type == "Mega 6/45" else "https://xskt.com.vn/ket-qua-xo-so-vietlott-power-6-55",
         "https://xoso.me/kqxs-mega-645.html" if game_type == "Mega 6/45" else "https://xoso.me/kqxs-power-655.html",
         "https://ketqua.vn/vietlott-mega-6-45" if game_type == "Mega 6/45" else "https://ketqua.vn/vietlott-power-6-55"
