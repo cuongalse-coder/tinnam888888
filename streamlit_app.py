@@ -482,6 +482,56 @@ def main_app():
         gap_scores = ai_engine.model_gap_overdue()
         st.markdown(f"**Các số đang ở ngưỡng nổ cao nhất:** {gap_scores}")
 
+    st.markdown("---")
+    st.markdown("### 🧪 KIỂM THỬ ĐỘ CHÍNH XÁC (BACKTESTING)")
+    with st.expander("Bấm để chạy Backtest (Kiểm tra lại lịch sử 50 kỳ gần nhất)"):
+        st.warning("⚠️ Hệ thống sẽ tua ngược thời gian, ẩn đi kết quả thật và dùng AI để dự đoán các kỳ trong quá khứ, sau đó đối chiếu với kết quả thực tế để tính tỉ lệ trúng.")
+        if st.button("🚀 CHẠY KIỂM THỬ BACKTEST 50 KỲ"):
+            test_progress = st.progress(0)
+            test_status = st.empty()
+            
+            total_draws = len(real_data)
+            if total_draws < 60:
+                st.error("Không đủ dữ liệu để backtest.")
+            else:
+                test_size = 50
+                total_matches = 0
+                match_counts = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0}
+                
+                # Chạy từ quá khứ đến hiện tại
+                for i in range(test_size):
+                    # Data up to the draw we want to predict
+                    current_idx = total_draws - test_size + i
+                    historical_data_for_test = real_data[:current_idx]
+                    actual_next_draw = real_data[current_idx]
+                    
+                    test_engine = RealWorldAIEngine(historical_data_for_test, max_number)
+                    pred = test_engine.optimize_ensemble()
+                    
+                    # Đếm số bóng trùng khớp
+                    matches = len(set(pred) & set(actual_next_draw))
+                    match_counts[matches] += 1
+                    total_matches += matches
+                    
+                    test_progress.progress((i + 1) / test_size)
+                    test_status.text(f"Đang kiểm thử kỳ {i + 1}/{test_size}... Khớp {matches}/6 số thực tế!")
+                    
+                test_status.empty()
+                avg_match = total_matches / test_size
+                win_rate = (total_matches / (test_size * 6)) * 100
+                
+                st.success(f"✅ Hoàn thành Backtest nghiệm thu trên {test_size} kỳ quay gần nhất!")
+                
+                col_a, col_b = st.columns(2)
+                with col_a:
+                    st.metric("Tỉ lệ khớp bóng chính xác (Hit Rate)", f"{win_rate:.2f}%")
+                    st.metric("Trung bình khớp mỗi kỳ", f"{avg_match:.2f} bóng / kỳ")
+                with col_b:
+                    st.markdown("**Phân bố số lượng bóng trúng:**")
+                    for k in range(3, 7):
+                        st.markdown(f"- Trúng {k}/6 số (Có giải): **{match_counts[k]} kỳ**")
+                    st.markdown(f"- Trượt hoặc trúng 1-2 số: **{match_counts[0]+match_counts[1]+match_counts[2]} kỳ**")
+
 if __name__ == "__main__":
     if check_password():
         main_app()
