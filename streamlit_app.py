@@ -63,8 +63,7 @@ def check_password():
 @st.cache_data(ttl=3600)
 def fetch_real_data(game_type):
     """
-    Cào dữ liệu THẬT 100% từ nhiều nguồn bằng Regex và Cloudscraper để vượt rào Cloudflare.
-    Hỗ trợ fallback (dữ liệu dự phòng) nếu các trang web chặn hoàn toàn.
+    Cào dữ liệu THẬT 100% TOÀN BỘ CÁC KỲ từ ketquadientoan và các nguồn khác.
     """
     try:
         import cloudscraper
@@ -72,7 +71,11 @@ def fetch_real_data(game_type):
     except ImportError:
         scraper = requests.Session()
         
+    today_str = datetime.now().strftime('%d-%m-%Y')
+    
     urls = [
+        # Ưu tiên lấy TOÀN BỘ từ trước tới nay từ ketquadientoan
+        f"https://www.ketquadientoan.com/tat-ca-ky-xo-so-mega-6-45.html?datef=18-07-2016&datet={today_str}" if game_type == "Mega 6/45" else f"https://www.ketquadientoan.com/tat-ca-ky-xo-so-power-655.html?datef=01-08-2017&datet={today_str}",
         "https://xskt.com.vn/ket-qua-xo-so-vietlott-mega-6-45" if game_type == "Mega 6/45" else "https://xskt.com.vn/ket-qua-xo-so-vietlott-power-6-55",
         "https://xoso.me/kqxs-mega-645.html" if game_type == "Mega 6/45" else "https://xoso.me/kqxs-power-655.html",
         "https://ketqua.vn/vietlott-mega-6-45" if game_type == "Mega 6/45" else "https://ketqua.vn/vietlott-power-6-55"
@@ -82,34 +85,25 @@ def fetch_real_data(game_type):
     
     for url in urls:
         try:
-            response = scraper.get(url, timeout=10)
+            response = scraper.get(url, timeout=15)
             if response.status_code == 200:
                 html = response.text
                 
                 history = []
-                # Regex 1: Cấu trúc xskt <em>01</em>
-                block_pattern = r'(?:<em>\d{2}</em>\s*){6,7}'
-                blocks = re.findall(block_pattern, html)
-                if blocks:
-                    for block in blocks:
-                        nums = re.findall(r'<em>(\d{2})</em>', block)
-                        if len(nums) >= 6:
-                            draw = sorted([int(n) for n in nums[:6]])
-                            if draw not in history:
-                                history.append(draw)
+                # Regex quét lấy toàn bộ thẻ HTML chỉ chứa 2 chữ số
+                nums = re.findall(r'>\s*(\d{2})\s*<', html)
                 
-                # Regex 2: Quét tất cả thẻ HTML có chứa số có 2 chữ số (fallback)
-                if not history:
-                    nums = re.findall(r'>\s*(\d{2})\s*<', html)
-                    for i in range(0, len(nums) - 5):
-                        chunk = [int(n) for n in nums[i:i+6]]
-                        if chunk == sorted(chunk) and len(set(chunk)) == 6 and all(1 <= n <= max_num for n in chunk):
-                            if chunk not in history:
-                                history.append(chunk)
+                # Quét cửa sổ trượt (Sliding Window) để tìm các chuỗi 6 số hợp lệ
+                for i in range(0, len(nums) - 5):
+                    chunk = [int(n) for n in nums[i:i+6]]
+                    # Mega/Power luôn có 6 số, không trùng, xếp tăng dần và <= max_num
+                    if chunk == sorted(chunk) and len(set(chunk)) == 6 and all(1 <= n <= max_num for n in chunk):
+                        if chunk not in history:
+                            history.append(chunk)
 
                 if history:
                     history.reverse() # Trả về từ cũ nhất đến mới nhất
-                    return history[-200:] # Lấy tối đa 200 kỳ gần nhất để tránh quá tải
+                    return history # TRẢ VỀ TOÀN BỘ DỮ LIỆU, KHÔNG GIỚI HẠN
         except Exception as e:
             continue
             
@@ -127,7 +121,7 @@ def fetch_real_data(game_type):
                         draw = sorted([int(n) for n in data['result'][:6]])
                         history.append(draw)
             if history:
-                return history[-200:]
+                return history
     except Exception:
         pass
         
