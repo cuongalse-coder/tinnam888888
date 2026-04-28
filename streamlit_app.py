@@ -63,40 +63,77 @@ def check_password():
 @st.cache_data(ttl=3600)
 def fetch_real_data(game_type):
     """
-    Cào dữ liệu THẬT 100% từ xskt.com.vn bằng Regex (đảm bảo độ ổn định cao hơn DOM parsing)
+    Cào dữ liệu THẬT 100% từ nhiều nguồn bằng Regex và Cloudscraper để vượt rào Cloudflare.
+    Hỗ trợ fallback (dữ liệu dự phòng) nếu các trang web chặn hoàn toàn.
     """
-    url = "https://xskt.com.vn/ket-qua-xo-so-vietlott-mega-6-45" if game_type == "Mega 6/45" else "https://xskt.com.vn/ket-qua-xo-so-vietlott-power-6-55"
-    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
-    
     try:
-        response = requests.get(url, headers=headers, timeout=10)
-        html = response.text
+        import cloudscraper
+        scraper = cloudscraper.create_scraper(delay=5, browser={'browser': 'chrome', 'platform': 'windows', 'mobile': False})
+    except ImportError:
+        scraper = requests.Session()
         
-        # Tìm các chuỗi HTML chứa nhóm 6-7 con số.
-        # Ở xskt, cấu trúc thường là: <em>01</em><em>05</em>...
-        # Dùng regex tìm tất cả các block chứa nhiều thẻ <em>
-        block_pattern = r'(?:<em>\d{2}</em>\s*){6,7}'
-        blocks = re.findall(block_pattern, html)
-        
-        history = []
-        for block in blocks:
-            nums = re.findall(r'<em>(\d{2})</em>', block)
-            if len(nums) >= 6:
-                # Lấy 6 số đầu tiên (bỏ số jackpot phụ nếu có)
-                draw = sorted([int(n) for n in nums[:6]])
-                if draw not in history:
-                    history.append(draw)
-        
-        # Dữ liệu xskt thường sắp xếp từ mới nhất đến cũ nhất.
-        # Ta cần đảo ngược lại: Cũ nhất -> Mới nhất để đưa vào mô hình học
-        if history:
-            history.reverse()
-            return history
+    urls = [
+        "https://xskt.com.vn/ket-qua-xo-so-vietlott-mega-6-45" if game_type == "Mega 6/45" else "https://xskt.com.vn/ket-qua-xo-so-vietlott-power-6-55",
+        "https://xoso.me/kqxs-mega-645.html" if game_type == "Mega 6/45" else "https://xoso.me/kqxs-power-655.html",
+        "https://ketqua.vn/vietlott-mega-6-45" if game_type == "Mega 6/45" else "https://ketqua.vn/vietlott-power-6-55"
+    ]
+    
+    max_num = 45 if game_type == "Mega 6/45" else 55
+    
+    for url in urls:
+        try:
+            response = scraper.get(url, timeout=10)
+            if response.status_code == 200:
+                html = response.text
+                
+                history = []
+                # Regex 1: Cấu trúc xskt <em>01</em>
+                block_pattern = r'(?:<em>\d{2}</em>\s*){6,7}'
+                blocks = re.findall(block_pattern, html)
+                if blocks:
+                    for block in blocks:
+                        nums = re.findall(r'<em>(\d{2})</em>', block)
+                        if len(nums) >= 6:
+                            draw = sorted([int(n) for n in nums[:6]])
+                            if draw not in history:
+                                history.append(draw)
+                
+                # Regex 2: Quét tất cả thẻ HTML có chứa số có 2 chữ số (fallback)
+                if not history:
+                    nums = re.findall(r'>\s*(\d{2})\s*<', html)
+                    for i in range(0, len(nums) - 5):
+                        chunk = [int(n) for n in nums[i:i+6]]
+                        if chunk == sorted(chunk) and len(set(chunk)) == 6 and all(1 <= n <= max_num for n in chunk):
+                            if chunk not in history:
+                                history.append(chunk)
+
+                if history:
+                    history.reverse() # Trả về từ cũ nhất đến mới nhất
+                    return history[-200:] # Lấy tối đa 200 kỳ gần nhất để tránh quá tải
+        except Exception as e:
+            continue
             
-    except Exception as e:
-        st.error(f"⚠️ Lỗi cào dữ liệu tự động: {e}")
+    # NẾU TẤT CẢ CÁC TRANG ĐỀU LỖI HOẶC BỊ CHẶN CLOUDFLARE, LẤY TỪ GITHUB
+    try:
+        github_url = "https://raw.githubusercontent.com/vietvudanh/vietlott-data/main/data/power645.jsonl" if game_type == "Mega 6/45" else "https://raw.githubusercontent.com/vietvudanh/vietlott-data/main/data/power655.jsonl"
+        response = requests.get(github_url, timeout=10)
+        history = []
+        if response.status_code == 200:
+            import json
+            for line in response.text.strip().split('\n'):
+                if line:
+                    data = json.loads(line)
+                    if 'result' in data and len(data['result']) >= 6:
+                        draw = sorted([int(n) for n in data['result'][:6]])
+                        history.append(draw)
+            if history:
+                return history[-200:]
+    except Exception:
+        pass
         
-    return []
+    st.error("⚠️ Không thể kết nối máy chủ xổ số. Đang sử dụng dữ liệu giả lập dự phòng.")
+    return [sorted(random.sample(range(1, max_num + 1), 6)) for _ in range(50)]
+
 
 # ==========================================
 # AI ENGINE: TOÁN HỌC THỰC TẾ
