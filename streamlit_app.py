@@ -293,6 +293,13 @@ def main_app():
     st.markdown(f"<div style='text-align: center; padding: 10px;'>{balls_html}</div>", unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
     
+    with st.expander(f"📚 XEM TOÀN BỘ LỊCH SỬ {len(real_data)} KỲ ĐÃ TẢI", expanded=False):
+        import pandas as pd
+        display_data = real_data[::-1] # Mới nhất lên trên
+        df = pd.DataFrame(display_data, columns=["Bóng 1", "Bóng 2", "Bóng 3", "Bóng 4", "Bóng 5", "Bóng 6"])
+        df.index = [f"Kỳ {len(real_data) - i}" for i in range(len(real_data))]
+        st.dataframe(df, use_container_width=True)
+    
     st.markdown("### 🧠 TÍNH TOÁN DÀN SỐ KỲ TIẾP THEO")
     
     if "prediction_ready" not in st.session_state:
