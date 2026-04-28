@@ -107,18 +107,20 @@ def fetch_real_data(game_type):
                         if len(set(chunk)) != 6 or not all(1 <= n <= max_num for n in chunk):
                             continue
                             
-                        # Tìm giải Jackpot bằng regex mạnh hơn để bao quát cả Mega và Power
-                        jp_matches = re.findall(r"class='hidden-xs'.*?>([\d\.]+)</span>", row)
-                        jp1_val = jp_matches[0] if len(jp_matches) > 0 else "0"
+                        # Tìm giải Jackpot bằng regex lấy cả thuộc tính thẻ span để xét màu
+                        jp_spans = re.findall(r"<span class='hidden-xs'([^>]*)>([\d\.]+)</span>", row)
+                        jp1_val = jp_spans[0][1] if len(jp_spans) > 0 else "0"
                         
-                        if game_type == "Power 6/55" and len(jp_matches) > 1:
-                            jp2_val = jp_matches[1]
+                        if game_type == "Power 6/55" and len(jp_spans) > 1:
+                            jp2_val = jp_spans[1][1]
                             if jp2_val != "0":
                                 jp1_val = f"JP1: {jp1_val} | JP2: {jp2_val}"
                         
                         has_winner = False
-                        if "COLOR:#F00" in row.upper() or "COLOR:RED" in row.upper():
-                            has_winner = True
+                        # Chỉ bôi đỏ nếu trúng giải ĐẶC BIỆT (JP1) - Tức là span đầu tiên có màu đỏ
+                        if len(jp_spans) > 0:
+                            if "COLOR:#F00" in jp_spans[0][0].upper() or "COLOR:RED" in jp_spans[0][0].upper():
+                                has_winner = True
                             
                         sorted_chunk = sorted(chunk)
                         if sorted_chunk not in history:
