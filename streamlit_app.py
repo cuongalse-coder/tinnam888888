@@ -107,17 +107,12 @@ def fetch_real_data(game_type):
                         if len(set(chunk)) != 6 or not all(1 <= n <= max_num for n in chunk):
                             continue
                             
-                        # Tìm giải Jackpot
-                        jp1_match = re.search(r"data-target='#noitrung_'.*?>([\d\.]+)</span>", row)
-                        if not jp1_match:
-                            jp1_match = re.search(r"data-target='#noitrung_'>([\d\.]+)</span>", row)
-                        jp1_val = jp1_match.group(1).strip() if jp1_match else "0"
+                        # Tìm giải Jackpot bằng regex mạnh hơn để bao quát cả Mega và Power
+                        jp_matches = re.findall(r"class='hidden-xs'.*?>([\d\.]+)</span>", row)
+                        jp1_val = jp_matches[0] if len(jp_matches) > 0 else "0"
                         
-                        if game_type == "Power 6/55":
-                            jp2_match = re.search(r"data-target='#noitrung2_'.*?>([\d\.]+)</span>", row)
-                            if not jp2_match:
-                                jp2_match = re.search(r"data-target='#noitrung2_'>([\d\.]+)</span>", row)
-                            jp2_val = jp2_match.group(1).strip() if jp2_match else "0"
+                        if game_type == "Power 6/55" and len(jp_matches) > 1:
+                            jp2_val = jp_matches[1]
                             if jp2_val != "0":
                                 jp1_val = f"JP1: {jp1_val} | JP2: {jp2_val}"
                         
