@@ -90,38 +90,75 @@ def fetch_real_data(game_type):
                 html = response.text
                 
                 history = []
+                detailed_history = []
+                
                 if "ketquadientoan.com" in url:
-                    # Lọc chính xác 6 bóng chính, tự động bỏ qua bóng thứ 7 (jphu) của Power 6/55
-                    nums = re.findall(r'class="home-mini-whiteball">\s*(\d{2})\s*<', html)
-                    for i in range(0, len(nums) - 5, 6):
-                        chunk = [int(n) for n in nums[i:i+6]]
-                        if len(set(chunk)) == 6 and all(1 <= n <= max_num for n in chunk):
-                            sorted_chunk = sorted(chunk)
-                            if sorted_chunk not in history:
-                                history.append(sorted_chunk)
+                    rows = re.findall(r'<tr.*?>(.*?)</tr>', html, re.DOTALL | re.IGNORECASE)
+                    for row in rows:
+                        date_match = re.search(r'<td>.*?((\d{2})/(\d{2})/(\d{4}))</td>', row)
+                        if not date_match:
+                            continue
+                        date_str = date_match.group(1)
+                        
+                        nums = re.findall(r'class="home-mini-whiteball">\s*(\d{2})\s*<', row)
+                        if len(nums) < 6:
+                            continue
+                        chunk = [int(n) for n in nums[:6]]
+                        if len(set(chunk)) != 6 or not all(1 <= n <= max_num for n in chunk):
+                            continue
+                            
+                        # Tìm giải Jackpot
+                        jp1_match = re.search(r"data-target='#noitrung_'.*?>([\d\.]+)</span>", row)
+                        if not jp1_match:
+                            jp1_match = re.search(r"data-target='#noitrung_'>([\d\.]+)</span>", row)
+                        jp1_val = jp1_match.group(1).strip() if jp1_match else "0"
+                        
+                        has_winner = False
+                        if "color:#F00" in row.upper() or "color:red" in row.lower():
+                            has_winner = True
+                            
+                        sorted_chunk = sorted(chunk)
+                        if sorted_chunk not in history:
+                            history.append(sorted_chunk)
+                            detailed_history.append({
+                                "Ngày": date_str,
+                                "Bóng 1": sorted_chunk[0], "Bóng 2": sorted_chunk[1], "Bóng 3": sorted_chunk[2],
+                                "Bóng 4": sorted_chunk[3], "Bóng 5": sorted_chunk[4], "Bóng 6": sorted_chunk[5],
+                                "Jackpot": jp1_val,
+                                "Trúng Giải": "🚨 CÓ" if has_winner else ""
+                            })
                 else:
-                    # Regex quét lấy toàn bộ thẻ HTML chỉ chứa 2 chữ số
                     nums = re.findall(r'>\s*(\d{2})\s*<', html)
-                    
-                    # Quét cửa sổ trượt (Sliding Window) để tìm các chuỗi 6 số hợp lệ
                     for i in range(0, len(nums) - 5):
                         chunk = [int(n) for n in nums[i:i+6]]
-                        # Mega/Power luôn có 6 số, không trùng, xếp tăng dần và <= max_num
                         if chunk == sorted(chunk) and len(set(chunk)) == 6 and all(1 <= n <= max_num for n in chunk):
                             if chunk not in history:
                                 history.append(chunk)
+                                detailed_history.append({
+                                    "Ngày": "N/A",
+                                    "Bóng 1": chunk[0], "Bóng 2": chunk[1], "Bóng 3": chunk[2],
+                                    "Bóng 4": chunk[3], "Bóng 5": chunk[4], "Bóng 6": chunk[5],
+                                    "Jackpot": "N/A",
+                                    "Trúng Giải": ""
+                                })
 
                 if history:
-                    history.reverse() # Trả về từ cũ nhất đến mới nhất
-                    return history # TRẢ VỀ TOÀN BỘ DỮ LIỆU, KHÔNG GIỚI HẠN
+                    history.reverse()
+                    detailed_history.reverse()
+                    for i, d in enumerate(detailed_history):
+                        d["Kỳ"] = f"Kỳ {i+1}"
+                    # Sắp xếp lại thứ tự cột cho đẹp
+                    detailed_history = [{"Kỳ": d["Kỳ"], "Ngày": d["Ngày"], "Bóng 1": d["Bóng 1"], "Bóng 2": d["Bóng 2"], "Bóng 3": d["Bóng 3"], "Bóng 4": d["Bóng 4"], "Bóng 5": d["Bóng 5"], "Bóng 6": d["Bóng 6"], "Jackpot": d["Jackpot"], "Trúng Giải": d["Trúng Giải"]} for d in detailed_history]
+                    return history, detailed_history
         except Exception as e:
             continue
             
-    # NẾU TẤT CẢ CÁC TRANG ĐỀU LỖI HOẶC BỊ CHẶN CLOUDFLARE, LẤY TỪ GITHUB
+    # GITHUB FALLBACK
     try:
         github_url = "https://raw.githubusercontent.com/vietvudanh/vietlott-data/main/data/power645.jsonl" if game_type == "Mega 6/45" else "https://raw.githubusercontent.com/vietvudanh/vietlott-data/main/data/power655.jsonl"
         response = requests.get(github_url, timeout=10)
         history = []
+        detailed_history = []
         if response.status_code == 200:
             import json
             for line in response.text.strip().split('\n'):
@@ -130,13 +167,21 @@ def fetch_real_data(game_type):
                     if 'result' in data and len(data['result']) >= 6:
                         draw = sorted([int(n) for n in data['result'][:6]])
                         history.append(draw)
+                        detailed_history.append({
+                            "Ngày": "N/A", "Bóng 1": draw[0], "Bóng 2": draw[1], "Bóng 3": draw[2], "Bóng 4": draw[3], "Bóng 5": draw[4], "Bóng 6": draw[5], "Jackpot": "N/A", "Trúng Giải": ""
+                        })
             if history:
-                return history
+                for i, d in enumerate(detailed_history):
+                    d["Kỳ"] = f"Kỳ {i+1}"
+                detailed_history = [{"Kỳ": d["Kỳ"], "Ngày": d["Ngày"], "Bóng 1": d["Bóng 1"], "Bóng 2": d["Bóng 2"], "Bóng 3": d["Bóng 3"], "Bóng 4": d["Bóng 4"], "Bóng 5": d["Bóng 5"], "Bóng 6": d["Bóng 6"], "Jackpot": d["Jackpot"], "Trúng Giải": d["Trúng Giải"]} for d in detailed_history]
+                return history, detailed_history
     except Exception:
         pass
         
     st.error("⚠️ Không thể kết nối máy chủ xổ số. Đang sử dụng dữ liệu giả lập dự phòng.")
-    return [sorted(random.sample(range(1, max_num + 1), 6)) for _ in range(50)]
+    fake_data = [sorted(random.sample(range(1, max_num + 1), 6)) for _ in range(50)]
+    detailed_history = [{"Kỳ": f"Kỳ {i+1}", "Ngày": "N/A", "Bóng 1": d[0], "Bóng 2": d[1], "Bóng 3": d[2], "Bóng 4": d[3], "Bóng 5": d[4], "Bóng 6": d[5], "Jackpot": "N/A", "Trúng Giải": ""} for i, d in enumerate(fake_data)]
+    return fake_data, detailed_history
 
 
 # ==========================================
@@ -270,7 +315,7 @@ def main_app():
     
     # --- CÀO DỮ LIỆU THỰC TẾ ---
     with st.spinner("📡 Đang quét dữ liệu THẬT 100% từ máy chủ Vietlott/XSKT..."):
-        real_data = fetch_real_data(game_choice)
+        real_data, detailed_data = fetch_real_data(game_choice)
         
     if not real_data:
         st.error("Không thể kết nối đến máy chủ lấy dữ liệu thực tế. Vui lòng thử lại sau.")
@@ -295,10 +340,14 @@ def main_app():
     
     with st.expander(f"📚 XEM TOÀN BỘ LỊCH SỬ {len(real_data)} KỲ ĐÃ TẢI", expanded=False):
         import pandas as pd
-        display_data = real_data[::-1] # Mới nhất lên trên
-        df = pd.DataFrame(display_data, columns=["Bóng 1", "Bóng 2", "Bóng 3", "Bóng 4", "Bóng 5", "Bóng 6"])
-        df.index = [f"Kỳ {len(real_data) - i}" for i in range(len(real_data))]
-        st.dataframe(df, use_container_width=True)
+        display_data = detailed_data[::-1] # Mới nhất lên trên
+        df = pd.DataFrame(display_data)
+        df.set_index("Kỳ", inplace=True)
+        
+        def highlight_row(row):
+            return ['background-color: rgba(255, 0, 0, 0.3)'] * len(row) if row['Trúng Giải'] == '🚨 CÓ' else [''] * len(row)
+            
+        st.dataframe(df.style.apply(highlight_row, axis=1), use_container_width=True)
     
     st.markdown("### 🧠 TÍNH TOÁN DÀN SỐ KỲ TIẾP THEO")
     
