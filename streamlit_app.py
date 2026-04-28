@@ -166,7 +166,7 @@ class RealWorldAIEngine:
         
         return [n for n, c in self._get_frequency(20).most_common(6)]
 
-    def model_gap_overdue(self):
+    def model_gap_overdue(self, top_n=6):
         """Phân tích các số ĐÃ ĐẾN HẠN NỔ (Overdue Analysis)"""
         last_seen = {num: -1 for num in self.all_numbers}
         for i, draw in enumerate(self.data):
@@ -198,7 +198,7 @@ class RealWorldAIEngine:
                 due_scores[num] = 0
                 
         sorted_due = sorted(due_scores.items(), key=lambda x: x[1], reverse=True)
-        return [num for num, score in sorted_due[:6]]
+        return [num for num, score in sorted_due[:top_n]]
 
     def model_momentum_neural(self):
         """Neural Weights - Tính toán động lượng tăng trưởng"""
@@ -317,7 +317,7 @@ def main_app():
         for _ in range(3):
             alt = st.session_state.best_prediction.copy()
             # Random thay 1-2 số bằng các số có gap cao tiếp theo
-            gap_candidates = ai_engine.model_gap_overdue()
+            gap_candidates = ai_engine.model_gap_overdue(top_n=15)
             for __ in range(random.randint(1, 2)):
                 idx = random.randint(0, 5)
                 new_num = random.choice([n for n in gap_candidates if n not in alt])
