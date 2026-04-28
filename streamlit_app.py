@@ -60,7 +60,7 @@ def check_password():
 # ==========================================
 # CRAWLER: QUÉT DỮ LIỆU THẬT 100%
 # ==========================================
-@st.cache_data(ttl=3600)
+@st.cache_data(ttl=300)
 def fetch_real_data(game_type):
     """
     Cào dữ liệu THẬT 100% TOÀN BỘ CÁC KỲ từ ketquadientoan và các nguồn khác.
@@ -246,6 +246,10 @@ def main_app():
         st.markdown(f"**Hôm nay:** {datetime.now().strftime('%d/%m/%Y')}")
         st.markdown("---")
         
+        if st.button("🔄 Cập nhật dữ liệu Xổ Số mới nhất"):
+            st.cache_data.clear()
+            st.rerun()
+            
         if st.button("🚪 Đăng xuất"):
             st.session_state.logged_in = False
             st.rerun()
