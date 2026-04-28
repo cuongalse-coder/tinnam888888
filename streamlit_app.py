@@ -90,16 +90,26 @@ def fetch_real_data(game_type):
                 html = response.text
                 
                 history = []
-                # Regex quét lấy toàn bộ thẻ HTML chỉ chứa 2 chữ số
-                nums = re.findall(r'>\s*(\d{2})\s*<', html)
-                
-                # Quét cửa sổ trượt (Sliding Window) để tìm các chuỗi 6 số hợp lệ
-                for i in range(0, len(nums) - 5):
-                    chunk = [int(n) for n in nums[i:i+6]]
-                    # Mega/Power luôn có 6 số, không trùng, xếp tăng dần và <= max_num
-                    if chunk == sorted(chunk) and len(set(chunk)) == 6 and all(1 <= n <= max_num for n in chunk):
-                        if chunk not in history:
-                            history.append(chunk)
+                if "ketquadientoan.com" in url:
+                    # Lọc chính xác 6 bóng chính, tự động bỏ qua bóng thứ 7 (jphu) của Power 6/55
+                    nums = re.findall(r'class="home-mini-whiteball">\s*(\d{2})\s*<', html)
+                    for i in range(0, len(nums) - 5, 6):
+                        chunk = [int(n) for n in nums[i:i+6]]
+                        if len(set(chunk)) == 6 and all(1 <= n <= max_num for n in chunk):
+                            sorted_chunk = sorted(chunk)
+                            if sorted_chunk not in history:
+                                history.append(sorted_chunk)
+                else:
+                    # Regex quét lấy toàn bộ thẻ HTML chỉ chứa 2 chữ số
+                    nums = re.findall(r'>\s*(\d{2})\s*<', html)
+                    
+                    # Quét cửa sổ trượt (Sliding Window) để tìm các chuỗi 6 số hợp lệ
+                    for i in range(0, len(nums) - 5):
+                        chunk = [int(n) for n in nums[i:i+6]]
+                        # Mega/Power luôn có 6 số, không trùng, xếp tăng dần và <= max_num
+                        if chunk == sorted(chunk) and len(set(chunk)) == 6 and all(1 <= n <= max_num for n in chunk):
+                            if chunk not in history:
+                                history.append(chunk)
 
                 if history:
                     history.reverse() # Trả về từ cũ nhất đến mới nhất
