@@ -85,7 +85,7 @@ def fetch_real_data(game_type):
     
     for url in urls:
         try:
-            response = scraper.get(url, timeout=15)
+            response = scraper.get(url, timeout=30)
             if response.status_code == 200:
                 html = response.text
                 
@@ -113,8 +113,16 @@ def fetch_real_data(game_type):
                             jp1_match = re.search(r"data-target='#noitrung_'>([\d\.]+)</span>", row)
                         jp1_val = jp1_match.group(1).strip() if jp1_match else "0"
                         
+                        if game_type == "Power 6/55":
+                            jp2_match = re.search(r"data-target='#noitrung2_'.*?>([\d\.]+)</span>", row)
+                            if not jp2_match:
+                                jp2_match = re.search(r"data-target='#noitrung2_'>([\d\.]+)</span>", row)
+                            jp2_val = jp2_match.group(1).strip() if jp2_match else "0"
+                            if jp2_val != "0":
+                                jp1_val = f"JP1: {jp1_val} | JP2: {jp2_val}"
+                        
                         has_winner = False
-                        if "color:#F00" in row.upper() or "color:red" in row.lower():
+                        if "COLOR:#F00" in row.upper() or "COLOR:RED" in row.upper():
                             has_winner = True
                             
                         sorted_chunk = sorted(chunk)
