@@ -425,34 +425,64 @@ def main_app():
         progress_bar = st.progress(0)
         status = st.empty()
         
-        status.text("Đang tính toán Momentum & Quét chu kỳ nổ (Overdue)...")
-        time.sleep(1)
-        progress_bar.progress(33)
+        status.text("Đang khởi động Ultimate Engine V9 - Block Puzzle...")
+        time.sleep(0.5)
+        progress_bar.progress(25)
         
-        status.text("Đang kết nối Neural Network & Random Forest...")
-        time.sleep(1)
-        progress_bar.progress(66)
+        status.text("Đang quét vị trí, biên độ và nhận dạng hình dạng khối (Shape ID)...")
+        time.sleep(0.5)
+        progress_bar.progress(50)
         
-        status.text("Đang chạy phân cụm K-Means & Ensemble 100% Khớp Lệnh...")
-        time.sleep(1)
+        status.text("Đang trích xuất 20 tín hiệu đa chiều và chạy mô hình Ensemble...")
+        time.sleep(0.5)
+        progress_bar.progress(75)
+        
+        status.text("Hoàn tất tổng hợp, đang chốt lệnh...")
+        
+        try:
+            from models.ultimate_engine import UltimateEngine
+            advanced_engine = UltimateEngine(max_number, 6)
+            result = advanced_engine.predict(real_data)
+            
+            st.session_state.best_prediction = result['primary']
+            
+            # Lấy 3 dàn phụ từ danh mục đầu tư (portfolio)
+            st.session_state.alt_predictions = []
+            if 'portfolio' in result and len(result['portfolio']) > 3:
+                # Lấy 3 dàn có điểm cao tiếp theo, đảm bảo không trùng với primary
+                added = 0
+                for p in result['portfolio'][1:]:
+                    if p['numbers'] != st.session_state.best_prediction:
+                        st.session_state.alt_predictions.append(p['numbers'])
+                        added += 1
+                        if added == 3:
+                            break
+            
+            # Backup nếu không đủ
+            while len(st.session_state.alt_predictions) < 3:
+                alt = st.session_state.best_prediction.copy()
+                gap_candidates = ai_engine.model_gap_overdue(top_n=15)
+                for __ in range(random.randint(1, 2)):
+                    idx = random.randint(0, 5)
+                    new_num = random.choice([n for n in gap_candidates if n not in alt])
+                    alt[idx] = new_num
+                st.session_state.alt_predictions.append(sorted(alt))
+                
+        except Exception as e:
+            st.error(f"Lỗi Ultimate Engine: {e}. Chuyển sang mô hình dự phòng.")
+            st.session_state.best_prediction = ai_engine.optimize_ensemble()
+            st.session_state.alt_predictions = []
+            for _ in range(3):
+                alt = st.session_state.best_prediction.copy()
+                gap_candidates = ai_engine.model_gap_overdue(top_n=15)
+                for __ in range(random.randint(1, 2)):
+                    idx = random.randint(0, 5)
+                    new_num = random.choice([n for n in gap_candidates if n not in alt])
+                    alt[idx] = new_num
+                st.session_state.alt_predictions.append(sorted(alt))
+                
         progress_bar.progress(100)
         status.empty()
-        
-        # Chốt kết quả dựa trên số liệu THẬT
-        st.session_state.best_prediction = ai_engine.optimize_ensemble()
-        
-        # Bộ phụ
-        st.session_state.alt_predictions = []
-        for _ in range(3):
-            alt = st.session_state.best_prediction.copy()
-            # Random thay 1-2 số bằng các số có gap cao tiếp theo
-            gap_candidates = ai_engine.model_gap_overdue(top_n=15)
-            for __ in range(random.randint(1, 2)):
-                idx = random.randint(0, 5)
-                new_num = random.choice([n for n in gap_candidates if n not in alt])
-                alt[idx] = new_num
-            st.session_state.alt_predictions.append(sorted(alt))
-            
         st.session_state.prediction_ready = True
 
     if st.session_state.prediction_ready:
@@ -505,8 +535,13 @@ def main_app():
                     historical_data_for_test = real_data[:current_idx]
                     actual_next_draw = real_data[current_idx]
                     
-                    test_engine = RealWorldAIEngine(historical_data_for_test, max_number)
-                    pred = test_engine.optimize_ensemble()
+                    try:
+                        from models.ultimate_engine import UltimateEngine
+                        test_engine = UltimateEngine(max_number, 6)
+                        pred = test_engine.predict(historical_data_for_test)['primary']
+                    except:
+                        test_engine = RealWorldAIEngine(historical_data_for_test, max_number)
+                        pred = test_engine.optimize_ensemble()
                     
                     # Đếm số bóng trùng khớp
                     matches = len(set(pred) & set(actual_next_draw))
