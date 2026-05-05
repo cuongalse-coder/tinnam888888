@@ -621,6 +621,15 @@ def main_app():
                     st.dataframe(df.nsmallest(5, 'Độ lệch (Z-Score)')[['Số', 'Lần xuất hiện', 'Độ lệch (Z-Score)']], use_container_width=True)
                     
                 st.warning("**Kết luận từ hệ thống:** Nếu biểu đồ trên có nhiều cột Đỏ/Xanh (Z-Score vượt quá ±2.5), lồng cầu có thể đang có sự thiên lệch vật lý (bóng nặng/nhẹ, trục quay nghiêng). Nếu đa số là cột Xám, lồng quay hoàn toàn ngẫu nhiên và không có sự 'chỉ định' nào.")
+                
+                st.markdown("---")
+                st.markdown("#### 📋 BẢNG XẾP HẠNG TOÀN BỘ CÁC QUẢ BÓNG (Từ cao xuống thấp)")
+                st.info("Bảng liệt kê chính xác tỷ lệ xuất hiện của tất cả các quả bóng từ kỳ đầu tiên đến nay. Bạn có thể bấm vào tiêu đề cột để sắp xếp.")
+                df['Tỷ lệ rơi (%)'] = (df['Lần xuất hiện'] / len(real_data) * 100).round(2)
+                df_sorted = df.sort_values(by='Lần xuất hiện', ascending=False).reset_index(drop=True)
+                # Đánh số thứ tự hạng (Rank)
+                df_sorted.index = df_sorted.index + 1
+                st.dataframe(df_sorted[['Số', 'Lần xuất hiện', 'Tỷ lệ rơi (%)', 'Độ lệch (Z-Score)', 'Ngủ đông Max (Kỳ)', 'Hiện chưa ra (Kỳ)']], use_container_width=True)
 
     st.markdown("---")
     st.markdown("### 🧪 KIỂM THỬ ĐỘ CHÍNH XÁC (BACKTESTING)")
