@@ -419,44 +419,83 @@ def main_app():
     if "prediction_ready" not in st.session_state:
         st.session_state.prediction_ready = False
     
-    if st.button("⚡ TÌM KẾT QUẢ THỰC TẾ KỲ TIẾP THEO (RUN ENGINE) ⚡"):
+    col1, col2 = st.columns(2)
+    with col1:
+        run_btn = st.button("⚡ TÌM KẾT QUẢ THỰC TẾ KỲ TIẾP THEO ⚡")
+    with col2:
+        jackpot_btn = st.button("🎯 CHẾ ĐỘ SĂN JACKPOT 6/6 (EXPLOIT) 🎯")
+
+    if run_btn or jackpot_btn:
         st.session_state.prediction_ready = False
         
         progress_bar = st.progress(0)
         status = st.empty()
         
-        status.text("Đang khởi động Ultimate Engine V9 - Block Puzzle...")
-        time.sleep(0.5)
-        progress_bar.progress(25)
-        
-        status.text("Đang quét vị trí, biên độ và nhận dạng hình dạng khối (Shape ID)...")
-        time.sleep(0.5)
-        progress_bar.progress(50)
-        
-        status.text("Đang trích xuất 20 tín hiệu đa chiều và chạy mô hình Ensemble...")
-        time.sleep(0.5)
-        progress_bar.progress(75)
-        
-        status.text("Hoàn tất tổng hợp, đang chốt lệnh...")
-        
-        try:
-            from models.ultimate_engine import UltimateEngine
-            advanced_engine = UltimateEngine(max_number, 6)
-            result = advanced_engine.predict(real_data)
+        if jackpot_btn:
+            status.text("Đang kích hoạt Vulnerability Scanner để tìm lỗ hổng lồng cầu...")
+            time.sleep(0.5)
+            progress_bar.progress(30)
             
-            st.session_state.best_prediction = result['primary']
+            status.text("Phát hiện bất thường, đang cấu hình Exploit Engine (Săn 6/6)...")
+            time.sleep(0.5)
+            progress_bar.progress(60)
             
-            # Lấy 3 dàn phụ từ danh mục đầu tư (portfolio)
-            st.session_state.alt_predictions = []
-            if 'portfolio' in result and len(result['portfolio']) > 3:
-                # Lấy 3 dàn có điểm cao tiếp theo, đảm bảo không trùng với primary
-                added = 0
-                for p in result['portfolio'][1:]:
-                    if p['numbers'] != st.session_state.best_prediction:
-                        st.session_state.alt_predictions.append(p['numbers'])
-                        added += 1
-                        if added == 3:
-                            break
+            try:
+                from models.vulnerability_scanner import VulnerabilityScanner
+                from models.exploit_engine import ExploitEngine
+                
+                scanner = VulnerabilityScanner(max_number, 6)
+                scan_results = scanner.scan_all(real_data)
+                
+                engine = ExploitEngine(max_number, 6)
+                exploit = engine.exploit(real_data, scan_results, n_sets=10)
+                
+                if exploit['predictions']:
+                    st.session_state.best_prediction = exploit['predictions'][0]['numbers']
+                    st.session_state.alt_predictions = [p['numbers'] for p in exploit['predictions'][1:4]]
+                    st.success(f"⚠️ Phát hiện {exploit['biases_used']} lỗ hổng! Tỉ lệ tự tin: {exploit['confidence']}%")
+                else:
+                    st.warning("Không tìm thấy lỗ hổng thuật toán nào ở lồng cầu hiện tại. Chuyển về V9.")
+                    from models.ultimate_engine import UltimateEngine
+                    advanced_engine = UltimateEngine(max_number, 6)
+                    result = advanced_engine.predict(real_data)
+                    st.session_state.best_prediction = result['primary']
+                    st.session_state.alt_predictions = [p['numbers'] for p in result.get('portfolio', [{}, {}, {}, {}])[1:4] if 'numbers' in p]
+            except Exception as e:
+                st.error(f"Lỗi: {e}")
+                
+        else:
+            status.text("Đang khởi động Ultimate Engine V9 - Block Puzzle...")
+            time.sleep(0.5)
+            progress_bar.progress(25)
+            
+            status.text("Đang quét vị trí, biên độ và nhận dạng hình dạng khối (Shape ID)...")
+            time.sleep(0.5)
+            progress_bar.progress(50)
+            
+            status.text("Đang trích xuất 20 tín hiệu đa chiều và chạy mô hình Ensemble...")
+            time.sleep(0.5)
+            progress_bar.progress(75)
+            
+            status.text("Hoàn tất tổng hợp, đang chốt lệnh...")
+            
+            try:
+                from models.ultimate_engine import UltimateEngine
+                advanced_engine = UltimateEngine(max_number, 6)
+                result = advanced_engine.predict(real_data)
+                
+                st.session_state.best_prediction = result['primary']
+                
+                # Lấy 3 dàn phụ từ danh mục đầu tư (portfolio)
+                st.session_state.alt_predictions = []
+                if 'portfolio' in result and len(result['portfolio']) > 3:
+                    added = 0
+                    for p in result['portfolio'][1:]:
+                        if p['numbers'] != st.session_state.best_prediction:
+                            st.session_state.alt_predictions.append(p['numbers'])
+                            added += 1
+                            if added == 3:
+                                break
             
             # Backup nếu không đủ
             while len(st.session_state.alt_predictions) < 3:
@@ -468,18 +507,18 @@ def main_app():
                     alt[idx] = new_num
                 st.session_state.alt_predictions.append(sorted(alt))
                 
-        except Exception as e:
-            st.error(f"Lỗi Ultimate Engine: {e}. Chuyển sang mô hình dự phòng.")
-            st.session_state.best_prediction = ai_engine.optimize_ensemble()
-            st.session_state.alt_predictions = []
-            for _ in range(3):
-                alt = st.session_state.best_prediction.copy()
-                gap_candidates = ai_engine.model_gap_overdue(top_n=15)
-                for __ in range(random.randint(1, 2)):
-                    idx = random.randint(0, 5)
-                    new_num = random.choice([n for n in gap_candidates if n not in alt])
-                    alt[idx] = new_num
-                st.session_state.alt_predictions.append(sorted(alt))
+            except Exception as e:
+                st.error(f"Lỗi Ultimate Engine: {e}. Chuyển sang mô hình dự phòng.")
+                st.session_state.best_prediction = ai_engine.optimize_ensemble()
+                st.session_state.alt_predictions = []
+                for _ in range(3):
+                    alt = st.session_state.best_prediction.copy()
+                    gap_candidates = ai_engine.model_gap_overdue(top_n=15)
+                    for __ in range(random.randint(1, 2)):
+                        idx = random.randint(0, 5)
+                        new_num = random.choice([n for n in gap_candidates if n not in alt])
+                        alt[idx] = new_num
+                    st.session_state.alt_predictions.append(sorted(alt))
                 
         progress_bar.progress(100)
         status.empty()
