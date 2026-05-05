@@ -552,6 +552,77 @@ def main_app():
         st.markdown(f"**Các số đang ở ngưỡng nổ cao nhất:** {gap_scores}")
 
     st.markdown("---")
+    st.markdown("### 🔍 PHÂN TÍCH NGƯỢC TOÀN DIỆN (REVERSE FORENSIC)")
+    with st.expander("Bấm để xem Phân tích Lịch sử từ kỳ đầu tiên đến nay"):
+        st.info("Hệ thống sẽ tính toán lại tỷ lệ bóng ra của TOÀN BỘ lịch sử để phát hiện sự thiên lệch vật lý. Tính năng này giúp trả lời câu hỏi: Có sự trùng hợp hay 'chỉ định' nào trong lồng quay không?")
+        if st.button("📊 CHẠY PHÂN TÍCH NGƯỢC TOÀN BỘ LỊCH SỬ"):
+            import pandas as pd
+            import numpy as np
+            import altair as alt
+            from collections import Counter
+            
+            with st.spinner("Đang lục lại toàn bộ dữ liệu từ kỳ 1 đến nay..."):
+                # Tính toán tần suất
+                all_numbers = [num for draw in real_data for num in draw]
+                freq_counts = Counter(all_numbers)
+                
+                # Tính toán Gap
+                last_seen = {}
+                max_gap = {}
+                for i, draw in enumerate(real_data):
+                    for num in draw:
+                        if num in last_seen:
+                            gap = i - last_seen[num]
+                            if gap > max_gap.get(num, 0):
+                                max_gap[num] = gap
+                        last_seen[num] = i
+                
+                current_gaps = {n: len(real_data) - 1 - last_seen.get(n, 0) for n in range(1, max_number + 1)}
+                
+                # Tạo DataFrame
+                df_data = []
+                expected_prob = 6 / max_number
+                expected_count = len(real_data) * expected_prob
+                
+                for n in range(1, max_number + 1):
+                    count = freq_counts.get(n, 0)
+                    z_score = (count - expected_count) / np.sqrt(len(real_data) * expected_prob * (1 - expected_prob))
+                    df_data.append({
+                        "Số": n,
+                        "Lần xuất hiện": count,
+                        "Độ lệch (Z-Score)": round(z_score, 2),
+                        "Ngủ đông Max (Kỳ)": max_gap.get(n, 0),
+                        "Hiện chưa ra (Kỳ)": current_gaps.get(n, 0)
+                    })
+                    
+                df = pd.DataFrame(df_data)
+                
+                st.markdown("#### 1. Biểu Đồ Tần Suất & Bất Thường Tổng Thể")
+                st.markdown("*(Đỏ: Cố tình ra nhiều bất thường / Xanh: Bị gìm lại / Xám: Nằm trong vùng ngẫu nhiên công bằng)*")
+                
+                chart = alt.Chart(df).mark_bar().encode(
+                    x=alt.X('Số:O', sort=None),
+                    y='Lần xuất hiện:Q',
+                    color=alt.condition(
+                        alt.datum['Độ lệch (Z-Score)'] > 1.5,
+                        alt.value('#ff4b4b'),  # Red for hot
+                        alt.condition(alt.datum['Độ lệch (Z-Score)'] < -1.5, alt.value('#0068c9'), alt.value('#888888'))
+                    ),
+                    tooltip=['Số', 'Lần xuất hiện', 'Độ lệch (Z-Score)', 'Hiện chưa ra (Kỳ)']
+                ).properties(height=400)
+                st.altair_chart(chart, use_container_width=True)
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.markdown("#### 🔥 TOP 5 Số Nóng Nhất (Ra Nhiều)")
+                    st.dataframe(df.nlargest(5, 'Độ lệch (Z-Score)')[['Số', 'Lần xuất hiện', 'Độ lệch (Z-Score)']], use_container_width=True)
+                with col2:
+                    st.markdown("#### ❄️ TOP 5 Số Lạnh Nhất (Bị Gìm)")
+                    st.dataframe(df.nsmallest(5, 'Độ lệch (Z-Score)')[['Số', 'Lần xuất hiện', 'Độ lệch (Z-Score)']], use_container_width=True)
+                    
+                st.warning("**Kết luận từ hệ thống:** Nếu biểu đồ trên có nhiều cột Đỏ/Xanh (Z-Score vượt quá ±2.5), lồng cầu có thể đang có sự thiên lệch vật lý (bóng nặng/nhẹ, trục quay nghiêng). Nếu đa số là cột Xám, lồng quay hoàn toàn ngẫu nhiên và không có sự 'chỉ định' nào.")
+
+    st.markdown("---")
     st.markdown("### 🧪 KIỂM THỬ ĐỘ CHÍNH XÁC (BACKTESTING)")
     with st.expander("Bấm để chạy Backtest (Kiểm tra lại lịch sử 50 kỳ gần nhất)"):
         st.warning("⚠️ Hệ thống sẽ tua ngược thời gian, ẩn đi kết quả thật và dùng AI để dự đoán các kỳ trong quá khứ, sau đó đối chiếu với kết quả thực tế để tính tỉ lệ trúng.")
