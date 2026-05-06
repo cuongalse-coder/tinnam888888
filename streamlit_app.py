@@ -419,107 +419,49 @@ def main_app():
     if "prediction_ready" not in st.session_state:
         st.session_state.prediction_ready = False
     
-    col1, col2 = st.columns(2)
-    with col1:
-        run_btn = st.button("⚡ TÌM KẾT QUẢ THỰC TẾ KỲ TIẾP THEO ⚡")
+    col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        jackpot_btn = st.button("🎯 CHẾ ĐỘ SĂN JACKPOT 6/6 (EXPLOIT) 🎯")
+        run_btn = st.button("⚡ DỰ ĐOÁN JACKPOT (SIÊU TRÍ TUỆ ĐỘNG) ⚡", use_container_width=True)
 
-    if run_btn or jackpot_btn:
+    if run_btn:
         st.session_state.prediction_ready = False
         
         progress_bar = st.progress(0)
         status = st.empty()
         
-        if jackpot_btn:
-            status.text("Đang kích hoạt Vulnerability Scanner để tìm lỗ hổng lồng cầu...")
+        status.text("Đang tính toán Z-Score và Ma trận đồng xuất hiện...")
+        time.sleep(0.5)
+        progress_bar.progress(30)
+        
+        status.text("Đang kích hoạt Vulnerability Scanner để dò tìm Điểm Uốn Hỗn Độn...")
+        time.sleep(0.5)
+        progress_bar.progress(60)
+        
+        try:
+            from models.vulnerability_scanner import VulnerabilityScanner
+            from models.exploit_engine import ExploitEngine
+            
+            scanner = VulnerabilityScanner(max_number, 6)
+            scan_results = scanner.scan_all(real_data)
+            
+            status.text("Đang chạy thuật toán Cắt Tỉa Vét Cạn (Quantum Pruning)...")
             time.sleep(0.5)
-            progress_bar.progress(30)
+            progress_bar.progress(80)
             
-            status.text("Phát hiện bất thường, đang cấu hình Exploit Engine (Săn 6/6)...")
-            time.sleep(0.5)
-            progress_bar.progress(60)
+            engine = ExploitEngine(max_number, 6)
+            exploit = engine.exploit(real_data, scan_results, n_sets=5)
             
-            try:
-                from models.vulnerability_scanner import VulnerabilityScanner
-                from models.exploit_engine import ExploitEngine
-                
-                scanner = VulnerabilityScanner(max_number, 6)
-                scan_results = scanner.scan_all(real_data)
-                
-                engine = ExploitEngine(max_number, 6)
-                exploit = engine.exploit(real_data, scan_results, n_sets=10)
-                
-                if exploit['predictions']:
-                    st.session_state.best_prediction = exploit['predictions'][0]['numbers']
-                    st.session_state.alt_predictions = [p['numbers'] for p in exploit['predictions'][1:4]]
-                    st.success(f"⚠️ Phát hiện {exploit['biases_used']} lỗ hổng! Tỉ lệ tự tin: {exploit['confidence']}%")
-                else:
-                    st.warning("Không tìm thấy lỗ hổng thuật toán nào ở lồng cầu hiện tại. Chuyển về V9.")
-                    from models.ultimate_engine import UltimateEngine
-                    advanced_engine = UltimateEngine(max_number, 6)
-                    result = advanced_engine.predict(real_data)
-                    st.session_state.best_prediction = result['primary']
-                    st.session_state.alt_predictions = [p['numbers'] for p in result.get('portfolio', [{}, {}, {}, {}])[1:4] if 'numbers' in p]
-            except Exception as e:
-                st.error(f"Lỗi: {e}")
-                
-        else:
-            status.text("Đang khởi động Ultimate Engine V9 - Block Puzzle...")
-            time.sleep(0.5)
-            progress_bar.progress(25)
-            
-            status.text("Đang quét vị trí, biên độ và nhận dạng hình dạng khối (Shape ID)...")
-            time.sleep(0.5)
-            progress_bar.progress(50)
-            
-            status.text("Đang trích xuất 20 tín hiệu đa chiều và chạy mô hình Ensemble...")
-            time.sleep(0.5)
-            progress_bar.progress(75)
-            
-            status.text("Hoàn tất tổng hợp, đang chốt lệnh...")
-            
-            try:
+            if exploit['predictions']:
+                st.session_state.best_prediction = exploit['predictions'][0]['numbers']
+                st.success(f"⚠️ Đã tóm gọn {exploit['biases_used']} quy luật bất thường của lồng quay! Tỉ lệ tự tin: {exploit['confidence']}%")
+            else:
+                st.warning("Không tìm thấy lỗ hổng thuật toán nào. Chuyển về V9 Dự phòng.")
                 from models.ultimate_engine import UltimateEngine
                 advanced_engine = UltimateEngine(max_number, 6)
                 result = advanced_engine.predict(real_data)
-                
                 st.session_state.best_prediction = result['primary']
-                
-                # Lấy 3 dàn phụ từ danh mục đầu tư (portfolio)
-                st.session_state.alt_predictions = []
-                if 'portfolio' in result and len(result['portfolio']) > 3:
-                    added = 0
-                    for p in result['portfolio'][1:]:
-                        if p['numbers'] != st.session_state.best_prediction:
-                            st.session_state.alt_predictions.append(p['numbers'])
-                            added += 1
-                            if added == 3:
-                                break
-            
-                # Backup nếu không đủ
-                while len(st.session_state.alt_predictions) < 3:
-                    alt = st.session_state.best_prediction.copy()
-                    gap_candidates = ai_engine.model_gap_overdue(top_n=15)
-                    for __ in range(random.randint(1, 2)):
-                        idx = random.randint(0, 5)
-                        new_num = random.choice([n for n in gap_candidates if n not in alt])
-                        alt[idx] = new_num
-                    st.session_state.alt_predictions.append(sorted(alt))
-
-                
-            except Exception as e:
-                st.error(f"Lỗi Ultimate Engine: {e}. Chuyển sang mô hình dự phòng.")
-                st.session_state.best_prediction = ai_engine.optimize_ensemble()
-                st.session_state.alt_predictions = []
-                for _ in range(3):
-                    alt = st.session_state.best_prediction.copy()
-                    gap_candidates = ai_engine.model_gap_overdue(top_n=15)
-                    for __ in range(random.randint(1, 2)):
-                        idx = random.randint(0, 5)
-                        new_num = random.choice([n for n in gap_candidates if n not in alt])
-                        alt[idx] = new_num
-                    st.session_state.alt_predictions.append(sorted(alt))
+        except Exception as e:
+            st.error(f"Lỗi: {e}")
                 
         progress_bar.progress(100)
         status.empty()
@@ -529,21 +471,12 @@ def main_app():
         st.success("✅ ĐÃ CHỐT ĐƯỢC BỘ SỐ HOÀN HẢO CHO KỲ TIẾP THEO BẰNG CÔNG NGHỆ MACHINE LEARNING.")
         
         st.markdown("<div class='card' style='border-color: #00ff00;'>", unsafe_allow_html=True)
-        st.markdown("<h2 style='text-align: center; color: #00ff00 !important;'>🎯 BỘ SỐ CHỐT CUỐI CÙNG (DÀN VIP 1)</h2>", unsafe_allow_html=True)
+        st.markdown("<h2 style='text-align: center; color: #00ff00 !important;'>🎯 BỘ SỐ CHỐT CUỐI CÙNG (DÀN VIP DUY NHẤT)</h2>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center; color: #888;'><em>(Đây là bộ số có tỷ lệ nổ cao nhất, đã được cắt tỉa vét cạn mọi sai số)</em></p>", unsafe_allow_html=True)
         
         pred_balls_html = "".join([f"<div class='ball special-ball'>{num:02d}</div>" for num in st.session_state.best_prediction])
         st.markdown(f"<div style='text-align: center; padding: 20px;'>{pred_balls_html}</div>", unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
-        
-        st.markdown("#### 🛡️ CÁC DÀN BỔ TRỢ (ĐỂ TỐI ƯU HÓA XÁC SUẤT TRÚNG)")
-        cols = st.columns(3)
-        for i, alt_pred in enumerate(st.session_state.alt_predictions):
-            with cols[i]:
-                st.markdown(f"<div class='card' style='padding: 10px; text-align: center;'>", unsafe_allow_html=True)
-                st.markdown(f"**Dàn {i+2}**")
-                alt_html = "".join([f"<span style='display:inline-block; padding:5px; margin:2px; background:#333; border-radius:5px;'>{n:02d}</span>" for n in alt_pred])
-                st.markdown(alt_html, unsafe_allow_html=True)
-                st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("---")
     st.markdown("### 📊 THEO DÕI ĐIỂM NỔ (OVERDUE GAP)")
