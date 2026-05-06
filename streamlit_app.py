@@ -497,15 +497,16 @@ def main_app():
                             if added == 3:
                                 break
             
-            # Backup nếu không đủ
-            while len(st.session_state.alt_predictions) < 3:
-                alt = st.session_state.best_prediction.copy()
-                gap_candidates = ai_engine.model_gap_overdue(top_n=15)
-                for __ in range(random.randint(1, 2)):
-                    idx = random.randint(0, 5)
-                    new_num = random.choice([n for n in gap_candidates if n not in alt])
-                    alt[idx] = new_num
-                st.session_state.alt_predictions.append(sorted(alt))
+                # Backup nếu không đủ
+                while len(st.session_state.alt_predictions) < 3:
+                    alt = st.session_state.best_prediction.copy()
+                    gap_candidates = ai_engine.model_gap_overdue(top_n=15)
+                    for __ in range(random.randint(1, 2)):
+                        idx = random.randint(0, 5)
+                        new_num = random.choice([n for n in gap_candidates if n not in alt])
+                        alt[idx] = new_num
+                    st.session_state.alt_predictions.append(sorted(alt))
+
                 
             except Exception as e:
                 st.error(f"Lỗi Ultimate Engine: {e}. Chuyển sang mô hình dự phòng.")
