@@ -12,7 +12,7 @@ import re
 # CẤU HÌNH TRANG & GIAO DIỆN
 # ==========================================
 st.set_page_config(
-    page_title="TINNAM AI - V19.0 QUANTUM NEURAL GRAPH",
+    page_title="TINNAM AI - V20.0 THE ORACLE",
     page_icon="🎯",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -20,20 +20,21 @@ st.set_page_config(
 
 st.markdown("""
     <style>
-    .main { background-color: #0e1117; color: #00ff00; font-family: 'Courier New', Courier, monospace; }
+    .main { background-color: #050505; color: #00ffcc; font-family: 'Courier New', Courier, monospace; }
     .ball {
         display: inline-flex; align-items: center; justify-content: center;
         width: 50px; height: 50px; border-radius: 50%; color: white;
         font-weight: bold; font-size: 20px; margin: 5px;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.5); border: 2px solid #ffffff;
+        box-shadow: 0 0 10px rgba(0,255,204,0.5); border: 2px solid #00ffcc;
+        background: #111;
     }
-    .mega-ball { background: linear-gradient(145deg, #ff0055, #a80033); }
-    .power-ball { background: linear-gradient(145deg, #ff4500, #b33000); }
-    .special-ball { background: linear-gradient(145deg, #ffd700, #b8860b); color: #000; }
-    .stButton>button { width: 100%; background-color: #00ff00; color: #000000; font-weight: bold; border: 2px solid #00aa00; border-radius: 5px; transition: 0.3s; }
-    .stButton>button:hover { background-color: #ffffff; color: #000000; box-shadow: 0 0 15px #00ff00; }
-    h1, h2, h3 { color: #00ff00 !important; }
-    .card { background-color: #1a1c23; padding: 20px; border-radius: 10px; border: 1px solid #333; margin-bottom: 20px; }
+    .mega-ball { box-shadow: 0 0 15px #ff0055; border-color: #ff0055; }
+    .power-ball { box-shadow: 0 0 15px #ff4500; border-color: #ff4500; }
+    .special-ball { background: linear-gradient(145deg, #00ffcc, #006655); color: #000; box-shadow: 0 0 20px #00ffcc; border-color: #fff; }
+    .stButton>button { width: 100%; background-color: transparent; color: #00ffcc; font-weight: bold; border: 2px solid #00ffcc; border-radius: 5px; transition: 0.3s; text-shadow: 0 0 5px #00ffcc; box-shadow: inset 0 0 10px #00ffcc; }
+    .stButton>button:hover { background-color: #00ffcc; color: #000000; box-shadow: 0 0 25px #00ffcc; }
+    h1, h2, h3 { color: #00ffcc !important; text-shadow: 0 0 10px #00ffcc; }
+    .card { background-color: rgba(10, 15, 20, 0.9); padding: 20px; border-radius: 10px; border: 1px solid #00ffcc; margin-bottom: 20px; box-shadow: 0 0 15px rgba(0,255,204,0.2); }
     </style>
 """, unsafe_allow_html=True)
 
@@ -358,7 +359,7 @@ class RealWorldAIEngine:
 def main_app():
     with st.sidebar:
         st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/a/ae/Vietlott_logo.svg/1200px-Vietlott_logo.svg.png", width=150)
-        st.markdown("### 🤖 V19.0 - QUANTUM NEURAL GRAPH")
+        st.markdown("### 👁️ V20.0 - THE ORACLE")
         st.markdown("---")
         game_choice = st.radio("CHỌN CHẾ ĐỘ QUÉT:", ["Mega 6/45", "Power 6/55"])
         st.markdown("---")
@@ -377,7 +378,7 @@ def main_app():
             st.session_state.logged_in = False
             st.rerun()
 
-    st.title(f"🚀 {game_choice.upper()} - V19.0 QUANTUM NEURAL GRAPH")
+    st.title(f"🚀 {game_choice.upper()} - V20.0 THE ORACLE (NHÀ TIÊN TRI)")
     max_number = 45 if game_choice == "Mega 6/45" else 55
     ball_class = "mega-ball" if game_choice == "Mega 6/45" else "power-ball"
     
@@ -424,7 +425,7 @@ def main_app():
     
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        run_btn = st.button("⚡ V19.0 QUANTUM NEURAL GRAPH — BẮN TỈA JACKPOT ⚡", use_container_width=True)
+        run_btn = st.button("👁️ V20.0 THE ORACLE — ĐỌC TƯƠNG LAI 👁️", use_container_width=True)
 
     if run_btn:
         st.session_state.prediction_ready = False
@@ -484,7 +485,7 @@ def main_app():
                 )
                 
                 sniper_ticket = result_v11['predictions'][0]['numbers']
-                sniper_obj = {'numbers': sniper_ticket, 'strategy': '⚡ VÉ THẦN THÁNH (JACKPOT SNIPER - 31 AI ĐỒNG THUẬN CAO NHẤT)'}
+                sniper_obj = {'numbers': sniper_ticket, 'strategy': '⚡ VÉ THẦN THÁNH (JACKPOT SNIPER - 32 AI ĐỒNG THUẬN)'}
                 
                 # Check to avoid duplicate
                 filtered_tickets = [t for t in tickets if sorted(t['numbers']) != sorted(sniper_ticket)]
@@ -529,12 +530,12 @@ def main_app():
     if st.session_state.prediction_ready:
         coverage = st.session_state.get('v11_confidence', 0)
         top_pool = st.session_state.get('v11_top_pool', [])
-        st.success(f"✅ V19.0 QUANTUM NEURAL GRAPH HOÀN TẤT — Tỉ lệ bao phủ lưới: {coverage}% | Hồ Tiềm Năng {len(top_pool)} số.")
+        st.success(f"✅ V20.0 THE ORACLE HOÀN TẤT — Tỉ lệ bao phủ lưới: {coverage}% | Hồ Tiềm Năng {len(top_pool)} số.")
         
         # === HỒ SỐ TIỀM NĂNG ===
         st.markdown("<div class='card'>", unsafe_allow_html=True)
-        st.markdown(f"<h2 style='text-align: center; color: #ff0055 !important;'>🔥 HỒ SỐ TIỀM NĂNG ({len(top_pool)} SỐ TỪ 31 AI SIGNALS) 🔥</h2>", unsafe_allow_html=True)
-        st.markdown("<p style='text-align: center; color: #888;'><em>(Xác suất Jackpot rơi vào hồ này là cao nhất theo tính toán của 31 AI Signals + ELO Rating)</em></p>", unsafe_allow_html=True)
+        st.markdown(f"<h2 style='text-align: center; color: #00ffcc !important;'>🔥 HỒ SỐ TIỀM NĂNG ({len(top_pool)} SỐ TỪ 32 AI SIGNALS) 🔥</h2>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center; color: #888;'><em>(Xác suất Jackpot rơi vào hồ này là cao nhất theo tính toán của 32 AI Signals + ELO Rating)</em></p>", unsafe_allow_html=True)
         if top_pool:
             pool_html = "".join([f"<div class='ball special-ball'>{n:02d}</div>" for n in top_pool])
             st.markdown(f"<div style='text-align:center;'>{pool_html}</div>", unsafe_allow_html=True)
@@ -589,13 +590,13 @@ def main_app():
                 elif coherence < 60:
                     st.warning("⚠️ TÍN HIỆU TRUNG BÌNH: Đã xuất hiện xu hướng nhưng chưa thực sự bứt phá. KHUYẾN NGHỊ: Đánh ở mức an toàn (10-20% quỹ mạo hiểm).")
                 else:
-                    st.success("🔥 TÍN HIỆU ĐỒNG THUẬN CAO (SINGULARITY): 31 Thuật toán lượng tử hội tụ về cùng một lưới xác suất. Đây là 'Điểm Rơi' hoàn hảo của lồng cầu. KHUYẾN NGHỊ: Tấn công mạnh, mua đủ danh sách vé AI đề xuất.")
+                    st.success("🔥 TÍN HIỆU ĐỒNG THUẬN CAO (SINGULARITY): 32 Thuật toán lượng tử hội tụ về cùng một lưới xác suất. Đây là 'Điểm Rơi' hoàn hảo của lồng cầu. KHUYẾN NGHỊ: Tấn công mạnh, mua đủ danh sách vé AI đề xuất.")
         st.markdown("</div>", unsafe_allow_html=True)
         
         # === TRỌNG SỐ TÍN HIỆU ===
         v11_weights = st.session_state.get('v11_weights', {})
         if v11_weights:
-            with st.expander("🧠 XEM TRỌNG SỐ 31 TÍN HIỆU AI (Dynamic ELO Rating)", expanded=False):
+            with st.expander("🧠 XEM TRỌNG SỐ 32 TÍN HIỆU AI (Dynamic ELO Rating)", expanded=False):
                 import pandas as pd
                 w_data = [{"Tín hiệu": k, "Trọng số": v} for k, v in v11_weights.items()]
                 df_w = pd.DataFrame(w_data)
