@@ -12,7 +12,7 @@ import re
 # CẤU HÌNH TRANG & GIAO DIỆN
 # ==========================================
 st.set_page_config(
-    page_title="TINNAM AI - MEGA EXPLOIT V11 (ULTIMATE)",
+    page_title="TINNAM AI - MEGA EXPLOIT V12.0 (QUANTUM SUPREMACY)",
     page_icon="🎯",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -358,7 +358,7 @@ class RealWorldAIEngine:
 def main_app():
     with st.sidebar:
         st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/a/ae/Vietlott_logo.svg/1200px-Vietlott_logo.svg.png", width=150)
-        st.markdown("### 🤖 V11 - MEGA EXPLOIT ENGINE")
+        st.markdown("### 🤖 V12.0 - QUANTUM SUPREMACY ENGINE")
         st.markdown("---")
         game_choice = st.radio("CHỌN CHẾ ĐỘ QUÉT:", ["Mega 6/45", "Power 6/55"])
         st.markdown("---")
@@ -374,7 +374,7 @@ def main_app():
             st.session_state.logged_in = False
             st.rerun()
 
-    st.title(f"🚀 {game_choice.upper()} - V11 MEGA EXPLOIT")
+    st.title(f"🚀 {game_choice.upper()} - V12.0 QUANTUM SUPREMACY")
     max_number = 45 if game_choice == "Mega 6/45" else 55
     ball_class = "mega-ball" if game_choice == "Mega 6/45" else "power-ball"
     
@@ -421,7 +421,7 @@ def main_app():
     
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        run_btn = st.button("⚡ V11 MEGA EXPLOIT — DỰ ĐOÁN JACKPOT TỐI THƯỢNG ⚡", use_container_width=True)
+        run_btn = st.button("⚡ V12.0 QUANTUM SUPREMACY — DỰ ĐOÁN JACKPOT TỐI THƯỢNG ⚡", use_container_width=True)
 
     if run_btn:
         st.session_state.prediction_ready = False
@@ -445,26 +445,26 @@ def main_app():
         time.sleep(0.2)
         progress_bar.progress(50)
         
-        status.text("🏊 [5/8] KNN + Momentum + Streak + Anti-Repeat + OddEven + HighLow (20 tín hiệu)...")
+        status.text("🏊 [5/8] KNN + Momentum + Streak + Anti-Repeat + OddEven + HighLow...")
         time.sleep(0.2)
         progress_bar.progress(60)
         
-        status.text("⚖️ [6/8] Walk-Forward Calibration — Tối ưu trọng số 20 tín hiệu...")
+        status.text("🌌 [6/8] QUANTUM: Prime Balance + Fibonacci Bias + Edge Bounce + K-Means Closeness (24 tín hiệu)...")
         time.sleep(0.2)
         progress_bar.progress(70)
         
-        status.text("🤖 [7/8] META-ENSEMBLE 4 ENGINES — V9 + SuperPredictor + DeepForensic + V10...")
+        status.text("⚖️ [7/8] Walk-Forward Calibration + 5-ENGINE META-ENSEMBLE...")
         time.sleep(0.2)
         progress_bar.progress(85)
         
-        status.text("🎯 [8/8] Sum-Mod7 + Decade Balance + Hill-Climbing — Chốt bộ số...")
+        status.text("🎯 [8/8] Sum-Mod7 + Decade Balance + Simulated Annealing — Chốt bộ số...")
         time.sleep(0.2)
         progress_bar.progress(90)
         
         try:
-            from models.mega_exploit_v11 import MegaExploitV11
+            from models.mega_exploit_v12 import MegaExploitV12
             
-            engine = MegaExploitV11(max_number, 6)
+            engine = MegaExploitV12(max_number, 6)
             result_v11 = engine.predict(real_data, n_sets=5)
             
             if result_v11['predictions']:
@@ -507,12 +507,12 @@ def main_app():
 
     if st.session_state.prediction_ready:
         confidence = st.session_state.get('v11_confidence', 0)
-        st.success(f"✅ V11.8 HYPER INTELLIGENCE HOÀN TẤT — Độ tự tin: {confidence}% | 20 tín hiệu AI + 4-Engine Meta-Ensemble.")
+        st.success(f"✅ V12.0 QUANTUM SUPREMACY HOÀN TẤT — Độ tự tin: {confidence}% | 24 tín hiệu AI + 5-Engine Meta-Ensemble + Simulated Annealing.")
         
         # === BỘ SỐ CHỐT CHÍNH ===
         st.markdown("<div class='card' style='border-color: #00ff00;'>", unsafe_allow_html=True)
         st.markdown("<h2 style='text-align: center; color: #00ff00 !important;'>🎯 BỘ SỐ #1 — DÀN VIP TỐI THƯỢNG</h2>", unsafe_allow_html=True)
-        st.markdown("<p style='text-align: center; color: #888;'><em>(Bộ số điểm cao nhất từ V11 Mega Exploit Engine)</em></p>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center; color: #888;'><em>(Bộ số điểm cao nhất từ V12.0 Quantum Supremacy Engine)</em></p>", unsafe_allow_html=True)
         
         pred_balls_html = "".join([f"<div class='ball special-ball'>{num:02d}</div>" for num in st.session_state.best_prediction])
         st.markdown(f"<div style='text-align: center; padding: 20px;'>{pred_balls_html}</div>", unsafe_allow_html=True)
@@ -532,7 +532,7 @@ def main_app():
         # === TRỌNG SỐ TÍN HIỆU ===
         v11_weights = st.session_state.get('v11_weights', {})
         if v11_weights:
-            with st.expander("🧠 XEM TRỌNG SỐ 20 TÍN HIỆU AI (Walk-Forward Calibration)", expanded=False):
+            with st.expander("🧠 XEM TRỌNG SỐ 24 TÍN HIỆU AI (Walk-Forward Calibration)", expanded=False):
                 import pandas as pd
                 w_data = [{"Tín hiệu": k, "Trọng số": v} for k, v in v11_weights.items()]
                 df_w = pd.DataFrame(w_data)
