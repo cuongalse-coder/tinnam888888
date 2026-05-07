@@ -363,6 +363,7 @@ def main_app():
         game_choice = st.radio("CHỌN CHẾ ĐỘ QUÉT:", ["Mega 6/45", "Power 6/55"])
         st.markdown("---")
         num_tickets = st.selectbox("Ngân sách đầu tư (Số vé mua):", [5, 10, 20, 50, 100], index=1)
+        pool_size = st.selectbox("Kích thước Hồ Tiềm Năng:", [10, 12, 15, 18, 20], index=2)
         st.markdown("---")
         st.markdown("**Trạng thái:** 🟢 Kết nối API Thực Tế")
         st.markdown(f"**Hôm nay:** {datetime.now().strftime('%d/%m/%Y')}")
@@ -470,7 +471,7 @@ def main_app():
             result_v11 = engine.predict(real_data, n_sets=5)
             
             if result_v11['top_pool']:
-                st.session_state.v11_top_pool = result_v11['top_pool'][:15] # Top 15 numbers
+                st.session_state.v11_top_pool = result_v11['top_pool'][:pool_size] # Dynamic pool size
                 
                 from models.wheeling_optimizer import WheelingOptimizer
                 wheel_opt = WheelingOptimizer(6)
@@ -514,12 +515,12 @@ def main_app():
 
     if st.session_state.prediction_ready:
         coverage = st.session_state.get('v11_confidence', 0)
-        st.success(f"✅ V13.0 WHEELING OPTIMIZER HOÀN TẤT — Tỉ lệ bao phủ lưới: {coverage}% | Hồ Tiềm Năng 15 số.")
+        top_pool = st.session_state.get('v11_top_pool', [])
+        st.success(f"✅ V13.0 WHEELING OPTIMIZER HOÀN TẤT — Tỉ lệ bao phủ lưới: {coverage}% | Hồ Tiềm Năng {len(top_pool)} số.")
         
         # === HỒ SỐ TIỀM NĂNG ===
-        top_pool = st.session_state.get('v11_top_pool', [])
         st.markdown("<div class='card'>", unsafe_allow_html=True)
-        st.markdown("<h2 style='text-align: center; color: #ff0055 !important;'>🔥 HỒ SỐ TIỀM NĂNG (15 SỐ AI CHỌN) 🔥</h2>", unsafe_allow_html=True)
+        st.markdown(f"<h2 style='text-align: center; color: #ff0055 !important;'>🔥 HỒ SỐ TIỀM NĂNG ({len(top_pool)} SỐ AI CHỌN) 🔥</h2>", unsafe_allow_html=True)
         st.markdown("<p style='text-align: center; color: #888;'><em>(Xác suất Jackpot rơi vào hồ này là cao nhất theo tính toán của 24 AI Signals)</em></p>", unsafe_allow_html=True)
         if top_pool:
             pool_html = "".join([f"<div class='ball special-ball'>{n:02d}</div>" for n in top_pool])
@@ -532,11 +533,27 @@ def main_app():
         st.markdown(f"<h2 style='text-align: center; color: #00ff00 !important;'>🎯 DÀN {len(all_preds)} VÉ BAO RÚT GỌN CHỐT SỐ 🎯</h2>", unsafe_allow_html=True)
         st.markdown(f"<p style='text-align: center; color: #888;'><em>(Ma trận tổ hợp bao phủ chéo giúp tiết kiệm tiền mà vẫn vét được lưới xác suất)</em></p>", unsafe_allow_html=True)
         
+        ticket_texts = []
         for i, pred in enumerate(all_preds):
             nums = pred['numbers']
+            ticket_str = " ".join([f"{n:02d}" for n in nums])
+            ticket_texts.append(ticket_str)
             ticket_html = "".join([f"<div class='ball {ball_class}' style='width:40px;height:40px;font-size:16px;'>{n:02d}</div>" for n in nums])
             st.markdown(f"**Vé #{i+1}:**", unsafe_allow_html=True)
             st.markdown(f"<div style='padding: 5px;'>{ticket_html}</div>", unsafe_allow_html=True)
+        
+        # Tiện ích Copy & Download
+        st.markdown("### 📋 SAO CHÉP & TẢI XUỐNG ĐỂ GHI VÉ")
+        st.info("💡 Bạn có thể copy dán trực tiếp vào SMS Vietlott, hoặc ghi ra giấy.")
+        full_text = "\\n".join(ticket_texts)
+        st.code(full_text, language='text')
+        
+        st.download_button(
+            label="💾 Tải danh sách vé (.txt)",
+            data=full_text,
+            file_name=f"vietlott_{game_choice.replace(' ', '_')}_dan_{len(all_preds)}_ve.txt",
+            mime="text/plain"
+        )
         st.markdown("</div>", unsafe_allow_html=True)
         
         # === TRỌNG SỐ TÍN HIỆU ===
