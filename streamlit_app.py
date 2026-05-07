@@ -12,7 +12,7 @@ import re
 # CẤU HÌNH TRANG & GIAO DIỆN
 # ==========================================
 st.set_page_config(
-    page_title="TINNAM AI - V14.0 SUPREME WHEELING",
+    page_title="TINNAM AI - V15.0 NEURAL QUANTUM",
     page_icon="🎯",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -358,7 +358,7 @@ class RealWorldAIEngine:
 def main_app():
     with st.sidebar:
         st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/a/ae/Vietlott_logo.svg/1200px-Vietlott_logo.svg.png", width=150)
-        st.markdown("### 🤖 V14.0 - SUPREME WHEELING")
+        st.markdown("### 🤖 V15.0 - NEURAL QUANTUM")
         st.markdown("---")
         game_choice = st.radio("CHỌN CHẾ ĐỘ QUÉT:", ["Mega 6/45", "Power 6/55"])
         st.markdown("---")
@@ -377,7 +377,7 @@ def main_app():
             st.session_state.logged_in = False
             st.rerun()
 
-    st.title(f"🚀 {game_choice.upper()} - V14.0 SUPREME WHEELING")
+    st.title(f"🚀 {game_choice.upper()} - V15.0 NEURAL QUANTUM")
     max_number = 45 if game_choice == "Mega 6/45" else 55
     ball_class = "mega-ball" if game_choice == "Mega 6/45" else "power-ball"
     
@@ -424,7 +424,7 @@ def main_app():
     
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        run_btn = st.button("⚡ V14.0 SUPREME WHEELING — TẠO DÀN BAO RÚT GỌN ⚡", use_container_width=True)
+        run_btn = st.button("⚡ V15.0 NEURAL QUANTUM — TẠO DÀN BAO RÚT GỌN ⚡", use_container_width=True)
 
     if run_btn:
         st.session_state.prediction_ready = False
@@ -452,11 +452,11 @@ def main_app():
         time.sleep(0.2)
         progress_bar.progress(60)
         
-        status.text("🌌 [6/8] QUANTUM: Prime Balance + Fibonacci Bias + Edge Bounce + K-Means Closeness (24 tín hiệu)...")
+        status.text("🌌 [6/8] QUANTUM: Poisson + Markov Steady + Golden Ratio + Bayesian (30 tín hiệu)...")
         time.sleep(0.2)
         progress_bar.progress(70)
         
-        status.text("⚖️ [7/8] Walk-Forward Calibration + 5-ENGINE META-ENSEMBLE...")
+        status.text("⚖️ [7/8] Dynamic ELO Rating Calibration + 5-ENGINE META-ENSEMBLE...")
         time.sleep(0.2)
         progress_bar.progress(85)
         
@@ -465,9 +465,9 @@ def main_app():
         progress_bar.progress(90)
         
         try:
-            from models.mega_exploit_v12 import MegaExploitV12
+            from models.mega_exploit_v15 import MegaExploitV15
             
-            engine = MegaExploitV12(max_number, 6)
+            engine = MegaExploitV15(max_number, 6)
             result_v11 = engine.predict(real_data, n_sets=5)
             
             if result_v11['top_pool']:
@@ -521,12 +521,12 @@ def main_app():
     if st.session_state.prediction_ready:
         coverage = st.session_state.get('v11_confidence', 0)
         top_pool = st.session_state.get('v11_top_pool', [])
-        st.success(f"✅ V14.0 SUPREME WHEELING HOÀN TẤT — Tỉ lệ bao phủ lưới: {coverage}% | Hồ Tiềm Năng {len(top_pool)} số.")
+        st.success(f"✅ V15.0 NEURAL QUANTUM HOÀN TẤT — Tỉ lệ bao phủ lưới: {coverage}% | Hồ Tiềm Năng {len(top_pool)} số.")
         
         # === HỒ SỐ TIỀM NĂNG ===
         st.markdown("<div class='card'>", unsafe_allow_html=True)
-        st.markdown(f"<h2 style='text-align: center; color: #ff0055 !important;'>🔥 HỒ SỐ TIỀM NĂNG ({len(top_pool)} SỐ AI CHỌN) 🔥</h2>", unsafe_allow_html=True)
-        st.markdown("<p style='text-align: center; color: #888;'><em>(Xác suất Jackpot rơi vào hồ này là cao nhất theo tính toán của 24 AI Signals)</em></p>", unsafe_allow_html=True)
+        st.markdown(f"<h2 style='text-align: center; color: #ff0055 !important;'>🔥 HỒ SỐ TIỀM NĂNG ({len(top_pool)} SỐ TỪ 30 AI SIGNALS) 🔥</h2>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center; color: #888;'><em>(Xác suất Jackpot rơi vào hồ này là cao nhất theo tính toán của 30 AI Signals + ELO Rating)</em></p>", unsafe_allow_html=True)
         if top_pool:
             pool_html = "".join([f"<div class='ball special-ball'>{n:02d}</div>" for n in top_pool])
             st.markdown(f"<div style='text-align:center;'>{pool_html}</div>", unsafe_allow_html=True)
@@ -564,7 +564,7 @@ def main_app():
         # === TRỌNG SỐ TÍN HIỆU ===
         v11_weights = st.session_state.get('v11_weights', {})
         if v11_weights:
-            with st.expander("🧠 XEM TRỌNG SỐ 24 TÍN HIỆU AI (Walk-Forward Calibration)", expanded=False):
+            with st.expander("🧠 XEM TRỌNG SỐ 30 TÍN HIỆU AI (Dynamic ELO Rating)", expanded=False):
                 import pandas as pd
                 w_data = [{"Tín hiệu": k, "Trọng số": v} for k, v in v11_weights.items()]
                 df_w = pd.DataFrame(w_data)
@@ -688,7 +688,7 @@ def main_app():
             if total_draws < 60:
                 st.error("Không đủ dữ liệu để backtest.")
             else:
-                from models.mega_exploit_v12 import MegaExploitV12
+                from models.mega_exploit_v15 import MegaExploitV15
                 from models.wheeling_optimizer import WheelingOptimizer
                 
                 match_counts = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0}
@@ -713,7 +713,7 @@ def main_app():
                     test_status.text(f"Đang phân tích kỳ {current_idx} / {total_draws}...")
                     
                     # 1. AI tạo hồ tiềm năng
-                    engine = MegaExploitV12(max_number, 6)
+                    engine = MegaExploitV15(max_number, 6)
                     res = engine.predict(historical_data_for_test, n_sets=1)
                     if res['top_pool']:
                         pool = res['top_pool'][:pool_size]
