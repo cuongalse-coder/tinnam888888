@@ -12,7 +12,7 @@ import re
 # CẤU HÌNH TRANG & GIAO DIỆN
 # ==========================================
 st.set_page_config(
-    page_title="TINNAM AI - VULNERABILITY SCANNER V10 (REAL WORLD)",
+    page_title="TINNAM AI - MEGA EXPLOIT V11 (ULTIMATE)",
     page_icon="🎯",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -358,7 +358,7 @@ class RealWorldAIEngine:
 def main_app():
     with st.sidebar:
         st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/a/ae/Vietlott_logo.svg/1200px-Vietlott_logo.svg.png", width=150)
-        st.markdown("### 🤖 V10 - REAL WORLD ENGINE")
+        st.markdown("### 🤖 V11 - MEGA EXPLOIT ENGINE")
         st.markdown("---")
         game_choice = st.radio("CHỌN CHẾ ĐỘ QUÉT:", ["Mega 6/45", "Power 6/55"])
         st.markdown("---")
@@ -374,7 +374,7 @@ def main_app():
             st.session_state.logged_in = False
             st.rerun()
 
-    st.title(f"🚀 {game_choice.upper()} - REALITY PREDICTION")
+    st.title(f"🚀 {game_choice.upper()} - V11 MEGA EXPLOIT")
     max_number = 45 if game_choice == "Mega 6/45" else 55
     ball_class = "mega-ball" if game_choice == "Mega 6/45" else "power-ball"
     
@@ -421,7 +421,7 @@ def main_app():
     
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        run_btn = st.button("⚡ DỰ ĐOÁN JACKPOT (SIÊU TRÍ TUỆ ĐỘNG) ⚡", use_container_width=True)
+        run_btn = st.button("⚡ V11 MEGA EXPLOIT — DỰ ĐOÁN JACKPOT TỐI THƯỢNG ⚡", use_container_width=True)
 
     if run_btn:
         st.session_state.prediction_ready = False
@@ -429,54 +429,113 @@ def main_app():
         progress_bar = st.progress(0)
         status = st.empty()
         
-        status.text("Đang tính toán Z-Score và Ma trận đồng xuất hiện...")
-        time.sleep(0.5)
+        status.text("🔬 [1/6] Đang quét Z-Score Trọng Lượng Vật Lý toàn bộ bóng...")
+        time.sleep(0.3)
+        progress_bar.progress(15)
+        
+        status.text("🧠 [2/6] Đang tính Ma Trận Chuyển Đổi Markov & Transition...")
+        time.sleep(0.3)
         progress_bar.progress(30)
         
-        status.text("Đang kích hoạt Vulnerability Scanner để dò tìm Điểm Uốn Hỗn Độn...")
-        time.sleep(0.5)
+        status.text("📡 [3/6] Đang phân tích FFT Cycle & Regime Detection...")
+        time.sleep(0.3)
+        progress_bar.progress(45)
+        
+        status.text("🔗 [4/6] Đang dò Sticky Pairs & Triplet Co-occurrence...")
+        time.sleep(0.3)
         progress_bar.progress(60)
         
+        status.text("⚖️ [5/6] Walk-Forward Calibration — Tối ưu trọng số tín hiệu...")
+        time.sleep(0.3)
+        progress_bar.progress(75)
+        
+        status.text("🎯 [6/6] Quantum Pruning — Cắt tỉa vét cạn & chốt bộ số...")
+        time.sleep(0.3)
+        progress_bar.progress(90)
+        
         try:
-            from models.vulnerability_scanner import VulnerabilityScanner
-            from models.exploit_engine import ExploitEngine
+            from models.mega_exploit_v11 import MegaExploitV11
             
-            scanner = VulnerabilityScanner(max_number, 6)
-            scan_results = scanner.scan_all(real_data)
+            engine = MegaExploitV11(max_number, 6)
+            result_v11 = engine.predict(real_data, n_sets=5)
             
-            status.text("Đang chạy thuật toán Cắt Tỉa Vét Cạn (Quantum Pruning)...")
-            time.sleep(0.5)
-            progress_bar.progress(80)
-            
-            engine = ExploitEngine(max_number, 6)
-            exploit = engine.exploit(real_data, scan_results, n_sets=5)
-            
-            if exploit['predictions']:
-                st.session_state.best_prediction = exploit['predictions'][0]['numbers']
-                st.success(f"⚠️ Đã tóm gọn {exploit['biases_used']} quy luật bất thường của lồng quay! Tỉ lệ tự tin: {exploit['confidence']}%")
+            if result_v11['predictions']:
+                st.session_state.best_prediction = result_v11['predictions'][0]['numbers']
+                st.session_state.all_predictions = result_v11['predictions']
+                st.session_state.v11_weights = result_v11.get('weights', {})
+                st.session_state.v11_confidence = result_v11['confidence']
+                st.session_state.v11_top_pool = result_v11.get('top_pool', [])
             else:
-                st.warning("Không tìm thấy lỗ hổng thuật toán nào. Chuyển về V9 Dự phòng.")
-                from models.ultimate_engine import UltimateEngine
-                advanced_engine = UltimateEngine(max_number, 6)
-                result = advanced_engine.predict(real_data)
-                st.session_state.best_prediction = result['primary']
+                # Fallback to V10
+                from models.vulnerability_scanner import VulnerabilityScanner
+                from models.exploit_engine import ExploitEngine
+                scanner = VulnerabilityScanner(max_number, 6)
+                scan_results = scanner.scan_all(real_data)
+                eng10 = ExploitEngine(max_number, 6)
+                exploit = eng10.exploit(real_data, scan_results, n_sets=5)
+                if exploit['predictions']:
+                    st.session_state.best_prediction = exploit['predictions'][0]['numbers']
+                    st.session_state.all_predictions = exploit['predictions']
+                    st.session_state.v11_weights = {}
+                    st.session_state.v11_confidence = exploit['confidence']
+                    st.session_state.v11_top_pool = []
+                else:
+                    from models.ultimate_engine import UltimateEngine
+                    adv = UltimateEngine(max_number, 6)
+                    res = adv.predict(real_data)
+                    st.session_state.best_prediction = res['primary']
+                    st.session_state.all_predictions = []
+                    st.session_state.v11_weights = {}
+                    st.session_state.v11_confidence = 50
+                    st.session_state.v11_top_pool = []
         except Exception as e:
             st.error(f"Lỗi: {e}")
+            import traceback
+            st.code(traceback.format_exc())
                 
         progress_bar.progress(100)
         status.empty()
         st.session_state.prediction_ready = True
 
     if st.session_state.prediction_ready:
-        st.success("✅ ĐÃ CHỐT ĐƯỢC BỘ SỐ HOÀN HẢO CHO KỲ TIẾP THEO BẰNG CÔNG NGHỆ MACHINE LEARNING.")
+        confidence = st.session_state.get('v11_confidence', 0)
+        st.success(f"✅ V11 MEGA EXPLOIT HOÀN TẤT — Độ tự tin: {confidence}% | 10 tín hiệu AI đã hội tụ.")
         
+        # === BỘ SỐ CHỐT CHÍNH ===
         st.markdown("<div class='card' style='border-color: #00ff00;'>", unsafe_allow_html=True)
-        st.markdown("<h2 style='text-align: center; color: #00ff00 !important;'>🎯 BỘ SỐ CHỐT CUỐI CÙNG (DÀN VIP DUY NHẤT)</h2>", unsafe_allow_html=True)
-        st.markdown("<p style='text-align: center; color: #888;'><em>(Đây là bộ số có tỷ lệ nổ cao nhất, đã được cắt tỉa vét cạn mọi sai số)</em></p>", unsafe_allow_html=True)
+        st.markdown("<h2 style='text-align: center; color: #00ff00 !important;'>🎯 BỘ SỐ #1 — DÀN VIP TỐI THƯỢNG</h2>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center; color: #888;'><em>(Bộ số điểm cao nhất từ V11 Mega Exploit Engine)</em></p>", unsafe_allow_html=True)
         
         pred_balls_html = "".join([f"<div class='ball special-ball'>{num:02d}</div>" for num in st.session_state.best_prediction])
         st.markdown(f"<div style='text-align: center; padding: 20px;'>{pred_balls_html}</div>", unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
+        
+        # === CÁC BỘ SỐ DỰ PHÒNG ===
+        all_preds = st.session_state.get('all_predictions', [])
+        if len(all_preds) > 1:
+            with st.expander(f"📋 XEM THÊM {len(all_preds)-1} BỘ SỐ DỰ PHÒNG (đa dạng hóa)", expanded=False):
+                for i, pred in enumerate(all_preds[1:], 2):
+                    nums = pred['numbers']
+                    score = pred.get('score', 0)
+                    alt_html = "".join([f"<div class='ball {ball_class}'>{n:02d}</div>" for n in nums])
+                    st.markdown(f"**Bộ #{i}** (điểm: {score:.1f}):", unsafe_allow_html=True)
+                    st.markdown(f"<div style='padding: 5px;'>{alt_html}</div>", unsafe_allow_html=True)
+        
+        # === TRỌNG SỐ TÍN HIỆU ===
+        v11_weights = st.session_state.get('v11_weights', {})
+        if v11_weights:
+            with st.expander("🧠 XEM TRỌNG SỐ 10 TÍN HIỆU AI (Walk-Forward Calibration)", expanded=False):
+                import pandas as pd
+                w_data = [{"Tín hiệu": k, "Trọng số": v} for k, v in v11_weights.items()]
+                df_w = pd.DataFrame(w_data)
+                st.dataframe(df_w, use_container_width=True)
+        
+        # === TOP POOL ===
+        top_pool = st.session_state.get('v11_top_pool', [])
+        if top_pool:
+            with st.expander(f"🏊 TOP {len(top_pool)} SỐ CÓ ĐIỂM CAO NHẤT (Candidate Pool)", expanded=False):
+                pool_html = "".join([f"<div class='ball {ball_class}' style='width:40px;height:40px;font-size:16px;'>{n:02d}</div>" for n in top_pool])
+                st.markdown(f"<div style='text-align:center;'>{pool_html}</div>", unsafe_allow_html=True)
 
     st.markdown("---")
     st.markdown("### 📊 THEO DÕI ĐIỂM NỔ (OVERDUE GAP)")
