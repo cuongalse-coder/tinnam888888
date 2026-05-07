@@ -429,28 +429,36 @@ def main_app():
         progress_bar = st.progress(0)
         status = st.empty()
         
-        status.text("🔬 [1/6] Đang quét Z-Score Trọng Lượng Vật Lý toàn bộ bóng...")
-        time.sleep(0.3)
-        progress_bar.progress(15)
+        status.text("🔬 [1/8] Đang quét Z-Score Trọng Lượng Vật Lý + Physical Weight...")
+        time.sleep(0.2)
+        progress_bar.progress(10)
         
-        status.text("🧠 [2/6] Đang tính Ma Trận Chuyển Đổi Markov & Transition...")
-        time.sleep(0.3)
-        progress_bar.progress(30)
+        status.text("🧠 [2/8] Ma Trận Markov + N-gram Bigram + Entropy Chain...")
+        time.sleep(0.2)
+        progress_bar.progress(25)
         
-        status.text("📡 [3/6] Đang phân tích FFT Cycle & Regime Detection...")
-        time.sleep(0.3)
-        progress_bar.progress(45)
+        status.text("📡 [3/8] FFT Cycle + Regime Detection + MA Crossover...")
+        time.sleep(0.2)
+        progress_bar.progress(35)
         
-        status.text("🔗 [4/6] Đang dò Sticky Pairs & Triplet Co-occurrence...")
-        time.sleep(0.3)
+        status.text("🔗 [4/8] Sticky Pairs + Triplet + Lag-N Repeat + Context-3...")
+        time.sleep(0.2)
+        progress_bar.progress(50)
+        
+        status.text("🏊 [5/8] KNN + Momentum + Streak + Anti-Repeat (16 tín hiệu)...")
+        time.sleep(0.2)
         progress_bar.progress(60)
         
-        status.text("⚖️ [5/6] Walk-Forward Calibration — Tối ưu trọng số tín hiệu...")
-        time.sleep(0.3)
-        progress_bar.progress(75)
+        status.text("⚖️ [6/8] Walk-Forward Calibration — Tối ưu trọng số 16 tín hiệu...")
+        time.sleep(0.2)
+        progress_bar.progress(70)
         
-        status.text("🎯 [6/6] Quantum Pruning — Cắt tỉa vét cạn & chốt bộ số...")
-        time.sleep(0.3)
+        status.text("🤖 [7/8] META-ENSEMBLE — Hội ý V9 + SuperPredictor + V10...")
+        time.sleep(0.2)
+        progress_bar.progress(85)
+        
+        status.text("🎯 [8/8] Quantum Pruning + Decade Balance — Chốt bộ số...")
+        time.sleep(0.2)
         progress_bar.progress(90)
         
         try:
@@ -499,7 +507,7 @@ def main_app():
 
     if st.session_state.prediction_ready:
         confidence = st.session_state.get('v11_confidence', 0)
-        st.success(f"✅ V11 MEGA EXPLOIT HOÀN TẤT — Độ tự tin: {confidence}% | 10 tín hiệu AI đã hội tụ.")
+        st.success(f"✅ V11.5 SUPER INTELLIGENCE HOÀN TẤT — Độ tự tin: {confidence}% | 16 tín hiệu AI + Meta-Ensemble hội tụ.")
         
         # === BỘ SỐ CHỐT CHÍNH ===
         st.markdown("<div class='card' style='border-color: #00ff00;'>", unsafe_allow_html=True)
@@ -524,7 +532,7 @@ def main_app():
         # === TRỌNG SỐ TÍN HIỆU ===
         v11_weights = st.session_state.get('v11_weights', {})
         if v11_weights:
-            with st.expander("🧠 XEM TRỌNG SỐ 10 TÍN HIỆU AI (Walk-Forward Calibration)", expanded=False):
+            with st.expander("🧠 XEM TRỌNG SỐ 16 TÍN HIỆU AI (Walk-Forward Calibration)", expanded=False):
                 import pandas as pd
                 w_data = [{"Tín hiệu": k, "Trọng số": v} for k, v in v11_weights.items()]
                 df_w = pd.DataFrame(w_data)
