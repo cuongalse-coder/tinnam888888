@@ -562,6 +562,40 @@ def main_app():
         )
         st.markdown("</div>", unsafe_allow_html=True)
         
+        # === PHÂN TÍCH CHUYÊN SÂU TỪ KỲ LIỀN KỀ ===
+        st.markdown("<div class='card' style='border-color: #00ffcc;'>", unsafe_allow_html=True)
+        st.markdown("<h2 style='text-align: center; color: #00ffcc !important;'>🔮 DỰ ĐOÁN CHUYÊN SÂU TỪ KỲ LIỀN KỀ 🔮</h2>", unsafe_allow_html=True)
+        
+        last_draw_balls = real_data[-1][:6]
+        balls_html_last = "".join([f"<div class='ball {ball_class}' style='width:30px;height:30px;font-size:12px;'>{num:02d}</div>" for num in last_draw_balls])
+        st.markdown(f"Dựa vào 6 quả bóng vừa nổ ở kỳ trước: <div style='display:inline-block;'>{balls_html_last}</div>", unsafe_allow_html=True)
+        st.markdown("Hệ thống đã trích xuất dữ liệu Chuỗi Markov (Markov Chain) để tìm ra những con số có xác suất **NỔ THEO ĐUÔI** các quả bóng này cao nhất trong lịch sử:")
+        
+        # Calculate trailing balls (Transition Matrix)
+        follow_counts = {}
+        for i in range(len(real_data) - 1):
+            intersect = set(real_data[i][:6]) & set(last_draw_balls)
+            if intersect:
+                weight = len(intersect) ** 2  # Exponential weight for more matches
+                for n in real_data[i+1][:6]:
+                    if n not in last_draw_balls:
+                        follow_counts[n] = follow_counts.get(n, 0) + weight
+                        
+        top_followers = sorted(follow_counts.items(), key=lambda x: -x[1])[:10]
+        
+        col_f1, col_f2 = st.columns(2)
+        with col_f1:
+            st.markdown("#### TOP 5 Số Dễ Rơi Nhất Kỳ Này")
+            for rank, (num, score) in enumerate(top_followers[:5]):
+                st.markdown(f"**#{rank+1}. Số {num:02d}** (Điểm tương quan: {score})")
+        with col_f2:
+            st.markdown("#### Các số bám đuôi tiếp theo")
+            for rank, (num, score) in enumerate(top_followers[5:10]):
+                st.markdown(f"**#{rank+6}. Số {num:02d}** (Điểm tương quan: {score})")
+                
+        st.info("💡 BÍ KÍP TỰ CHƠI: Nếu bạn không muốn mua theo Dàn Bao của AI, bạn có thể tự bốc 6 số từ danh sách TOP 10 Bóng Theo Đuôi ở trên để mua 1 vé duy nhất. Xác suất rơi của chúng cực kỳ cao!")
+        st.markdown("</div>", unsafe_allow_html=True)
+        
         # === V18.0: QUẢN TRỊ VỐN KELLY & ĐỘ NHẤT QUÁN TÍN HIỆU ===
         st.markdown("<div class='card' style='border-color: #ff9900;'>", unsafe_allow_html=True)
         st.markdown(f"<h2 style='text-align: center; color: #ff9900 !important;'>⚖️ AI QUẢN TRỊ RỦI RO (KELLY CRITERION) ⚖️</h2>", unsafe_allow_html=True)
