@@ -1,7 +1,9 @@
-import random
+import secrets
 import numpy as np
 from itertools import combinations
 import math
+
+sys_rand = secrets.SystemRandom()
 
 class WheelingOptimizer:
     """
@@ -42,6 +44,13 @@ class WheelingOptimizer:
             dec[min((n - 1) // 10, 5)] += 1
         if max(dec) > 3: return False
         
+        # Psychological Avoidance (V17.0 OMNISCIENCE):
+        # People love picking birth dates (1-31). If we win with those, we share the jackpot.
+        # We enforce at least 1-2 numbers > 31 to guarantee a less-shared jackpot.
+        # If max_number is 45 or 55, requiring at least 1 number > 31 is statistically sound.
+        count_over_31 = sum(1 for n in combo if n > 31)
+        if count_over_31 < 1: return False
+        
         if sum_mod7 and s % 7 not in sum_mod7: return False
         
         return True
@@ -69,7 +78,7 @@ class WheelingOptimizer:
         valid_candidates = []
         if len(pool) <= 18:
             all_cands = list(combinations(pool, self.pick_count))
-            random.shuffle(all_cands)
+            sys_rand.shuffle(all_cands)
             for c in all_cands:
                 if not self._validate_ticket(c, constraints, sum_mod7):
                     continue
@@ -83,7 +92,7 @@ class WheelingOptimizer:
             attempts = 0
             while len(valid_candidates) < 4000 and attempts < 30000:
                 attempts += 1
-                c = tuple(sorted(random.sample(pool, self.pick_count)))
+                c = tuple(sorted(sys_rand.sample(pool, self.pick_count)))
                 if not self._validate_ticket(c, constraints, sum_mod7):
                     continue
                 c_set = set(c)
@@ -93,17 +102,17 @@ class WheelingOptimizer:
                     
         if not valid_candidates:
             # Fallback if constraints are too tight
-            valid_candidates = [tuple(sorted(random.sample(pool, self.pick_count))) for _ in range(100)]
+            valid_candidates = [tuple(sorted(sys_rand.sample(pool, self.pick_count))) for _ in range(100)]
              
         for i in range(num_tickets):
             if not uncovered:
-                best_ticket = random.choice(valid_candidates)
+                best_ticket = sys_rand.choice(valid_candidates)
                 strategy = "🌪️ Đột biến (Chống bão hòa)"
             else:
                 best_ticket = None
                 best_coverage = -1
                 
-                sample_pool = random.sample(valid_candidates, min(len(valid_candidates), 1000))
+                sample_pool = sys_rand.sample(valid_candidates, min(len(valid_candidates), 1000))
                 
                 for cand in sample_pool:
                     cand_triplets = set(combinations(cand, 3))
@@ -117,7 +126,7 @@ class WheelingOptimizer:
                         break
                         
                 if not best_ticket:
-                    best_ticket = random.choice(valid_candidates)
+                    best_ticket = sys_rand.choice(valid_candidates)
                     strategy = "🌪️ Đột biến (Chống bão hòa)"
                 else:
                     if i < num_tickets * 0.3:
