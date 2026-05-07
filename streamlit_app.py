@@ -739,17 +739,6 @@ def main_app():
                     st.markdown(f"- 🥉 Trúng giải Ba (3/6): **{match_counts[3]} vé**")
                     st.markdown(f"- Không trúng (0-2/6): **{match_counts[0]+match_counts[1]+match_counts[2]} vé**")
                 
-                st.success(f"✅ Hoàn thành Backtest nghiệm thu trên {test_size} kỳ quay gần nhất!")
-                
-                col_a, col_b = st.columns(2)
-                with col_a:
-                    st.metric("Tỉ lệ khớp bóng chính xác (Hit Rate)", f"{win_rate:.2f}%")
-                    st.metric("Trung bình khớp mỗi kỳ", f"{avg_match:.2f} bóng / kỳ")
-                with col_b:
-                    st.markdown("**Phân bố số lượng bóng trúng:**")
-                    for k in range(3, 7):
-                        st.markdown(f"- Trúng {k}/6 số (Có giải): **{match_counts[k]} kỳ**")
-                    st.markdown(f"- Trượt hoặc trúng 1-2 số: **{match_counts[0]+match_counts[1]+match_counts[2]} kỳ**")
 
 if __name__ == "__main__":
     if check_password():
