@@ -653,47 +653,91 @@ def main_app():
                 st.dataframe(df_sorted[['Số', 'Lần xuất hiện', 'Tỷ lệ rơi (%)', 'Độ lệch (Z-Score)', 'Ngủ đông Max (Kỳ)', 'Hiện chưa ra (Kỳ)']], use_container_width=True)
 
     st.markdown("---")
-    st.markdown("### 🧪 KIỂM THỬ ĐỘ CHÍNH XÁC (BACKTESTING)")
-    with st.expander("Bấm để chạy Backtest (Kiểm tra lại lịch sử 50 kỳ gần nhất)"):
-        st.warning("⚠️ Hệ thống sẽ tua ngược thời gian, ẩn đi kết quả thật và dùng AI để dự đoán các kỳ trong quá khứ, sau đó đối chiếu với kết quả thực tế để tính tỉ lệ trúng.")
-        if st.button("🚀 CHẠY KIỂM THỬ BACKTEST 50 KỲ"):
+    st.markdown("### 🧪 KIỂM THỬ ĐỘ CHÍNH XÁC DÀN BAO (WHEELING BACKTEST)")
+    with st.expander("Bấm để chạy Backtest (Kiểm thử thực tế với thuật toán Dàn Bao)"):
+        st.warning(f"⚠️ Hệ thống sẽ tua ngược thời gian, ẩn đi kết quả thật và dùng AI tạo Dàn Bao {num_tickets} vé từ Hồ {pool_size} số ở các kỳ quá khứ, sau đó đối chiếu với kết quả ĐÃ XẢY RA để tính lãi/lỗ.")
+        
+        test_mode = st.radio("Chọn chế độ kiểm thử:", ["Test 1 kỳ cụ thể (Chọn từ quá khứ)", "Test 50 kỳ liên tiếp (Sẽ mất khoảng 1-2 phút)"])
+        
+        total_draws = len(real_data)
+        target_draw = 1
+        if test_mode == "Test 1 kỳ cụ thể (Chọn từ quá khứ)":
+            target_draw = st.slider("Chọn kỳ để test (Tính lùi từ hiện tại về quá khứ, 1 = Kỳ trước):", 1, min(1000, total_draws-100), 1)
+            
+        if st.button("🚀 CHẠY KIỂM THỬ DÀN BAO"):
             test_progress = st.progress(0)
             test_status = st.empty()
             
-            total_draws = len(real_data)
             if total_draws < 60:
                 st.error("Không đủ dữ liệu để backtest.")
             else:
-                test_size = 50
-                total_matches = 0
-                match_counts = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0}
+                from models.mega_exploit_v12 import MegaExploitV12
+                from models.wheeling_optimizer import WheelingOptimizer
                 
-                # Chạy từ quá khứ đến hiện tại
-                for i in range(test_size):
-                    # Data up to the draw we want to predict
-                    current_idx = total_draws - test_size + i
+                match_counts = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0}
+                total_spent = 0
+                total_won = 0 
+                
+                test_indices = []
+                if test_mode == "Test 50 kỳ liên tiếp (Sẽ mất khoảng 1-2 phút)":
+                    test_indices = range(total_draws - 50, total_draws)
+                else:
+                    test_indices = [total_draws - target_draw - 1]
+                    
+                test_size = len(test_indices)
+                
+                for step, current_idx in enumerate(test_indices):
                     historical_data_for_test = real_data[:current_idx]
-                    actual_next_draw = real_data[current_idx]
+                    actual_next_draw = set(real_data[current_idx])
                     
-                    try:
-                        from models.ultimate_engine import UltimateEngine
-                        test_engine = UltimateEngine(max_number, 6)
-                        pred = test_engine.predict(historical_data_for_test)['primary']
-                    except:
-                        test_engine = RealWorldAIEngine(historical_data_for_test, max_number)
-                        pred = test_engine.optimize_ensemble()
+                    test_status.text(f"Đang phân tích kỳ {current_idx} / {total_draws}...")
                     
-                    # Đếm số bóng trùng khớp
-                    matches = len(set(pred) & set(actual_next_draw))
-                    match_counts[matches] += 1
-                    total_matches += matches
+                    # 1. AI tạo hồ tiềm năng
+                    engine = MegaExploitV12(max_number, 6)
+                    res = engine.predict(historical_data_for_test, n_sets=1)
+                    if res['top_pool']:
+                        pool = res['top_pool'][:pool_size]
+                    else:
+                        pool = list(range(1, pool_size + 1))
+                        
+                    # 2. Sinh dàn bao
+                    wheel_opt = WheelingOptimizer(6)
+                    tickets, _ = wheel_opt.generate_wheel(pool, num_tickets)
                     
-                    test_progress.progress((i + 1) / test_size)
-                    test_status.text(f"Đang kiểm thử kỳ {i + 1}/{test_size}... Khớp {matches}/6 số thực tế!")
+                    # 3. Đối chiếu kết quả các vé
+                    draw_best_match = 0
+                    for t in tickets:
+                        hits = len(set(t) & actual_next_draw)
+                        match_counts[hits] += 1
+                        total_spent += 10000
+                        
+                        # Tính tiền thưởng giả lập (Mega 6/45)
+                        if hits == 3: total_won += 30000
+                        elif hits == 4: total_won += 300000
+                        elif hits == 5: total_won += 10000000
+                        elif hits == 6: total_won += 12000000000
+                        
+                        if hits > draw_best_match:
+                            draw_best_match = hits
+                            
+                    test_progress.progress((step + 1) / test_size)
+                    test_status.text(f"Đã test xong. Thành tích cao nhất trong dàn vé: {draw_best_match}/6")
                     
                 test_status.empty()
-                avg_match = total_matches / test_size
-                win_rate = (total_matches / (test_size * 6)) * 100
+                st.success(f"✅ Hoàn thành Backtest trên {test_size} kỳ quay!")
+                
+                st.markdown(f"**Tổng kết Dàn Bao {num_tickets} vé (Dựa trên {test_size} kỳ):**")
+                col_a, col_b = st.columns(2)
+                with col_a:
+                    st.metric("Tổng vốn đầu tư", f"{total_spent:,} VNĐ")
+                    st.metric("Tổng tiền trúng thưởng", f"{total_won:,} VNĐ", delta=total_won-total_spent)
+                with col_b:
+                    st.markdown("**Chi tiết số vé trúng giải:**")
+                    st.markdown(f"- 🏆 Trúng Jackpot (6/6): **{match_counts[6]} vé**")
+                    st.markdown(f"- 🥇 Trúng giải Nhất (5/6): **{match_counts[5]} vé**")
+                    st.markdown(f"- 🥈 Trúng giải Nhì (4/6): **{match_counts[4]} vé**")
+                    st.markdown(f"- 🥉 Trúng giải Ba (3/6): **{match_counts[3]} vé**")
+                    st.markdown(f"- Không trúng (0-2/6): **{match_counts[0]+match_counts[1]+match_counts[2]} vé**")
                 
                 st.success(f"✅ Hoàn thành Backtest nghiệm thu trên {test_size} kỳ quay gần nhất!")
                 
