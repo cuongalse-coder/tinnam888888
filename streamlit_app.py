@@ -657,12 +657,24 @@ def main_app():
     with st.expander("Bấm để chạy Backtest (Kiểm thử thực tế với thuật toán Dàn Bao)"):
         st.warning(f"⚠️ Hệ thống sẽ tua ngược thời gian, ẩn đi kết quả thật và dùng AI tạo Dàn Bao {num_tickets} vé từ Hồ {pool_size} số ở các kỳ quá khứ, sau đó đối chiếu với kết quả ĐÃ XẢY RA để tính lãi/lỗ.")
         
-        test_mode = st.radio("Chọn chế độ kiểm thử:", ["Test 1 kỳ cụ thể (Chọn từ quá khứ)", "Test 50 kỳ liên tiếp (Sẽ mất khoảng 1-2 phút)"])
+        test_mode = st.radio("Chọn chế độ kiểm thử:", [
+            "Test 1 kỳ cụ thể (Tính lùi)", 
+            "Test 50 kỳ liên tiếp gần nhất",
+            "Test một khối kỳ tùy chọn (Chọn khoảng)"
+        ])
         
         total_draws = len(real_data)
-        target_draw = 1
-        if test_mode == "Test 1 kỳ cụ thể (Chọn từ quá khứ)":
-            target_draw = st.slider("Chọn kỳ để test (Tính lùi từ hiện tại về quá khứ, 1 = Kỳ trước):", 1, min(1000, total_draws-100), 1)
+        
+        if test_mode == "Test 1 kỳ cụ thể (Tính lùi)":
+            target_draw = st.slider("Chọn kỳ để test (Tính lùi từ hiện tại về quá khứ, 1 = Kỳ trước):", 1, min(1000, total_draws-60), 1)
+        elif test_mode == "Test một khối kỳ tùy chọn (Chọn khoảng)":
+            range_vals = st.slider(
+                "Chọn khối kỳ muốn Test (Theo số thứ tự kỳ quay thực tế):",
+                min_value=60, 
+                max_value=total_draws,
+                value=(total_draws-50, total_draws)
+            )
+            st.info(f"Sẽ chạy kiểm thử trên {range_vals[1] - range_vals[0] + 1} kỳ. Lưu ý: Chạy càng nhiều kỳ sẽ càng tốn thời gian.")
             
         if st.button("🚀 CHẠY KIỂM THỬ DÀN BAO"):
             test_progress = st.progress(0)
@@ -677,10 +689,13 @@ def main_app():
                 match_counts = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0}
                 total_spent = 0
                 total_won = 0 
+                winning_draws_count = 0
                 
                 test_indices = []
-                if test_mode == "Test 50 kỳ liên tiếp (Sẽ mất khoảng 1-2 phút)":
+                if test_mode == "Test 50 kỳ liên tiếp gần nhất":
                     test_indices = range(total_draws - 50, total_draws)
+                elif test_mode == "Test một khối kỳ tùy chọn (Chọn khoảng)":
+                    test_indices = range(range_vals[0] - 1, range_vals[1])
                 else:
                     test_indices = [total_draws - target_draw - 1]
                     
@@ -706,19 +721,24 @@ def main_app():
                     
                     # 3. Đối chiếu kết quả các vé
                     draw_best_match = 0
+                    draw_won_any = False
+                    
                     for t in tickets:
                         hits = len(set(t) & actual_next_draw)
                         match_counts[hits] += 1
                         total_spent += 10000
                         
                         # Tính tiền thưởng giả lập (Mega 6/45)
-                        if hits == 3: total_won += 30000
-                        elif hits == 4: total_won += 300000
-                        elif hits == 5: total_won += 10000000
-                        elif hits == 6: total_won += 12000000000
+                        if hits == 3: total_won += 30000; draw_won_any = True
+                        elif hits == 4: total_won += 300000; draw_won_any = True
+                        elif hits == 5: total_won += 10000000; draw_won_any = True
+                        elif hits == 6: total_won += 12000000000; draw_won_any = True
                         
                         if hits > draw_best_match:
                             draw_best_match = hits
+                            
+                    if draw_won_any:
+                        winning_draws_count += 1
                             
                     test_progress.progress((step + 1) / test_size)
                     test_status.text(f"Đã test xong. Thành tích cao nhất trong dàn vé: {draw_best_match}/6")
@@ -731,6 +751,9 @@ def main_app():
                 with col_a:
                     st.metric("Tổng vốn đầu tư", f"{total_spent:,} VNĐ")
                     st.metric("Tổng tiền trúng thưởng", f"{total_won:,} VNĐ", delta=total_won-total_spent)
+                    
+                    win_rate = (winning_draws_count / test_size) * 100
+                    st.metric("Tỉ lệ kỳ quay có lãi/trúng (Win Rate)", f"{win_rate:.1f}%", help=f"Có {winning_draws_count} kỳ chiến thắng trên tổng {test_size} kỳ test.")
                 with col_b:
                     st.markdown("**Chi tiết số vé trúng giải:**")
                     st.markdown(f"- 🏆 Trúng Jackpot (6/6): **{match_counts[6]} vé**")
