@@ -441,23 +441,23 @@ def main_app():
         time.sleep(0.2)
         progress_bar.progress(35)
         
-        status.text("🔗 [4/8] Sticky Pairs + Triplet + Lag-N Repeat + Context-3...")
+        status.text("🔗 [4/8] Sticky Pairs + Triplet + Lag-N Repeat + Context-3 + Seq Pattern...")
         time.sleep(0.2)
         progress_bar.progress(50)
         
-        status.text("🏊 [5/8] KNN + Momentum + Streak + Anti-Repeat (16 tín hiệu)...")
+        status.text("🏊 [5/8] KNN + Momentum + Streak + Anti-Repeat + OddEven + HighLow (20 tín hiệu)...")
         time.sleep(0.2)
         progress_bar.progress(60)
         
-        status.text("⚖️ [6/8] Walk-Forward Calibration — Tối ưu trọng số 16 tín hiệu...")
+        status.text("⚖️ [6/8] Walk-Forward Calibration — Tối ưu trọng số 20 tín hiệu...")
         time.sleep(0.2)
         progress_bar.progress(70)
         
-        status.text("🤖 [7/8] META-ENSEMBLE — Hội ý V9 + SuperPredictor + V10...")
+        status.text("🤖 [7/8] META-ENSEMBLE 4 ENGINES — V9 + SuperPredictor + DeepForensic + V10...")
         time.sleep(0.2)
         progress_bar.progress(85)
         
-        status.text("🎯 [8/8] Quantum Pruning + Decade Balance — Chốt bộ số...")
+        status.text("🎯 [8/8] Sum-Mod7 + Decade Balance + Hill-Climbing — Chốt bộ số...")
         time.sleep(0.2)
         progress_bar.progress(90)
         
@@ -507,7 +507,7 @@ def main_app():
 
     if st.session_state.prediction_ready:
         confidence = st.session_state.get('v11_confidence', 0)
-        st.success(f"✅ V11.5 SUPER INTELLIGENCE HOÀN TẤT — Độ tự tin: {confidence}% | 16 tín hiệu AI + Meta-Ensemble hội tụ.")
+        st.success(f"✅ V11.8 HYPER INTELLIGENCE HOÀN TẤT — Độ tự tin: {confidence}% | 20 tín hiệu AI + 4-Engine Meta-Ensemble.")
         
         # === BỘ SỐ CHỐT CHÍNH ===
         st.markdown("<div class='card' style='border-color: #00ff00;'>", unsafe_allow_html=True)
@@ -532,7 +532,7 @@ def main_app():
         # === TRỌNG SỐ TÍN HIỆU ===
         v11_weights = st.session_state.get('v11_weights', {})
         if v11_weights:
-            with st.expander("🧠 XEM TRỌNG SỐ 16 TÍN HIỆU AI (Walk-Forward Calibration)", expanded=False):
+            with st.expander("🧠 XEM TRỌNG SỐ 20 TÍN HIỆU AI (Walk-Forward Calibration)", expanded=False):
                 import pandas as pd
                 w_data = [{"Tín hiệu": k, "Trọng số": v} for k, v in v11_weights.items()]
                 df_w = pd.DataFrame(w_data)
