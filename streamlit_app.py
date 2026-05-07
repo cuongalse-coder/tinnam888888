@@ -12,7 +12,7 @@ import re
 # CẤU HÌNH TRANG & GIAO DIỆN
 # ==========================================
 st.set_page_config(
-    page_title="TINNAM AI - V18.0 SINGULARITY",
+    page_title="TINNAM AI - V19.0 QUANTUM NEURAL GRAPH",
     page_icon="🎯",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -358,7 +358,7 @@ class RealWorldAIEngine:
 def main_app():
     with st.sidebar:
         st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/a/ae/Vietlott_logo.svg/1200px-Vietlott_logo.svg.png", width=150)
-        st.markdown("### 🤖 V18.0 - SINGULARITY")
+        st.markdown("### 🤖 V19.0 - QUANTUM NEURAL GRAPH")
         st.markdown("---")
         game_choice = st.radio("CHỌN CHẾ ĐỘ QUÉT:", ["Mega 6/45", "Power 6/55"])
         st.markdown("---")
@@ -377,7 +377,7 @@ def main_app():
             st.session_state.logged_in = False
             st.rerun()
 
-    st.title(f"🚀 {game_choice.upper()} - V18.0 SINGULARITY")
+    st.title(f"🚀 {game_choice.upper()} - V19.0 QUANTUM NEURAL GRAPH")
     max_number = 45 if game_choice == "Mega 6/45" else 55
     ball_class = "mega-ball" if game_choice == "Mega 6/45" else "power-ball"
     
@@ -424,7 +424,7 @@ def main_app():
     
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        run_btn = st.button("⚡ V18.0 SINGULARITY — KÍCH HOẠT ĐIỂM KỲ DỊ ⚡", use_container_width=True)
+        run_btn = st.button("⚡ V19.0 QUANTUM NEURAL GRAPH — BẮN TỈA JACKPOT ⚡", use_container_width=True)
 
     if run_btn:
         st.session_state.prediction_ready = False
@@ -483,8 +483,15 @@ def main_app():
                     history_data=real_data
                 )
                 
-                st.session_state.best_prediction = tickets[0]['numbers'] if tickets else []
-                st.session_state.all_predictions = tickets
+                sniper_ticket = result_v11['predictions'][0]['numbers']
+                sniper_obj = {'numbers': sniper_ticket, 'strategy': '⚡ VÉ THẦN THÁNH (JACKPOT SNIPER - 31 AI ĐỒNG THUẬN CAO NHẤT)'}
+                
+                # Check to avoid duplicate
+                filtered_tickets = [t for t in tickets if sorted(t['numbers']) != sorted(sniper_ticket)]
+                final_tickets = [sniper_obj] + filtered_tickets
+                
+                st.session_state.best_prediction = sniper_ticket
+                st.session_state.all_predictions = final_tickets
                 st.session_state.v11_weights = result_v11.get('weights', {})
                 st.session_state.v11_confidence = coverage
             else:
@@ -522,12 +529,12 @@ def main_app():
     if st.session_state.prediction_ready:
         coverage = st.session_state.get('v11_confidence', 0)
         top_pool = st.session_state.get('v11_top_pool', [])
-        st.success(f"✅ V18.0 SINGULARITY HOÀN TẤT — Tỉ lệ bao phủ lưới: {coverage}% | Hồ Tiềm Năng {len(top_pool)} số.")
+        st.success(f"✅ V19.0 QUANTUM NEURAL GRAPH HOÀN TẤT — Tỉ lệ bao phủ lưới: {coverage}% | Hồ Tiềm Năng {len(top_pool)} số.")
         
         # === HỒ SỐ TIỀM NĂNG ===
         st.markdown("<div class='card'>", unsafe_allow_html=True)
-        st.markdown(f"<h2 style='text-align: center; color: #ff0055 !important;'>🔥 HỒ SỐ TIỀM NĂNG ({len(top_pool)} SỐ TỪ 30 AI SIGNALS) 🔥</h2>", unsafe_allow_html=True)
-        st.markdown("<p style='text-align: center; color: #888;'><em>(Xác suất Jackpot rơi vào hồ này là cao nhất theo tính toán của 30 AI Signals + ELO Rating)</em></p>", unsafe_allow_html=True)
+        st.markdown(f"<h2 style='text-align: center; color: #ff0055 !important;'>🔥 HỒ SỐ TIỀM NĂNG ({len(top_pool)} SỐ TỪ 31 AI SIGNALS) 🔥</h2>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center; color: #888;'><em>(Xác suất Jackpot rơi vào hồ này là cao nhất theo tính toán của 31 AI Signals + ELO Rating)</em></p>", unsafe_allow_html=True)
         if top_pool:
             pool_html = "".join([f"<div class='ball special-ball'>{n:02d}</div>" for n in top_pool])
             st.markdown(f"<div style='text-align:center;'>{pool_html}</div>", unsafe_allow_html=True)
@@ -582,13 +589,13 @@ def main_app():
                 elif coherence < 60:
                     st.warning("⚠️ TÍN HIỆU TRUNG BÌNH: Đã xuất hiện xu hướng nhưng chưa thực sự bứt phá. KHUYẾN NGHỊ: Đánh ở mức an toàn (10-20% quỹ mạo hiểm).")
                 else:
-                    st.success("🔥 TÍN HIỆU ĐỒNG THUẬN CAO (SINGULARITY): 30 Thuật toán lượng tử hội tụ về cùng một lưới xác suất. Đây là 'Điểm Rơi' hoàn hảo của lồng cầu. KHUYẾN NGHỊ: Tấn công mạnh, mua đủ danh sách vé AI đề xuất.")
+                    st.success("🔥 TÍN HIỆU ĐỒNG THUẬN CAO (SINGULARITY): 31 Thuật toán lượng tử hội tụ về cùng một lưới xác suất. Đây là 'Điểm Rơi' hoàn hảo của lồng cầu. KHUYẾN NGHỊ: Tấn công mạnh, mua đủ danh sách vé AI đề xuất.")
         st.markdown("</div>", unsafe_allow_html=True)
         
         # === TRỌNG SỐ TÍN HIỆU ===
         v11_weights = st.session_state.get('v11_weights', {})
         if v11_weights:
-            with st.expander("🧠 XEM TRỌNG SỐ 30 TÍN HIỆU AI (Dynamic ELO Rating)", expanded=False):
+            with st.expander("🧠 XEM TRỌNG SỐ 31 TÍN HIỆU AI (Dynamic ELO Rating)", expanded=False):
                 import pandas as pd
                 w_data = [{"Tín hiệu": k, "Trọng số": v} for k, v in v11_weights.items()]
                 df_w = pd.DataFrame(w_data)
