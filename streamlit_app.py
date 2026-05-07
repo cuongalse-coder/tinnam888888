@@ -12,7 +12,7 @@ import re
 # CẤU HÌNH TRANG & GIAO DIỆN
 # ==========================================
 st.set_page_config(
-    page_title="TINNAM AI - V13.0 WHEELING OPTIMIZER",
+    page_title="TINNAM AI - V14.0 SUPREME WHEELING",
     page_icon="🎯",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -358,7 +358,7 @@ class RealWorldAIEngine:
 def main_app():
     with st.sidebar:
         st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/a/ae/Vietlott_logo.svg/1200px-Vietlott_logo.svg.png", width=150)
-        st.markdown("### 🤖 V13.0 - WHEELING OPTIMIZER")
+        st.markdown("### 🤖 V14.0 - SUPREME WHEELING")
         st.markdown("---")
         game_choice = st.radio("CHỌN CHẾ ĐỘ QUÉT:", ["Mega 6/45", "Power 6/55"])
         st.markdown("---")
@@ -377,7 +377,7 @@ def main_app():
             st.session_state.logged_in = False
             st.rerun()
 
-    st.title(f"🚀 {game_choice.upper()} - V13.0 WHEELING OPTIMIZER")
+    st.title(f"🚀 {game_choice.upper()} - V14.0 SUPREME WHEELING")
     max_number = 45 if game_choice == "Mega 6/45" else 55
     ball_class = "mega-ball" if game_choice == "Mega 6/45" else "power-ball"
     
@@ -424,7 +424,7 @@ def main_app():
     
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        run_btn = st.button("⚡ V13.0 WHEELING OPTIMIZER — TẠO DÀN BAO RÚT GỌN ⚡", use_container_width=True)
+        run_btn = st.button("⚡ V14.0 SUPREME WHEELING — TẠO DÀN BAO RÚT GỌN ⚡", use_container_width=True)
 
     if run_btn:
         st.session_state.prediction_ready = False
@@ -475,7 +475,12 @@ def main_app():
                 
                 from models.wheeling_optimizer import WheelingOptimizer
                 wheel_opt = WheelingOptimizer(6)
-                tickets, coverage = wheel_opt.generate_wheel(st.session_state.v11_top_pool, num_tickets)
+                tickets, coverage = wheel_opt.generate_wheel(
+                    st.session_state.v11_top_pool, 
+                    num_tickets,
+                    constraints=result_v11.get('constraints'),
+                    sum_mod7=result_v11.get('sum_mod7')
+                )
                 
                 st.session_state.best_prediction = tickets[0]
                 st.session_state.all_predictions = [{'numbers': t, 'score': 0} for t in tickets]
@@ -516,7 +521,7 @@ def main_app():
     if st.session_state.prediction_ready:
         coverage = st.session_state.get('v11_confidence', 0)
         top_pool = st.session_state.get('v11_top_pool', [])
-        st.success(f"✅ V13.0 WHEELING OPTIMIZER HOÀN TẤT — Tỉ lệ bao phủ lưới: {coverage}% | Hồ Tiềm Năng {len(top_pool)} số.")
+        st.success(f"✅ V14.0 SUPREME WHEELING HOÀN TẤT — Tỉ lệ bao phủ lưới: {coverage}% | Hồ Tiềm Năng {len(top_pool)} số.")
         
         # === HỒ SỐ TIỀM NĂNG ===
         st.markdown("<div class='card'>", unsafe_allow_html=True)
@@ -717,7 +722,12 @@ def main_app():
                         
                     # 2. Sinh dàn bao
                     wheel_opt = WheelingOptimizer(6)
-                    tickets, _ = wheel_opt.generate_wheel(pool, num_tickets)
+                    tickets, _ = wheel_opt.generate_wheel(
+                        pool, 
+                        num_tickets,
+                        constraints=res.get('constraints'),
+                        sum_mod7=res.get('sum_mod7')
+                    )
                     
                     # 3. Đối chiếu kết quả các vé
                     draw_best_match = 0
