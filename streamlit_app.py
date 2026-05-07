@@ -12,7 +12,7 @@ import re
 # CẤU HÌNH TRANG & GIAO DIỆN
 # ==========================================
 st.set_page_config(
-    page_title="TINNAM AI - V17.0 OMNISCIENCE",
+    page_title="TINNAM AI - V18.0 SINGULARITY",
     page_icon="🎯",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -358,7 +358,7 @@ class RealWorldAIEngine:
 def main_app():
     with st.sidebar:
         st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/a/ae/Vietlott_logo.svg/1200px-Vietlott_logo.svg.png", width=150)
-        st.markdown("### 🤖 V17.0 - OMNISCIENCE")
+        st.markdown("### 🤖 V18.0 - SINGULARITY")
         st.markdown("---")
         game_choice = st.radio("CHỌN CHẾ ĐỘ QUÉT:", ["Mega 6/45", "Power 6/55"])
         st.markdown("---")
@@ -377,7 +377,7 @@ def main_app():
             st.session_state.logged_in = False
             st.rerun()
 
-    st.title(f"🚀 {game_choice.upper()} - V17.0 OMNISCIENCE")
+    st.title(f"🚀 {game_choice.upper()} - V18.0 SINGULARITY")
     max_number = 45 if game_choice == "Mega 6/45" else 55
     ball_class = "mega-ball" if game_choice == "Mega 6/45" else "power-ball"
     
@@ -424,7 +424,7 @@ def main_app():
     
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        run_btn = st.button("⚡ V17.0 OMNISCIENCE — TẠO DÀN BAO RÚT GỌN ⚡", use_container_width=True)
+        run_btn = st.button("⚡ V18.0 SINGULARITY — KÍCH HOẠT ĐIỂM KỲ DỊ ⚡", use_container_width=True)
 
     if run_btn:
         st.session_state.prediction_ready = False
@@ -522,7 +522,7 @@ def main_app():
     if st.session_state.prediction_ready:
         coverage = st.session_state.get('v11_confidence', 0)
         top_pool = st.session_state.get('v11_top_pool', [])
-        st.success(f"✅ V17.0 OMNISCIENCE HOÀN TẤT — Tỉ lệ bao phủ lưới: {coverage}% | Hồ Tiềm Năng {len(top_pool)} số.")
+        st.success(f"✅ V18.0 SINGULARITY HOÀN TẤT — Tỉ lệ bao phủ lưới: {coverage}% | Hồ Tiềm Năng {len(top_pool)} số.")
         
         # === HỒ SỐ TIỀM NĂNG ===
         st.markdown("<div class='card'>", unsafe_allow_html=True)
@@ -560,6 +560,29 @@ def main_app():
             file_name=f"vietlott_{game_choice.replace(' ', '_')}_dan_{len(all_preds)}_ve.txt",
             mime="text/plain"
         )
+        st.markdown("</div>", unsafe_allow_html=True)
+        
+        # === V18.0: QUẢN TRỊ VỐN KELLY & ĐỘ NHẤT QUÁN TÍN HIỆU ===
+        st.markdown("<div class='card' style='border-color: #ff9900;'>", unsafe_allow_html=True)
+        st.markdown(f"<h2 style='text-align: center; color: #ff9900 !important;'>⚖️ AI QUẢN TRỊ RỦI RO (KELLY CRITERION) ⚖️</h2>", unsafe_allow_html=True)
+        
+        v11_weights = st.session_state.get('v11_weights', {})
+        if v11_weights:
+            weight_values = list(v11_weights.values())
+            if weight_values:
+                max_w = max(weight_values)
+                avg_w = sum(weight_values) / len(weight_values)
+                # Coherence: How strongly the top signals dominate the average.
+                coherence = min(100, max(0, int((max_w / (avg_w + 1e-5) - 1) * 25)))
+                
+                st.metric("Độ Nhất Quán Tín Hiệu (Signal Coherence)", f"{coherence}%")
+                
+                if coherence < 30:
+                    st.error("⚠️ TÍN HIỆU NHIỄU LOẠN: Các thuật toán AI đang mâu thuẫn dữ dội. Lồng cầu đang ở trạng thái cực kỳ hỗn loạn và phi logic. KHUYẾN NGHỊ: Dừng mua vé kỳ này để bảo toàn vốn, hoặc chỉ đánh 1-2 vé dò đường.")
+                elif coherence < 60:
+                    st.warning("⚠️ TÍN HIỆU TRUNG BÌNH: Đã xuất hiện xu hướng nhưng chưa thực sự bứt phá. KHUYẾN NGHỊ: Đánh ở mức an toàn (10-20% quỹ mạo hiểm).")
+                else:
+                    st.success("🔥 TÍN HIỆU ĐỒNG THUẬN CAO (SINGULARITY): 30 Thuật toán lượng tử hội tụ về cùng một lưới xác suất. Đây là 'Điểm Rơi' hoàn hảo của lồng cầu. KHUYẾN NGHỊ: Tấn công mạnh, mua đủ danh sách vé AI đề xuất.")
         st.markdown("</div>", unsafe_allow_html=True)
         
         # === TRỌNG SỐ TÍN HIỆU ===
