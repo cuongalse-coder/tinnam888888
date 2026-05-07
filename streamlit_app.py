@@ -474,7 +474,7 @@ def main_app():
                 st.session_state.v11_top_pool = result_v11['top_pool'][:pool_size] # Dynamic pool size
                 
                 from models.wheeling_optimizer import WheelingOptimizer
-                wheel_opt = WheelingOptimizer(6)
+                wheel_opt = WheelingOptimizer(6, max_number)
                 tickets, coverage = wheel_opt.generate_wheel(
                     st.session_state.v11_top_pool, 
                     num_tickets,
@@ -721,7 +721,7 @@ def main_app():
                         pool = list(range(1, pool_size + 1))
                         
                     # 2. Sinh dàn bao
-                    wheel_opt = WheelingOptimizer(6)
+                    wheel_opt = WheelingOptimizer(6, max_number)
                     tickets, _ = wheel_opt.generate_wheel(
                         pool, 
                         num_tickets,
