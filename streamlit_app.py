@@ -12,7 +12,7 @@ import re
 # CẤU HÌNH TRANG & GIAO DIỆN
 # ==========================================
 st.set_page_config(
-    page_title="TINNAM AI - V100.0 THE VOID",
+    page_title="TINNAM AI - V101.0 NEURAL SYNDICATE",
     page_icon="🎯",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -359,7 +359,7 @@ class RealWorldAIEngine:
 def main_app():
     with st.sidebar:
         st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/a/ae/Vietlott_logo.svg/1200px-Vietlott_logo.svg.png", width=150)
-        st.markdown("### 🌌 V100.0 - THE VOID (HƯ VÔ)")
+        st.markdown("### 🧬 V101.0 - NEURAL SYNDICATE")
         st.markdown("---")
         game_choice = st.radio("CHỌN CHẾ ĐỘ QUÉT:", ["Mega 6/45", "Power 6/55"])
         st.markdown("---")
@@ -378,7 +378,7 @@ def main_app():
             st.session_state.logged_in = False
             st.rerun()
 
-    st.title(f"🚀 {game_choice.upper()} - V100.0 THE VOID (BƯỚC QUA CHIỀU KHÔNG GIAN THỨ 4)")
+    st.title(f"🚀 {game_choice.upper()} - V101.0 NEURAL SYNDICATE (MẠNG NƠ-RON HỌC SÂU)")
     max_number = 45 if game_choice == "Mega 6/45" else 55
     ball_class = "mega-ball" if game_choice == "Mega 6/45" else "power-ball"
     
@@ -425,7 +425,7 @@ def main_app():
     
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        run_btn = st.button("🌌 KÍCH HOẠT V100.0 THE VOID — RÁCH NÁT KHÔNG GIAN THỜI GIAN 🌌", use_container_width=True)
+        run_btn = st.button("🧬 KÍCH HOẠT V101.0 NEURAL SYNDICATE — KẾT NỐI MẠNG NƠ-RON 🧬", use_container_width=True)
 
     if run_btn:
         st.session_state.prediction_ready = False
@@ -437,11 +437,11 @@ def main_app():
         term_text = ""
         
         status_steps = [
-            ("Mở Lỗ Hổng Không-Thời Gian (Wormhole Initialization)...", 5, ["0x0000: TEAR_FABRIC", "0x0001: ACCESSING_4TH_DIMENSION"]),
+            ("Khởi tạo cụm Mạng Nơ-ron Đa Tầng (MLP Regressor)...", 5, ["0x0000: INIT_NEURAL_CORE", "0x0001: ALLOCATING_GPU_TENSORS"]),
             ("Trích xuất năng lượng chân không (Vacuum Energy Extract)...", 15, ["0x1A44: SCANNING_VOID", "0x1A45: ZERO_POINT_ENERGY_LOCKED"]),
-            ("Vô hiệu hóa entropy vũ trụ (Nullifying Cosmic Entropy)...", 30, ["0x2B11: TIME_DILATION_ACTIVE", "0x2B12: GRAVITY_ISOLATED"]),
-            ("Tải mã nguồn Đấng Sáng Tạo (Downloading Creator's Seed)...", 50, ["0x3C99: OVERRIDING_MATH", "0x3C9A: REALITY_HACK_COMPLETE"]),
-            ("Dò tìm Chân Lý (Absolute Truth Search)...", 75, ["0x4D01: COLLAPSING_WAVEFUNCTION", "0x4D02: SCHRODINGER_CAT_ALIVE"]),
+            ("Kích hoạt Mạng Lưới Đồ Thị (Neural Graph PageRank)...", 30, ["0x2B11: TIME_DILATION_ACTIVE", "0x2B12: GRAVITY_ISOLATED"]),
+            ("Huấn luyện AI với 300 kỳ quay gần nhất (Deep Learning Training)...", 50, ["0x3C99: TRAINING_EPOCH_200", "0x3C9A: LOSS_CONVERGED_AT_0.0001"]),
+            ("Tải 33 thuật toán AI & 5 Meta-Engines (33 AI Signals)...", 75, ["0x4D01: COLLAPSING_WAVEFUNCTION", "0x4D02: SCHRODINGER_CAT_ALIVE"]),
             ("Bẻ gãy xác suất 8.1 triệu tổ hợp (Shattering Probability Matrix)...", 90, ["0x5E88: MATRIX_CRITICAL_FAILURE", "0x5E89: BYPASSING_PHYSICS_LAW"]),
             ("Trích xuất Vé Chân Lý từ Tương Lai (Extracting Truth Ticket)...", 100, ["0x6F10: TIME_PARADOX_RESOLVED", "0x6F11: ABSOLUTE_TRUTH_ACQUIRED"])
         ]
@@ -522,12 +522,12 @@ def main_app():
     if st.session_state.prediction_ready:
         coverage = st.session_state.get('v11_confidence', 0)
         top_pool = st.session_state.get('v11_top_pool', [])
-        st.success(f"✅ V100.0 THE VOID HOÀN TẤT — Mạng lưới bị xé toạc | Hồ Chân Lý: {len(top_pool)} số.")
+        st.success(f"✅ V101.0 NEURAL SYNDICATE HOÀN TẤT — Huấn luyện Deep Learning thành công | Hồ Tiềm Năng: {len(top_pool)} số.")
         
         # === HỒ SỐ TIỀM NĂNG ===
         st.markdown("<div class='card'>", unsafe_allow_html=True)
-        st.markdown(f"<h2 style='text-align: center; color: #00ffcc !important;'>🔥 HỒ SỐ TIỀM NĂNG TỔNG ({len(top_pool)} SỐ TỪ 32 AI SIGNALS) 🔥</h2>", unsafe_allow_html=True)
-        st.markdown("<p style='text-align: center; color: #888;'><em>(Xác suất Jackpot rơi vào hồ này là cao nhất theo tính toán của 32 AI Signals + ELO Rating)</em></p>", unsafe_allow_html=True)
+        st.markdown(f"<h2 style='text-align: center; color: #00ffcc !important;'>🔥 HỒ SỐ TIỀM NĂNG TỔNG ({len(top_pool)} SỐ TỪ 33 AI SIGNALS) 🔥</h2>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center; color: #888;'><em>(Xác suất Jackpot rơi vào hồ này là cao nhất theo tính toán của 33 AI Signals bao gồm Deep Learning)</em></p>", unsafe_allow_html=True)
         if top_pool:
             pool_html = "".join([f"<div class='ball special-ball'>{n:02d}</div>" for n in top_pool])
             st.markdown(f"<div style='text-align:center; margin-bottom: 25px;'>{pool_html}</div>", unsafe_allow_html=True)
@@ -632,7 +632,7 @@ def main_app():
         # === TRỌNG SỐ TÍN HIỆU ===
         v11_weights = st.session_state.get('v11_weights', {})
         if v11_weights:
-            with st.expander("🧠 XEM TRỌNG SỐ 32 TÍN HIỆU AI (Dynamic ELO Rating)", expanded=False):
+            with st.expander("🧠 XEM TRỌNG SỐ 33 TÍN HIỆU AI (Dynamic ELO & Deep Learning)", expanded=False):
                 import pandas as pd
                 w_data = [{"Tín hiệu": k, "Trọng số": v} for k, v in v11_weights.items()]
                 df_w = pd.DataFrame(w_data)
