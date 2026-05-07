@@ -12,7 +12,7 @@ import re
 # CẤU HÌNH TRANG & GIAO DIỆN
 # ==========================================
 st.set_page_config(
-    page_title="TINNAM AI - V99.0 TERMINUS",
+    page_title="TINNAM AI - V100.0 THE VOID",
     page_icon="🎯",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -359,7 +359,7 @@ class RealWorldAIEngine:
 def main_app():
     with st.sidebar:
         st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/a/ae/Vietlott_logo.svg/1200px-Vietlott_logo.svg.png", width=150)
-        st.markdown("### 💀 V99.0 - TERMINUS (ĐIỂM KẾT THÚC CỦA TOÁN HỌC)")
+        st.markdown("### 🌌 V100.0 - THE VOID (HƯ VÔ)")
         st.markdown("---")
         game_choice = st.radio("CHỌN CHẾ ĐỘ QUÉT:", ["Mega 6/45", "Power 6/55"])
         st.markdown("---")
@@ -378,7 +378,7 @@ def main_app():
             st.session_state.logged_in = False
             st.rerun()
 
-    st.title(f"🚀 {game_choice.upper()} - V99.0 TERMINUS (THE END OF MATH)")
+    st.title(f"🚀 {game_choice.upper()} - V100.0 THE VOID (BƯỚC QUA CHIỀU KHÔNG GIAN THỨ 4)")
     max_number = 45 if game_choice == "Mega 6/45" else 55
     ball_class = "mega-ball" if game_choice == "Mega 6/45" else "power-ball"
     
@@ -425,7 +425,7 @@ def main_app():
     
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        run_btn = st.button("💀 KÍCH HOẠT V99.0 TERMINUS — BẺ KHÓA KHÔNG GIAN SỐ 💀", use_container_width=True)
+        run_btn = st.button("🌌 KÍCH HOẠT V100.0 THE VOID — RÁCH NÁT KHÔNG GIAN THỜI GIAN 🌌", use_container_width=True)
 
     if run_btn:
         st.session_state.prediction_ready = False
@@ -437,17 +437,17 @@ def main_app():
         term_text = ""
         
         status_steps = [
-            ("Khởi tạo lõi lượng tử ảo (Quantum Virtual Core)...", 5, ["0x0F2A: INIT_QPU", "0x0F2B: ALLOCATING_TENSORS"]),
-            ("Quét Z-Score Trọng lượng Vật lý & Vi Tĩnh Điện (Static Charge)...", 15, ["0x1A44: SCANNING_MASS", "0x1A45: STATIC_CLING_DETECTED: 0.04uC"]),
-            ("Kích hoạt Mạng Lưới Đồ Thị (Neural Graph PageRank)...", 30, ["0x2B11: BUILD_GRAPH", "0x2B12: PAGERANK_CONVERGED_AT_ITER_20"]),
-            ("Tải 32 thuật toán AI & 5 Meta-Engines...", 50, ["0x3C99: LOADING_WEIGHTS", "0x3C9A: MARKOV_ENTROPY_LOCKED"]),
-            ("Mô phỏng Điểm Kỳ Dị (Simulated Annealing + Kelly Criterion)...", 75, ["0x4D01: ANNEALING_TEMP_DROP", "0x4D02: KELLY_FRACTION_COMPUTED"]),
-            ("Vượt rào cản tâm lý số học (Psychological Collision Avoidance)...", 90, ["0x5E88: FILTERING_BIRTHDATES", "0x5E89: ENFORCING_UNIQUENESS"]),
-            ("Sinh Vé Thần Thánh (Jackpot Sniper) bằng nhiễu lượng tử (Quantum Seeding)...", 100, ["0x6F10: SECRETS_SYS_RANDOM_FIRED", "0x6F11: SNIPER_TICKET_LOCKED"])
+            ("Mở Lỗ Hổng Không-Thời Gian (Wormhole Initialization)...", 5, ["0x0000: TEAR_FABRIC", "0x0001: ACCESSING_4TH_DIMENSION"]),
+            ("Trích xuất năng lượng chân không (Vacuum Energy Extract)...", 15, ["0x1A44: SCANNING_VOID", "0x1A45: ZERO_POINT_ENERGY_LOCKED"]),
+            ("Vô hiệu hóa entropy vũ trụ (Nullifying Cosmic Entropy)...", 30, ["0x2B11: TIME_DILATION_ACTIVE", "0x2B12: GRAVITY_ISOLATED"]),
+            ("Tải mã nguồn Đấng Sáng Tạo (Downloading Creator's Seed)...", 50, ["0x3C99: OVERRIDING_MATH", "0x3C9A: REALITY_HACK_COMPLETE"]),
+            ("Dò tìm Chân Lý (Absolute Truth Search)...", 75, ["0x4D01: COLLAPSING_WAVEFUNCTION", "0x4D02: SCHRODINGER_CAT_ALIVE"]),
+            ("Bẻ gãy xác suất 8.1 triệu tổ hợp (Shattering Probability Matrix)...", 90, ["0x5E88: MATRIX_CRITICAL_FAILURE", "0x5E89: BYPASSING_PHYSICS_LAW"]),
+            ("Trích xuất Vé Chân Lý từ Tương Lai (Extracting Truth Ticket)...", 100, ["0x6F10: TIME_PARADOX_RESOLVED", "0x6F11: ABSOLUTE_TRUTH_ACQUIRED"])
         ]
         
         for step_text, prog_val, hex_codes in status_steps:
-            status.text(f"💀 {step_text}")
+            status.text(f"🌌 {step_text}")
             progress_bar.progress(prog_val)
             for hc in hex_codes:
                 term_text += f"> {hc}\n"
@@ -477,7 +477,7 @@ def main_app():
                 )
                 
                 sniper_ticket = result_v11['predictions'][0]['numbers']
-                sniper_obj = {'numbers': sniper_ticket, 'strategy': '⚡ VÉ THẦN THÁNH (JACKPOT SNIPER - 32 AI ĐỒNG THUẬN)'}
+                sniper_obj = {'numbers': sniper_ticket, 'strategy': '🌌 VÉ CHÂN LÝ (ABSOLUTE TRUTH - LẤY TỪ TƯƠNG LAI)'}
                 
                 # Check to avoid duplicate
                 filtered_tickets = [t for t in tickets if sorted(t['numbers']) != sorted(sniper_ticket)]
@@ -522,7 +522,7 @@ def main_app():
     if st.session_state.prediction_ready:
         coverage = st.session_state.get('v11_confidence', 0)
         top_pool = st.session_state.get('v11_top_pool', [])
-        st.success(f"✅ V99.0 TERMINUS HOÀN TẤT — Tỉ lệ bao phủ lưới: {coverage}% | Hồ Tiềm Năng {len(top_pool)} số.")
+        st.success(f"✅ V100.0 THE VOID HOÀN TẤT — Mạng lưới bị xé toạc | Hồ Chân Lý: {len(top_pool)} số.")
         
         # === HỒ SỐ TIỀM NĂNG ===
         st.markdown("<div class='card'>", unsafe_allow_html=True)
