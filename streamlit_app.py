@@ -526,11 +526,21 @@ def main_app():
         
         # === HỒ SỐ TIỀM NĂNG ===
         st.markdown("<div class='card'>", unsafe_allow_html=True)
-        st.markdown(f"<h2 style='text-align: center; color: #00ffcc !important;'>🔥 HỒ SỐ TIỀM NĂNG ({len(top_pool)} SỐ TỪ 32 AI SIGNALS) 🔥</h2>", unsafe_allow_html=True)
+        st.markdown(f"<h2 style='text-align: center; color: #00ffcc !important;'>🔥 HỒ SỐ TIỀM NĂNG TỔNG ({len(top_pool)} SỐ TỪ 32 AI SIGNALS) 🔥</h2>", unsafe_allow_html=True)
         st.markdown("<p style='text-align: center; color: #888;'><em>(Xác suất Jackpot rơi vào hồ này là cao nhất theo tính toán của 32 AI Signals + ELO Rating)</em></p>", unsafe_allow_html=True)
         if top_pool:
             pool_html = "".join([f"<div class='ball special-ball'>{n:02d}</div>" for n in top_pool])
-            st.markdown(f"<div style='text-align:center;'>{pool_html}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='text-align:center; margin-bottom: 25px;'>{pool_html}</div>", unsafe_allow_html=True)
+            
+            # --- LÕI KIM CƯƠNG 10 SỐ ---
+            top_10_diamond = top_pool[:10]
+            top10_html = "".join([f"<div class='ball special-ball' style='background: linear-gradient(145deg, #ff00ff, #00ffff); box-shadow: 0 0 25px #ff00ff; border-color: #ff00ff;'>{n:02d}</div>" for n in top_10_diamond])
+            st.markdown("<div style='background-color: rgba(255, 0, 255, 0.05); border: 2px dashed #ff00ff; border-radius: 10px; padding: 20px; margin-top: 10px;'>", unsafe_allow_html=True)
+            st.markdown("<h3 style='text-align: center; color: #ff00ff !important; text-shadow: 0 0 10px #ff00ff;'>💎 LÕI KIM CƯƠNG: 10 SỐ CHUẨN NHẤT (Dành cho đánh BAO 10) 💎</h3>", unsafe_allow_html=True)
+            st.markdown("<p style='text-align: center; color: #bbb;'><em>(Hệ thống đã nén và trích xuất đúng 10 con số có Điểm Tương Quan Tổng Hợp cao nhất từ 32 thuật toán. Chuyên dùng để ghép Bao 7 đến Bao 10)</em></p>", unsafe_allow_html=True)
+            st.markdown(f"<div style='text-align:center;'>{top10_html}</div>", unsafe_allow_html=True)
+            st.markdown("</div>", unsafe_allow_html=True)
+            
         st.markdown("</div>", unsafe_allow_html=True)
         
         # === DÀN VÉ RÚT GỌN ===
