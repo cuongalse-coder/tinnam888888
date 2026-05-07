@@ -12,7 +12,7 @@ import re
 # CẤU HÌNH TRANG & GIAO DIỆN
 # ==========================================
 st.set_page_config(
-    page_title="TINNAM AI - MEGA EXPLOIT V12.0 (QUANTUM SUPREMACY)",
+    page_title="TINNAM AI - V13.0 WHEELING OPTIMIZER",
     page_icon="🎯",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -358,9 +358,11 @@ class RealWorldAIEngine:
 def main_app():
     with st.sidebar:
         st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/a/ae/Vietlott_logo.svg/1200px-Vietlott_logo.svg.png", width=150)
-        st.markdown("### 🤖 V12.0 - QUANTUM SUPREMACY ENGINE")
+        st.markdown("### 🤖 V13.0 - WHEELING OPTIMIZER")
         st.markdown("---")
         game_choice = st.radio("CHỌN CHẾ ĐỘ QUÉT:", ["Mega 6/45", "Power 6/55"])
+        st.markdown("---")
+        num_tickets = st.selectbox("Ngân sách đầu tư (Số vé mua):", [5, 10, 20, 50, 100], index=1)
         st.markdown("---")
         st.markdown("**Trạng thái:** 🟢 Kết nối API Thực Tế")
         st.markdown(f"**Hôm nay:** {datetime.now().strftime('%d/%m/%Y')}")
@@ -374,7 +376,7 @@ def main_app():
             st.session_state.logged_in = False
             st.rerun()
 
-    st.title(f"🚀 {game_choice.upper()} - V12.0 QUANTUM SUPREMACY")
+    st.title(f"🚀 {game_choice.upper()} - V13.0 WHEELING OPTIMIZER")
     max_number = 45 if game_choice == "Mega 6/45" else 55
     ball_class = "mega-ball" if game_choice == "Mega 6/45" else "power-ball"
     
@@ -421,7 +423,7 @@ def main_app():
     
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        run_btn = st.button("⚡ V12.0 QUANTUM SUPREMACY — DỰ ĐOÁN JACKPOT TỐI THƯỢNG ⚡", use_container_width=True)
+        run_btn = st.button("⚡ V13.0 WHEELING OPTIMIZER — TẠO DÀN BAO RÚT GỌN ⚡", use_container_width=True)
 
     if run_btn:
         st.session_state.prediction_ready = False
@@ -457,7 +459,7 @@ def main_app():
         time.sleep(0.2)
         progress_bar.progress(85)
         
-        status.text("🎯 [8/8] Sum-Mod7 + Decade Balance + Simulated Annealing — Chốt bộ số...")
+        status.text("🎯 [8/8] Sinh Hồ Tiềm Năng 15 số & Tối ưu hóa Tổ hợp Bao Rút Gọn...")
         time.sleep(0.2)
         progress_bar.progress(90)
         
@@ -467,12 +469,17 @@ def main_app():
             engine = MegaExploitV12(max_number, 6)
             result_v11 = engine.predict(real_data, n_sets=5)
             
-            if result_v11['predictions']:
-                st.session_state.best_prediction = result_v11['predictions'][0]['numbers']
-                st.session_state.all_predictions = result_v11['predictions']
+            if result_v11['top_pool']:
+                st.session_state.v11_top_pool = result_v11['top_pool'][:15] # Top 15 numbers
+                
+                from models.wheeling_optimizer import WheelingOptimizer
+                wheel_opt = WheelingOptimizer(6)
+                tickets, coverage = wheel_opt.generate_wheel(st.session_state.v11_top_pool, num_tickets)
+                
+                st.session_state.best_prediction = tickets[0]
+                st.session_state.all_predictions = [{'numbers': t, 'score': 0} for t in tickets]
                 st.session_state.v11_weights = result_v11.get('weights', {})
-                st.session_state.v11_confidence = result_v11['confidence']
-                st.session_state.v11_top_pool = result_v11.get('top_pool', [])
+                st.session_state.v11_confidence = coverage
             else:
                 # Fallback to V10
                 from models.vulnerability_scanner import VulnerabilityScanner
@@ -506,28 +513,31 @@ def main_app():
         st.session_state.prediction_ready = True
 
     if st.session_state.prediction_ready:
-        confidence = st.session_state.get('v11_confidence', 0)
-        st.success(f"✅ V12.0 QUANTUM SUPREMACY HOÀN TẤT — Độ tự tin: {confidence}% | 24 tín hiệu AI + 5-Engine Meta-Ensemble + Simulated Annealing.")
+        coverage = st.session_state.get('v11_confidence', 0)
+        st.success(f"✅ V13.0 WHEELING OPTIMIZER HOÀN TẤT — Tỉ lệ bao phủ lưới: {coverage}% | Hồ Tiềm Năng 15 số.")
         
-        # === BỘ SỐ CHỐT CHÍNH ===
-        st.markdown("<div class='card' style='border-color: #00ff00;'>", unsafe_allow_html=True)
-        st.markdown("<h2 style='text-align: center; color: #00ff00 !important;'>🎯 BỘ SỐ #1 — DÀN VIP TỐI THƯỢNG</h2>", unsafe_allow_html=True)
-        st.markdown("<p style='text-align: center; color: #888;'><em>(Bộ số điểm cao nhất từ V12.0 Quantum Supremacy Engine)</em></p>", unsafe_allow_html=True)
-        
-        pred_balls_html = "".join([f"<div class='ball special-ball'>{num:02d}</div>" for num in st.session_state.best_prediction])
-        st.markdown(f"<div style='text-align: center; padding: 20px;'>{pred_balls_html}</div>", unsafe_allow_html=True)
+        # === HỒ SỐ TIỀM NĂNG ===
+        top_pool = st.session_state.get('v11_top_pool', [])
+        st.markdown("<div class='card'>", unsafe_allow_html=True)
+        st.markdown("<h2 style='text-align: center; color: #ff0055 !important;'>🔥 HỒ SỐ TIỀM NĂNG (15 SỐ AI CHỌN) 🔥</h2>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center; color: #888;'><em>(Xác suất Jackpot rơi vào hồ này là cao nhất theo tính toán của 24 AI Signals)</em></p>", unsafe_allow_html=True)
+        if top_pool:
+            pool_html = "".join([f"<div class='ball special-ball'>{n:02d}</div>" for n in top_pool])
+            st.markdown(f"<div style='text-align:center;'>{pool_html}</div>", unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
         
-        # === CÁC BỘ SỐ DỰ PHÒNG ===
+        # === DÀN VÉ RÚT GỌN ===
         all_preds = st.session_state.get('all_predictions', [])
-        if len(all_preds) > 1:
-            with st.expander(f"📋 XEM THÊM {len(all_preds)-1} BỘ SỐ DỰ PHÒNG (đa dạng hóa)", expanded=False):
-                for i, pred in enumerate(all_preds[1:], 2):
-                    nums = pred['numbers']
-                    score = pred.get('score', 0)
-                    alt_html = "".join([f"<div class='ball {ball_class}'>{n:02d}</div>" for n in nums])
-                    st.markdown(f"**Bộ #{i}** (điểm: {score:.1f}):", unsafe_allow_html=True)
-                    st.markdown(f"<div style='padding: 5px;'>{alt_html}</div>", unsafe_allow_html=True)
+        st.markdown("<div class='card' style='border-color: #00ff00;'>", unsafe_allow_html=True)
+        st.markdown(f"<h2 style='text-align: center; color: #00ff00 !important;'>🎯 DÀN {len(all_preds)} VÉ BAO RÚT GỌN CHỐT SỐ 🎯</h2>", unsafe_allow_html=True)
+        st.markdown(f"<p style='text-align: center; color: #888;'><em>(Ma trận tổ hợp bao phủ chéo giúp tiết kiệm tiền mà vẫn vét được lưới xác suất)</em></p>", unsafe_allow_html=True)
+        
+        for i, pred in enumerate(all_preds):
+            nums = pred['numbers']
+            ticket_html = "".join([f"<div class='ball {ball_class}' style='width:40px;height:40px;font-size:16px;'>{n:02d}</div>" for n in nums])
+            st.markdown(f"**Vé #{i+1}:**", unsafe_allow_html=True)
+            st.markdown(f"<div style='padding: 5px;'>{ticket_html}</div>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
         
         # === TRỌNG SỐ TÍN HIỆU ===
         v11_weights = st.session_state.get('v11_weights', {})
@@ -537,13 +547,6 @@ def main_app():
                 w_data = [{"Tín hiệu": k, "Trọng số": v} for k, v in v11_weights.items()]
                 df_w = pd.DataFrame(w_data)
                 st.dataframe(df_w, use_container_width=True)
-        
-        # === TOP POOL ===
-        top_pool = st.session_state.get('v11_top_pool', [])
-        if top_pool:
-            with st.expander(f"🏊 TOP {len(top_pool)} SỐ CÓ ĐIỂM CAO NHẤT (Candidate Pool)", expanded=False):
-                pool_html = "".join([f"<div class='ball {ball_class}' style='width:40px;height:40px;font-size:16px;'>{n:02d}</div>" for n in top_pool])
-                st.markdown(f"<div style='text-align:center;'>{pool_html}</div>", unsafe_allow_html=True)
 
     st.markdown("---")
     st.markdown("### 📊 THEO DÕI ĐIỂM NỔ (OVERDUE GAP)")
