@@ -12,7 +12,7 @@ import re
 # CẤU HÌNH TRANG & GIAO DIỆN
 # ==========================================
 st.set_page_config(
-    page_title="TINNAM AI - V15.0 NEURAL QUANTUM",
+    page_title="TINNAM AI - V16.0 GOD MODE",
     page_icon="🎯",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -358,7 +358,7 @@ class RealWorldAIEngine:
 def main_app():
     with st.sidebar:
         st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/a/ae/Vietlott_logo.svg/1200px-Vietlott_logo.svg.png", width=150)
-        st.markdown("### 🤖 V15.0 - NEURAL QUANTUM")
+        st.markdown("### 🤖 V16.0 - GOD MODE")
         st.markdown("---")
         game_choice = st.radio("CHỌN CHẾ ĐỘ QUÉT:", ["Mega 6/45", "Power 6/55"])
         st.markdown("---")
@@ -377,7 +377,7 @@ def main_app():
             st.session_state.logged_in = False
             st.rerun()
 
-    st.title(f"🚀 {game_choice.upper()} - V15.0 NEURAL QUANTUM")
+    st.title(f"🚀 {game_choice.upper()} - V16.0 GOD MODE")
     max_number = 45 if game_choice == "Mega 6/45" else 55
     ball_class = "mega-ball" if game_choice == "Mega 6/45" else "power-ball"
     
@@ -424,7 +424,7 @@ def main_app():
     
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        run_btn = st.button("⚡ V15.0 NEURAL QUANTUM — TẠO DÀN BAO RÚT GỌN ⚡", use_container_width=True)
+        run_btn = st.button("⚡ V16.0 GOD MODE — TẠO DÀN BAO RÚT GỌN ⚡", use_container_width=True)
 
     if run_btn:
         st.session_state.prediction_ready = False
@@ -479,11 +479,12 @@ def main_app():
                     st.session_state.v11_top_pool, 
                     num_tickets,
                     constraints=result_v11.get('constraints'),
-                    sum_mod7=result_v11.get('sum_mod7')
+                    sum_mod7=result_v11.get('sum_mod7'),
+                    history_data=real_data
                 )
                 
-                st.session_state.best_prediction = tickets[0]
-                st.session_state.all_predictions = [{'numbers': t, 'score': 0} for t in tickets]
+                st.session_state.best_prediction = tickets[0]['numbers'] if tickets else []
+                st.session_state.all_predictions = tickets
                 st.session_state.v11_weights = result_v11.get('weights', {})
                 st.session_state.v11_confidence = coverage
             else:
@@ -521,7 +522,7 @@ def main_app():
     if st.session_state.prediction_ready:
         coverage = st.session_state.get('v11_confidence', 0)
         top_pool = st.session_state.get('v11_top_pool', [])
-        st.success(f"✅ V15.0 NEURAL QUANTUM HOÀN TẤT — Tỉ lệ bao phủ lưới: {coverage}% | Hồ Tiềm Năng {len(top_pool)} số.")
+        st.success(f"✅ V16.0 GOD MODE HOÀN TẤT — Tỉ lệ bao phủ lưới: {coverage}% | Hồ Tiềm Năng {len(top_pool)} số.")
         
         # === HỒ SỐ TIỀM NĂNG ===
         st.markdown("<div class='card'>", unsafe_allow_html=True)
@@ -544,7 +545,7 @@ def main_app():
             ticket_str = " ".join([f"{n:02d}" for n in nums])
             ticket_texts.append(ticket_str)
             ticket_html = "".join([f"<div class='ball {ball_class}' style='width:40px;height:40px;font-size:16px;'>{n:02d}</div>" for n in nums])
-            st.markdown(f"**Vé #{i+1}:**", unsafe_allow_html=True)
+            st.markdown(f"**Vé #{i+1}:** <span style='color:#ff0055; font-style:italic;'>{pred.get('strategy', '')}</span>", unsafe_allow_html=True)
             st.markdown(f"<div style='padding: 5px;'>{ticket_html}</div>", unsafe_allow_html=True)
         
         # Tiện ích Copy & Download
@@ -726,14 +727,16 @@ def main_app():
                         pool, 
                         num_tickets,
                         constraints=res.get('constraints'),
-                        sum_mod7=res.get('sum_mod7')
+                        sum_mod7=res.get('sum_mod7'),
+                        history_data=historical_data_for_test
                     )
                     
                     # 3. Đối chiếu kết quả các vé
                     draw_best_match = 0
                     draw_won_any = False
                     
-                    for t in tickets:
+                    for t_obj in tickets:
+                        t = t_obj['numbers']
                         hits = len(set(t) & actual_next_draw)
                         match_counts[hits] += 1
                         total_spent += 10000

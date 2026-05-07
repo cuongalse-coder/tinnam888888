@@ -46,49 +46,63 @@ class WheelingOptimizer:
         
         return True
 
-    def generate_wheel(self, pool, num_tickets, constraints=None, sum_mod7=None):
+    def generate_wheel(self, pool, num_tickets, constraints=None, sum_mod7=None, history_data=None):
         """
-        Generates `num_tickets` tickets from `pool` matching AI constraints.
+        Generates `num_tickets` tickets from `pool` matching AI constraints and strict historical elimination.
         Maximizes coverage of 3-combinations (triplets) to guarantee a minimum win if the 6 winning numbers are in the pool.
         """
         pool = sorted(list(pool))
         if len(pool) <= self.pick_count:
-            return [pool] * num_tickets, 100.0
+            return [{'numbers': pool, 'strategy': '🎯 Trọng tâm (Duy nhất)'}] * num_tickets, 100.0
 
         all_triplets = set(combinations(pool, 3))
         uncovered = set(all_triplets)
         
+        # Parse history into sets for fast elimination
+        history_sets = []
+        if history_data:
+            history_sets = [set(d[:self.pick_count]) for d in history_data]
+            
         tickets = []
         
-        # Prepare Candidate Pool with Smart AI Filtering
+        # Prepare Candidate Pool with Smart AI Filtering + Historical Elimination
         valid_candidates = []
         if len(pool) <= 18:
             all_cands = list(combinations(pool, self.pick_count))
             random.shuffle(all_cands)
             for c in all_cands:
-                if self._validate_ticket(c, constraints, sum_mod7):
-                    valid_candidates.append(c)
+                if not self._validate_ticket(c, constraints, sum_mod7):
+                    continue
+                # Strict Historical Elimination (V16.0 GOD MODE)
+                c_set = set(c)
+                if any(len(c_set & h) >= 4 for h in history_sets):
+                    continue
+                valid_candidates.append(c)
                 if len(valid_candidates) >= 3000: break
         else:
             attempts = 0
-            while len(valid_candidates) < 4000 and attempts < 20000:
+            while len(valid_candidates) < 4000 and attempts < 30000:
                 attempts += 1
                 c = tuple(sorted(random.sample(pool, self.pick_count)))
-                if self._validate_ticket(c, constraints, sum_mod7):
-                    valid_candidates.append(c)
+                if not self._validate_ticket(c, constraints, sum_mod7):
+                    continue
+                c_set = set(c)
+                if any(len(c_set & h) >= 4 for h in history_sets):
+                    continue
+                valid_candidates.append(c)
                     
         if not valid_candidates:
             # Fallback if constraints are too tight
             valid_candidates = [tuple(sorted(random.sample(pool, self.pick_count))) for _ in range(100)]
              
-        for _ in range(num_tickets):
+        for i in range(num_tickets):
             if not uncovered:
                 best_ticket = random.choice(valid_candidates)
+                strategy = "🌪️ Đột biến (Chống bão hòa)"
             else:
                 best_ticket = None
                 best_coverage = -1
                 
-                # We can sample a subset of valid_candidates to speed up
                 sample_pool = random.sample(valid_candidates, min(len(valid_candidates), 1000))
                 
                 for cand in sample_pool:
@@ -99,13 +113,19 @@ class WheelingOptimizer:
                         best_coverage = coverage
                         best_ticket = cand
                         
-                    if best_coverage == 20: # 6 choose 3 = 20, max possible
+                    if best_coverage == 20:
                         break
                         
                 if not best_ticket:
                     best_ticket = random.choice(valid_candidates)
+                    strategy = "🌪️ Đột biến (Chống bão hòa)"
+                else:
+                    if i < num_tickets * 0.3:
+                        strategy = "🔥 Vét lưới (Dồn tín hiệu AI)"
+                    else:
+                        strategy = "🎯 Trọng tâm (Bao phủ chéo)"
                     
-            tickets.append(list(best_ticket))
+            tickets.append({'numbers': list(best_ticket), 'strategy': strategy})
             covered = set(combinations(best_ticket, 3))
             uncovered -= covered
             
