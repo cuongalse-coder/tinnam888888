@@ -855,6 +855,209 @@ def main_app():
                     st.markdown(f"- Không trúng (0-2/6): **{match_counts[0]+match_counts[1]+match_counts[2]} vé**")
                 
 
+    # =====================================================================
+    # FULL HISTORICAL WIN-RATE TEST (dùng RealWorldAIEngine — NHANH)
+    # =====================================================================
+    st.markdown("---")
+    st.markdown("### 🏆 TOÀN BỘ LỊCH SỬ — TỶ LỆ TRÚNG THỰC TẾ (FULL BACKTEST)")
+    with st.expander("📊 Bấm để kiểm tra tỷ lệ AI trúng trên TẤT CẢ các kỳ lịch sử"):
+        st.info(
+            "⚡ **Chế độ quét nhanh toàn lịch sử:** Hệ thống sẽ tua ngược về từng kỳ (từ kỳ 60 đến nay), "
+            "dùng AI dự đoán Top-6 / Top-10 / Top-15 số, sau đó so sánh với kết quả THỰC TẾ đã xảy ra. "
+            "Đây là bài kiểm tra TRUNG THỰC nhất về độ chính xác của AI."
+        )
+
+        col_bt1, col_bt2 = st.columns(2)
+        with col_bt1:
+            bt_start_pct = st.slider("Bắt đầu từ % lịch sử (0 = kỳ đầu tiên):", 0, 80, 0, step=5,
+                                     help="0% = test từ kỳ 60, 50% = chỉ test nửa sau lịch sử")
+        with col_bt2:
+            bt_step = st.selectbox("Bước nhảy (Mỗi bao nhiêu kỳ test 1 lần):", [1, 2, 5, 10], index=0,
+                                   help="Bước=1 test mọi kỳ (chính xác nhất nhưng chậm hơn). Bước=5 test 1/5 số kỳ (nhanh 5x).")
+
+        st.caption(
+            f"📌 Ước tính số kỳ sẽ test: **{max(0, (len(real_data) - 60 - int(len(real_data) * bt_start_pct / 100)) // bt_step)}** kỳ "
+            f"(từ {int(len(real_data) * bt_start_pct / 100) + 60} → {len(real_data)})"
+        )
+
+        if st.button("🚀 CHẠY KIỂM TRA TOÀN BỘ LỊCH SỬ", key="full_bt_btn"):
+            total_draws_bt = len(real_data)
+            if total_draws_bt < 60:
+                st.error("Không đủ dữ liệu để backtest (cần tối thiểu 60 kỳ).")
+            else:
+                start_idx = 60 + int(total_draws_bt * bt_start_pct / 100)
+                test_indices_bt = list(range(start_idx, total_draws_bt, bt_step))
+                n_test = len(test_indices_bt)
+
+                if n_test == 0:
+                    st.error("Không có kỳ nào để test với cài đặt hiện tại.")
+                else:
+                    bt_prog = st.progress(0)
+                    bt_status = st.empty()
+
+                    # Bộ đếm match cho Top-6 / Top-10 / Top-15
+                    counts6  = {k: 0 for k in range(7)}   # match = 0..6
+                    counts10 = {k: 0 for k in range(7)}   # ≥k match vào top-10
+                    counts15 = {k: 0 for k in range(7)}   # ≥k match vào top-15
+
+                    detail_rows = []   # lưu chi tiết 50 kỳ gần nhất để hiển thị bảng
+
+                    for step_i, cur_idx in enumerate(test_indices_bt):
+                        hist = real_data[:cur_idx]
+                        actual = set(real_data[cur_idx])
+
+                        bt_status.text(
+                            f"⏳ Đang test kỳ {cur_idx}/{total_draws_bt} "
+                            f"({step_i+1}/{n_test}) — {int((step_i+1)/n_test*100)}%"
+                        )
+                        bt_prog.progress((step_i + 1) / n_test)
+
+                        try:
+                            eng = RealWorldAIEngine(hist, max_number)
+
+                            # --- Lấy top-15 pool từ Ensemble ---
+                            from collections import Counter as _Counter
+                            m1 = eng.model_markov_chain()
+                            m2 = eng.model_gap_overdue(top_n=15)
+                            m3 = eng.model_momentum_neural()
+                            m4 = eng.model_advanced_ml()
+
+                            # Cho điểm tổng hợp có trọng số
+                            vote = _Counter()
+                            for num in m4[:15]: vote[num] += 5
+                            for num in m2[:15]: vote[num] += 3
+                            for num in m3[:15]: vote[num] += 2
+                            for num in m1[:15]: vote[num] += 1
+
+                            ranked_pool = [n for n, _ in vote.most_common(15)]
+                            top6  = set(ranked_pool[:6])
+                            top10 = set(ranked_pool[:10])
+                            top15 = set(ranked_pool[:15])
+
+                            hit6  = len(top6  & actual)
+                            hit10 = len(top10 & actual)
+                            hit15 = len(top15 & actual)
+
+                            counts6[hit6]   += 1
+                            counts10[hit10] += 1
+                            counts15[hit15] += 1
+
+                            # Lưu 50 kỳ gần nhất vào detail
+                            if step_i >= n_test - 50:
+                                detail_rows.append({
+                                    "Kỳ": cur_idx,
+                                    "Kết quả thật": " ".join(f"{n:02d}" for n in sorted(actual)),
+                                    "Top-6 AI": " ".join(f"{n:02d}" for n in sorted(top6)),
+                                    "Trúng/6": hit6,
+                                    "Trúng/10": hit10,
+                                    "Trúng/15": hit15,
+                                })
+                        except Exception:
+                            continue
+
+                    bt_prog.progress(1.0)
+                    bt_status.empty()
+
+                    st.success(f"✅ Hoàn tất! Đã kiểm tra **{n_test} kỳ** từ kỳ {start_idx} đến kỳ {total_draws_bt}.")
+
+                    # ---- KẾT QUẢ TỔNG HỢP ----
+                    st.markdown("---")
+                    st.markdown("## 📊 KẾT QUẢ TỔNG HỢP")
+
+                    def pct(c, total):
+                        return f"{c/total*100:.1f}%" if total > 0 else "0%"
+
+                    c1, c2, c3 = st.columns(3)
+                    with c1:
+                        st.markdown("### 🎯 Dự đoán Top-6 Số")
+                        st.markdown(f"| Trúng | Số kỳ | Tỷ lệ |")
+                        st.markdown(f"|-------|--------|-------|")
+                        for k in range(6, -1, -1):
+                            emoji = {6:"🏆",5:"🥇",4:"🥈",3:"🥉",2:"",1:"",0:""}.get(k,"")
+                            st.markdown(f"| {emoji} **{k}/6** | {counts6[k]} | {pct(counts6[k], n_test)} |")
+
+                    with c2:
+                        st.markdown("### 🔟 Pool Top-10 Số")
+                        st.markdown(f"| ≥X trúng | Số kỳ | Tỷ lệ |")
+                        st.markdown(f"|----------|--------|-------|")
+                        for k in range(6, -1, -1):
+                            above = sum(counts10[i] for i in range(k, 7))
+                            emoji = {6:"🏆",5:"🥇",4:"🥈",3:"🥉",2:"",1:"",0:""}.get(k,"")
+                            st.markdown(f"| {emoji} ≥{k}/6 | {above} | {pct(above, n_test)} |")
+
+                    with c3:
+                        st.markdown("### 🎱 Pool Top-15 Số")
+                        st.markdown(f"| ≥X trúng | Số kỳ | Tỷ lệ |")
+                        st.markdown(f"|----------|--------|-------|")
+                        for k in range(6, -1, -1):
+                            above = sum(counts15[i] for i in range(k, 7))
+                            emoji = {6:"🏆",5:"🥇",4:"🥈",3:"🥉",2:"",1:"",0:""}.get(k,"")
+                            st.markdown(f"| {emoji} ≥{k}/6 | {above} | {pct(above, n_test)} |")
+
+                    # ---- METRIC NỔI BẬT ----
+                    st.markdown("---")
+                    st.markdown("## 🔑 CHỈ SỐ QUAN TRỌNG NHẤT")
+                    m1c, m2c, m3c, m4c = st.columns(4)
+                    with m1c:
+                        v = counts6[3] + counts6[4] + counts6[5] + counts6[6]
+                        st.metric("Top-6 trúng ≥3/6", f"{pct(v, n_test)}", f"{v}/{n_test} kỳ")
+                    with m2c:
+                        v4 = counts6[4] + counts6[5] + counts6[6]
+                        st.metric("Top-6 trúng ≥4/6", f"{pct(v4, n_test)}", f"{v4}/{n_test} kỳ")
+                    with m3c:
+                        v3_10 = sum(counts10[i] for i in range(3, 7))
+                        st.metric("Pool-10 có ≥3 số trúng", f"{pct(v3_10, n_test)}", f"{v3_10}/{n_test} kỳ",
+                                  help="Tức là trong 10 số dự đoán, ít nhất 3 số khớp với kết quả thật")
+                    with m4c:
+                        v4_10 = sum(counts10[i] for i in range(4, 7))
+                        st.metric("Pool-10 có ≥4 số trúng", f"{pct(v4_10, n_test)}", f"{v4_10}/{n_test} kỳ")
+
+                    # ---- BIỂU ĐỒ ----
+                    st.markdown("---")
+                    st.markdown("#### 📈 Phân bố Số Trúng trong Top-6 Dự Đoán")
+                    try:
+                        import altair as alt
+                        chart_data = pd.DataFrame({
+                            "Số trúng": [f"{k}/6" for k in range(7)],
+                            "Số kỳ": [counts6[k] for k in range(7)],
+                            "Màu": ["#ff0055" if k >= 4 else "#ffaa00" if k == 3 else "#444" for k in range(7)]
+                        })
+                        bar = alt.Chart(chart_data).mark_bar(cornerRadiusTopLeft=4, cornerRadiusTopRight=4).encode(
+                            x=alt.X("Số trúng:O", sort=None, title="Số trúng (Top-6)"),
+                            y=alt.Y("Số kỳ:Q", title="Số kỳ"),
+                            color=alt.Color("Màu:N", scale=None, legend=None),
+                            tooltip=["Số trúng", "Số kỳ"]
+                        ).properties(height=300)
+                        st.altair_chart(bar, use_container_width=True)
+                    except Exception:
+                        pass
+
+                    # ---- BẢNG CHI TIẾT 50 KỲ GẦN NHẤT ----
+                    if detail_rows:
+                        st.markdown("---")
+                        st.markdown(f"#### 📋 Chi tiết {len(detail_rows)} kỳ gần nhất được test")
+                        df_detail = pd.DataFrame(detail_rows)
+
+                        def color_hits(val):
+                            if val >= 4: return "background-color: rgba(255,0,85,0.4); font-weight:bold"
+                            if val == 3: return "background-color: rgba(255,170,0,0.3)"
+                            return ""
+
+                        styled = df_detail.style.applymap(color_hits, subset=["Trúng/6", "Trúng/10", "Trúng/15"])
+                        st.dataframe(styled, use_container_width=True, hide_index=True)
+
+                    # ---- NHẬN XÉT AI ----
+                    st.markdown("---")
+                    rate3 = (counts6[3] + counts6[4] + counts6[5] + counts6[6]) / max(n_test, 1) * 100
+                    rate_pool10_3 = sum(counts10[i] for i in range(3, 7)) / max(n_test, 1) * 100
+                    if rate_pool10_3 >= 60:
+                        st.success(f"🔥 **AI ĐÁNH GIÁ: XUẤT SẮC** — Pool 10 số bao phủ ≥3 số trúng đến {rate_pool10_3:.1f}% kỳ. Chiến lược BAO-10 cực kỳ hiệu quả!")
+                    elif rate_pool10_3 >= 40:
+                        st.warning(f"⚠️ **AI ĐÁNH GIÁ: KHÁ** — Pool 10 số bao phủ ≥3 số trúng {rate_pool10_3:.1f}% kỳ. Nên dùng dàn bao 10-15 vé.")
+                    else:
+                        st.error(f"📉 **AI ĐÁNH GIÁ: TRUNG BÌNH** — Pool 10 số bao phủ {rate_pool10_3:.1f}% kỳ. Lý do: Xổ số có độ ngẫu nhiên rất cao. Hãy dùng pool 15 số để tăng coverage.")
+
+
 if __name__ == "__main__":
     if check_password():
         main_app()
