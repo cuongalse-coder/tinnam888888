@@ -1043,7 +1043,11 @@ def main_app():
                             if val == 3: return "background-color: rgba(255,170,0,0.3)"
                             return ""
 
-                        styled = df_detail.style.applymap(color_hits, subset=["Trúng/6", "Trúng/10", "Trúng/15"])
+                        try:
+                            styled = df_detail.style.map(color_hits, subset=["Trúng/6", "Trúng/10", "Trúng/15"])
+                        except AttributeError:
+                            # Fallback for older pandas versions
+                            styled = df_detail.style.applymap(color_hits, subset=["Trúng/6", "Trúng/10", "Trúng/15"])
                         st.dataframe(styled, use_container_width=True, hide_index=True)
 
                     # ---- NHẬN XÉT AI ----
