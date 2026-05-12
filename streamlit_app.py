@@ -12,8 +12,8 @@ import re
 # CẤU HÌNH TRANG & GIAO DIỆN
 # ==========================================
 st.set_page_config(
-    page_title="TINNAM AI - V104.0 THE CAGE",
-    page_icon="🎯",
+    page_title="TINNAM AI - V200.0 QUANTUM NEXUS",
+    page_icon="🧬",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -359,7 +359,7 @@ class RealWorldAIEngine:
 def main_app():
     with st.sidebar:
         st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/a/ae/Vietlott_logo.svg/1200px-Vietlott_logo.svg.png", width=150)
-        st.markdown("### 🕸️ V104.0 - THE CAGE")
+        st.markdown("### 🧬 V200.0 - QUANTUM NEXUS")
         st.markdown("---")
         game_choice = st.radio("CHỌN CHẾ ĐỘ QUÉT:", ["Mega 6/45", "Power 6/55"])
         st.markdown("---")
@@ -378,7 +378,7 @@ def main_app():
             st.session_state.logged_in = False
             st.rerun()
 
-    st.title(f"🚀 {game_choice.upper()} - V104.0 THE CAGE (BẺ KHÓA LỒNG QUAY)")
+    st.title(f"🧬 {game_choice.upper()} - V200.0 QUANTUM NEXUS")
     max_number = 45 if game_choice == "Mega 6/45" else 55
     ball_class = "mega-ball" if game_choice == "Mega 6/45" else "power-ball"
     
@@ -425,7 +425,7 @@ def main_app():
     
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        run_btn = st.button("🕸️ KÍCH HOẠT V104.0 THE CAGE — QUÉT ĐỘ LỆCH LỒNG QUAY 🕸️", use_container_width=True)
+        run_btn = st.button("🧬 KÍCH HOẠT V200.0 QUANTUM NEXUS — 41 TÍN HIỆU AI 🧬", use_container_width=True)
 
     if run_btn:
         st.session_state.prediction_ready = False
@@ -458,9 +458,9 @@ def main_app():
         term_placeholder.empty()
         
         try:
-            from models.mega_exploit_v15 import MegaExploitV15
+            from models.nexus_engine import NexusEngine
             
-            engine = MegaExploitV15(max_number, 6)
+            engine = NexusEngine(max_number, 6)
             result_v11 = engine.predict(real_data, n_sets=5)
             
             if result_v11['top_pool']:
@@ -523,12 +523,12 @@ def main_app():
     if st.session_state.prediction_ready:
         coverage = st.session_state.get('v11_confidence', 0)
         top_pool = st.session_state.get('v11_top_pool', [])
-        st.success(f"✅ V104.0 THE CAGE HOÀN TẤT — 35 AI Signals | Đã mô phỏng Độ Lệch Trục Lồng Quay | Hồ Tiềm Năng: {len(top_pool)} số.")
+        st.success(f"✅ V200.0 QUANTUM NEXUS HOÀN TẤT — 41 AI Signals | 6 Tín hiệu Nexus mới | Hồ Tiềm Năng: {len(top_pool)} số.")
         
         # === HỒ SỐ TIỀM NĂNG ===
         st.markdown("<div class='card'>", unsafe_allow_html=True)
-        st.markdown(f"<h2 style='text-align: center; color: #00ffcc !important;'>🕸️ HỒ SỐ ĐỘT BIẾN ({len(top_pool)} SỐ TỪ 35 AI SIGNALS) 🕸️</h2>", unsafe_allow_html=True)
-        st.markdown("<p style='text-align: center; color: #888;'><em>(Lọc qua Hệ thống quét Vùng Nóng (Hot Zone) dựa trên độ mài mòn và độ nghiêng của Lồng Quay)</em></p>", unsafe_allow_html=True)
+        st.markdown(f"<h2 style='text-align: center; color: #00ffcc !important;'>🧬 HỒ SỐ ĐỘT BIẾN ({len(top_pool)} SỐ TỪ 41 AI SIGNALS) 🧬</h2>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center; color: #888;'><em>(Lọc qua 41 tín hiệu AI: Sliding Window, Conditional Probability, Gap Acceleration, Delta Momentum, Sector Rotation...)</em></p>", unsafe_allow_html=True)
         if top_pool:
             pool_html = "".join([f"<div class='ball special-ball'>{n:02d}</div>" for n in top_pool])
             st.markdown(f"<div style='text-align:center; margin-bottom: 25px;'>{pool_html}</div>", unsafe_allow_html=True)
