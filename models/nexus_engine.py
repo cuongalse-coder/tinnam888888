@@ -1,8 +1,8 @@
 """
-NEXUS ENGINE V200.0 — QUANTUM NEXUS
-====================================
-Wraps MegaExploitV15 and adds 6 high-impact signals + improved calibration.
-Designed as a drop-in replacement for predict() calls.
+NEXUS ENGINE V400.0 — ADAPTIVE QUANTUM
+=======================================
+Wraps MegaExploitV15 and adds 8 high-impact signals + walk-forward calibration.
+V400 improvements: pair co-occurrence, temporal decay, adaptive weights.
 """
 import math
 import numpy as np
@@ -35,6 +35,8 @@ class NexusEngine:
         new_sigs['hot_cold_cross'] = self._sig_hot_cold_intersection(data)
         new_sigs['delta_momentum'] = self._sig_delta_momentum(data)
         new_sigs['sector_rotation'] = self._sig_sector_rotation(data)
+        new_sigs['pair_boost'] = self._sig_pair_boost(data)
+        new_sigs['temporal_decay'] = self._sig_temporal_decay(data)
 
         # --- PHASE 3: Calibrate new signals via rolling backtest ---
         new_weights = self._calibrate_rolling(data, new_sigs)
@@ -111,7 +113,7 @@ class NexusEngine:
             'weights': {k: round(v, 3) if isinstance(v, float) else v for k, v in sorted(all_weights.items(), key=lambda x: -float(x[1]))},
             'scores': {n: round(s, 3) for n, s in ranked[:30]},
             'top_pool': top_pool[:25],
-            'n_signals': 35 + len(new_sigs),
+            'n_signals': 35 + len(new_sigs),  # V400: 43 signals total
             'constraints': constraints if isinstance(constraints, dict) else {},
             'sum_mod7': list(sum_mod7) if sum_mod7 else [],
             'absolute_final_6': absolute_final_6,
@@ -266,6 +268,38 @@ class NexusEngine:
                 scores[num] = (r - p) * 0.3
             elif r < p * 0.8:  # Sector cooling down
                 scores[num] = -0.5
+        return scores
+
+    def _sig_pair_boost(self, data):
+        """V400: Pair co-occurrence boost with last draw numbers."""
+        scores = {n: 0.0 for n in range(1, self.max_number + 1)}
+        last = set(data[-1][:self.pick_count])
+        pf = Counter()
+        for x in data[-150:]:
+            for p in combinations(sorted(x[:self.pick_count]), 2):
+                pf[p] += 1
+        for n in range(1, self.max_number + 1):
+            for p in last:
+                key = tuple(sorted([p, n]))
+                cnt = pf.get(key, 0)
+                if cnt > 3:
+                    scores[n] += cnt * 0.08
+        return scores
+
+    def _sig_temporal_decay(self, data):
+        """V400: Exponential temporal decay weighting."""
+        scores = {n: 0.0 for n in range(1, self.max_number + 1)}
+        nd = len(data)
+        lam = 0.05
+        for i, draw in enumerate(data):
+            age = nd - 1 - i
+            w = math.exp(-lam * age)
+            for n in draw[:self.pick_count]:
+                scores[n] += w
+        mx = max(scores.values()) if scores else 1
+        if mx > 0:
+            for n in scores:
+                scores[n] = (scores[n] / mx) * 4
         return scores
 
     # ================================================================
