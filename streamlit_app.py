@@ -12,7 +12,7 @@ import re
 # CẤU HÌNH TRANG & GIAO DIỆN
 # ==========================================
 st.set_page_config(
-    page_title="TINNAM AI - V400.0 ADAPTIVE QUANTUM",
+    page_title="TINNAM AI - V500.0 HYBRID SYNAPSE",
     page_icon="🧬",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -359,7 +359,7 @@ class RealWorldAIEngine:
 def main_app():
     with st.sidebar:
         st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/a/ae/Vietlott_logo.svg/1200px-Vietlott_logo.svg.png", width=150)
-        st.markdown("### 🧬 V400.0 - ADAPTIVE QUANTUM")
+        st.markdown("### 🧬 V500.0 - HYBRID SYNAPSE")
         st.markdown("---")
         game_choice = st.radio("CHỌN CHẾ ĐỘ QUÉT:", ["Mega 6/45", "Power 6/55"])
         st.markdown("---")
@@ -378,7 +378,7 @@ def main_app():
             st.session_state.logged_in = False
             st.rerun()
 
-    st.title(f"🧬 {game_choice.upper()} - V400.0 ADAPTIVE QUANTUM")
+    st.title(f"🧬 {game_choice.upper()} - V500.0 HYBRID SYNAPSE")
     max_number = 45 if game_choice == "Mega 6/45" else 55
     ball_class = "mega-ball" if game_choice == "Mega 6/45" else "power-ball"
     
@@ -425,7 +425,7 @@ def main_app():
     
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        run_btn = st.button("🧬 KÍCH HOẠT V400.0 ADAPTIVE QUANTUM — 43 TÍN HIỆU AI 🧬", use_container_width=True)
+        run_btn = st.button("🧬 KÍCH HOẠT V500.0 HYBRID — ML + QUANTUM 🧬", use_container_width=True)
 
     if run_btn:
         st.session_state.prediction_ready = False
@@ -523,12 +523,12 @@ def main_app():
     if st.session_state.prediction_ready:
         coverage = st.session_state.get('v11_confidence', 0)
         top_pool = st.session_state.get('v11_top_pool', [])
-        st.success(f"✅ V400.0 ADAPTIVE QUANTUM HOÀN TẤT — 43 AI Signals | Walk-Forward Calibration | Hồ Tiềm Năng: {len(top_pool)} số.")
+        st.success(f"✅ V500.0 HYBRID HOÀN TẤT — Deep Learning + Walk-Forward Calibration | Hồ Tiềm Năng: {len(top_pool)} số.")
         
         # === HỒ SỐ TIỀM NĂNG ===
         st.markdown("<div class='card'>", unsafe_allow_html=True)
-        st.markdown(f"<h2 style='text-align: center; color: #00ffcc !important;'>🧬 HỒ SỐ ĐỘT BIẾN ({len(top_pool)} SỐ TỪ 43 AI SIGNALS) 🧬</h2>", unsafe_allow_html=True)
-        st.markdown("<p style='text-align: center; color: #888;'><em>(V400: Walk-Forward Calibration + Pair Co-occurrence + Temporal Decay + 35 Core Signals)</em></p>", unsafe_allow_html=True)
+        st.markdown(f"<h2 style='text-align: center; color: #00ffcc !important;'>🧬 HỒ SỐ ĐỘT BIẾN ({len(top_pool)} SỐ TỪ V500 HYBRID) 🧬</h2>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center; color: #888;'><em>(Dùng thuật toán Tuyến Tính Tự Thích Nghi - Tối ưu cho dàn Bao 10 & 15 số)</em></p>", unsafe_allow_html=True)
         if top_pool:
             pool_html = "".join([f"<div class='ball special-ball'>{n:02d}</div>" for n in top_pool])
             st.markdown(f"<div style='text-align:center; margin-bottom: 25px;'>{pool_html}</div>", unsafe_allow_html=True)
@@ -548,8 +548,8 @@ def main_app():
         final_6 = st.session_state.get('absolute_final_6', [])
         if final_6:
             st.markdown("<div style='background: linear-gradient(135deg, rgba(255,0,85,0.15), rgba(0,255,204,0.1)); border: 2px solid #ff0055; border-radius: 12px; padding: 24px; margin-bottom: 20px; box-shadow: 0 0 30px rgba(255,0,85,0.4);'>", unsafe_allow_html=True)
-            st.markdown("<h2 style='text-align: center; color: #ff0055 !important; text-shadow: 0 0 20px #ff0055; font-size: 1.8em;'>🎯 6 SỐ TUYÊN NGÔN (VÙNG LỆCH TRỤC MÁY QUAY) 🎯</h2>", unsafe_allow_html=True)
-            st.markdown("<p style='text-align: center; color: #bbb;'><em>Những quả bóng này nằm chính xác vào Điểm Mù (Blind Spot) của Lồng Cầu bị nghiêng, nơi lực ly tâm gom chúng lại dễ rơi vào ống hút nhất.</em></p>", unsafe_allow_html=True)
+            st.markdown("<h2 style='text-align: center; color: #ff0055 !important; text-shadow: 0 0 20px #ff0055; font-size: 1.8em;'>🎯 6 SỐ TUYÊN NGÔN (TỪ V500 DEEP LEARNING) 🎯</h2>", unsafe_allow_html=True)
+            st.markdown("<p style='text-align: center; color: #bbb;'><em>(Thuật toán AI Deep Learning HistGradientBoostingRegressor chuyên trị phi tuyến tính. Cực kỳ tối ưu nếu bạn chỉ muốn đánh đúng 1 vé duy nhất.)</em></p>", unsafe_allow_html=True)
             f6_html = "".join([f"<div class='ball {ball_class}' style='width:65px;height:65px;font-size:24px; background: linear-gradient(145deg,#ff0055,#ff6600); border-color:#ff0055; box-shadow: 0 0 30px #ff0055;'>{n:02d}</div>" for n in final_6])
             st.markdown(f"<div style='text-align:center; padding: 15px;'>{f6_html}</div>", unsafe_allow_html=True)
             st.markdown("<p style='text-align:center; color:#ff0055; font-weight:bold;'>⚡ ĐÂY LÀ LỰA CHỌN SỐ 1 CỦA HỆ THỐNG. Nếu chỉ muốn mua 1 VÉ DUY NHẤT — hãy dùng 6 số này. ⚡</p>", unsafe_allow_html=True)
