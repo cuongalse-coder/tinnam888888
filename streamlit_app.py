@@ -529,34 +529,34 @@ def main_app():
         
         with tab1:
             # === HỒ SỐ TIỀM NĂNG ===
-        st.markdown("<div class='card'>", unsafe_allow_html=True)
-        st.markdown(f"<h2 style='text-align: center; color: #00ffcc !important;'>🧬 HỒ SỐ ĐỘT BIẾN ({len(top_pool)} SỐ TỪ V600 NEURAL APEX) 🧬</h2>", unsafe_allow_html=True)
-        st.markdown("<p style='text-align: center; color: #888;'><em>(Stacking Ensemble: HistGBR + RandomForest + Ridge — Tối ưu cho dàn Bao 10 & 15 số)</em></p>", unsafe_allow_html=True)
-        if top_pool:
-            pool_html = "".join([f"<div class='ball special-ball'>{n:02d}</div>" for n in top_pool])
-            st.markdown(f"<div style='text-align:center; margin-bottom: 25px;'>{pool_html}</div>", unsafe_allow_html=True)
-            
-            # --- LÕI KIM CƯƠNG 10 SỐ ---
-            top_10_diamond = top_pool[:10]
-            top10_html = "".join([f"<div class='ball special-ball' style='background: linear-gradient(145deg, #ff00ff, #00ffff); box-shadow: 0 0 25px #ff00ff; border-color: #ff00ff;'>{n:02d}</div>" for n in top_10_diamond])
-            st.markdown("<div style='background-color: rgba(255, 0, 255, 0.05); border: 2px dashed #ff00ff; border-radius: 10px; padding: 20px; margin-top: 10px;'>", unsafe_allow_html=True)
-            st.markdown("<h3 style='text-align: center; color: #ff00ff !important; text-shadow: 0 0 10px #ff00ff;'>💎 LÕI KIM CƯƠNG: 10 SỐ CHUẨN NHẤT (Dành cho đánh BAO 10) 💎</h3>", unsafe_allow_html=True)
-            st.markdown("<p style='text-align: center; color: #bbb;'><em>(Hệ thống đã nén và trích xuất đúng 10 con số có Điểm Tương Quan Tổng Hợp cao nhất từ 32 thuật toán. Chuyên dùng để ghép Bao 7 đến Bao 10)</em></p>", unsafe_allow_html=True)
-            st.markdown(f"<div style='text-align:center;'>{top10_html}</div>", unsafe_allow_html=True)
+            st.markdown("<div class='card'>", unsafe_allow_html=True)
+            st.markdown(f"<h2 style='text-align: center; color: #00ffcc !important;'>🧬 HỒ SỐ ĐỘT BIẾN ({len(top_pool)} SỐ TỪ V600 NEURAL APEX) 🧬</h2>", unsafe_allow_html=True)
+            st.markdown("<p style='text-align: center; color: #888;'><em>(Stacking Ensemble: HistGBR + RandomForest + Ridge — Tối ưu cho dàn Bao 10 & 15 số)</em></p>", unsafe_allow_html=True)
+            if top_pool:
+                pool_html = "".join([f"<div class='ball special-ball'>{n:02d}</div>" for n in top_pool])
+                st.markdown(f"<div style='text-align:center; margin-bottom: 25px;'>{pool_html}</div>", unsafe_allow_html=True)
+                
+                # --- LÕI KIM CƯƠNG 10 SỐ ---
+                top_10_diamond = top_pool[:10]
+                top10_html = "".join([f"<div class='ball special-ball' style='background: linear-gradient(145deg, #ff00ff, #00ffff); box-shadow: 0 0 25px #ff00ff; border-color: #ff00ff;'>{n:02d}</div>" for n in top_10_diamond])
+                st.markdown("<div style='background-color: rgba(255, 0, 255, 0.05); border: 2px dashed #ff00ff; border-radius: 10px; padding: 20px; margin-top: 10px;'>", unsafe_allow_html=True)
+                st.markdown("<h3 style='text-align: center; color: #ff00ff !important; text-shadow: 0 0 10px #ff00ff;'>💎 LÕI KIM CƯƠNG: 10 SỐ CHUẨN NHẤT (Dành cho đánh BAO 10) 💎</h3>", unsafe_allow_html=True)
+                st.markdown("<p style='text-align: center; color: #bbb;'><em>(Hệ thống đã nén và trích xuất đúng 10 con số có Điểm Tương Quan Tổng Hợp cao nhất từ 32 thuật toán. Chuyên dùng để ghép Bao 7 đến Bao 10)</em></p>", unsafe_allow_html=True)
+                st.markdown(f"<div style='text-align:center;'>{top10_html}</div>", unsafe_allow_html=True)
+                st.markdown("</div>", unsafe_allow_html=True)
+                
             st.markdown("</div>", unsafe_allow_html=True)
             
-        st.markdown("</div>", unsafe_allow_html=True)
-        
-        # === 6 SỐ TUYÊN NGÔN CUỐI CÙNG (ABSOLUTE FINAL 6) ===
-        final_6 = st.session_state.get('absolute_final_6', [])
-        if final_6:
-            st.markdown("<div style='background: linear-gradient(135deg, rgba(255,0,85,0.15), rgba(0,255,204,0.1)); border: 2px solid #ff0055; border-radius: 12px; padding: 24px; margin-bottom: 20px; box-shadow: 0 0 30px rgba(255,0,85,0.4);'>", unsafe_allow_html=True)
-            st.markdown("<h2 style='text-align: center; color: #ff0055 !important; text-shadow: 0 0 20px #ff0055; font-size: 1.8em;'>🎯 6 SỐ TUYÊN NGÔN (TỪ V600 STACKING ML) 🎯</h2>", unsafe_allow_html=True)
-            st.markdown("<p style='text-align: center; color: #bbb;'><em>(3-Model Stacking: HistGBR + RandomForest + Ridge với 20 features/số. Walk-Forward validation — KHÔNG rò rỉ dữ liệu.)</em></p>", unsafe_allow_html=True)
-            f6_html = "".join([f"<div class='ball {ball_class}' style='width:65px;height:65px;font-size:24px; background: linear-gradient(145deg,#ff0055,#ff6600); border-color:#ff0055; box-shadow: 0 0 30px #ff0055;'>{n:02d}</div>" for n in final_6])
-            st.markdown(f"<div style='text-align:center; padding: 15px;'>{f6_html}</div>", unsafe_allow_html=True)
-            st.markdown("<p style='text-align:center; color:#ff0055; font-weight:bold;'>⚡ ĐÂY LÀ LỰA CHỌN SỐ 1 CỦA HỆ THỐNG. Nếu chỉ muốn mua 1 VÉ DUY NHẤT — hãy dùng 6 số này. ⚡</p>", unsafe_allow_html=True)
-            st.markdown("</div>", unsafe_allow_html=True)
+            # === 6 SỐ TUYÊN NGÔN CUỐI CÙNG (ABSOLUTE FINAL 6) ===
+            final_6 = st.session_state.get('absolute_final_6', [])
+            if final_6:
+                st.markdown("<div style='background: linear-gradient(135deg, rgba(255,0,85,0.15), rgba(0,255,204,0.1)); border: 2px solid #ff0055; border-radius: 12px; padding: 24px; margin-bottom: 20px; box-shadow: 0 0 30px rgba(255,0,85,0.4);'>", unsafe_allow_html=True)
+                st.markdown("<h2 style='text-align: center; color: #ff0055 !important; text-shadow: 0 0 20px #ff0055; font-size: 1.8em;'>🎯 6 SỐ TUYÊN NGÔN (TỪ V600 STACKING ML) 🎯</h2>", unsafe_allow_html=True)
+                st.markdown("<p style='text-align: center; color: #bbb;'><em>(3-Model Stacking: HistGBR + RandomForest + Ridge với 20 features/số. Walk-Forward validation — KHÔNG rò rỉ dữ liệu.)</em></p>", unsafe_allow_html=True)
+                f6_html = "".join([f"<div class='ball {ball_class}' style='width:65px;height:65px;font-size:24px; background: linear-gradient(145deg,#ff0055,#ff6600); border-color:#ff0055; box-shadow: 0 0 30px #ff0055;'>{n:02d}</div>" for n in final_6])
+                st.markdown(f"<div style='text-align:center; padding: 15px;'>{f6_html}</div>", unsafe_allow_html=True)
+                st.markdown("<p style='text-align:center; color:#ff0055; font-weight:bold;'>⚡ ĐÂY LÀ LỰA CHỌN SỐ 1 CỦA HỆ THỐNG. Nếu chỉ muốn mua 1 VÉ DUY NHẤT — hãy dùng 6 số này. ⚡</p>", unsafe_allow_html=True)
+                st.markdown("</div>", unsafe_allow_html=True)
             
             # === PHÂN TÍCH CHUYÊN SÂU TỪ KỲ LIỀN KỀ ===
             st.markdown("<div class='card' style='border-color: #00ffcc;'>", unsafe_allow_html=True)
