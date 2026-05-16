@@ -270,29 +270,107 @@ class RealWorldAIEngine:
         return [num for num, w in sorted_weights[:6]]
 
     def model_knn_mirror(self):
-        """Thuật toán K-Nearest Neighbors: Tìm lịch sử lặp lại (Fractal Pattern)"""
-        if len(self.data) < 10:
+        """KNN Mirror V2: Tìm fractal pattern dùng cửa sổ 3 kỳ + weighted decay"""
+        if len(self.data) < 15:
             return self.model_momentum_neural()
-            
-        pattern = set(self.data[-1]) | set(self.data[-2])
+        
+        # Dùng 3 kỳ gần nhất làm fingerprint (thay vì 2)
+        pattern = set(self.data[-1]) | set(self.data[-2]) | set(self.data[-3])
+        n = len(self.data)
         similarities = []
-        for i in range(1, len(self.data) - 2):
-            past_pattern = set(self.data[i]) | set(self.data[i-1])
+        for i in range(2, n - 3):
+            past_pattern = set(self.data[i]) | set(self.data[i-1]) | set(self.data[i-2])
             intersect = len(pattern & past_pattern)
-            similarities.append((intersect, i + 1))
+            # Recency bonus: gần đây hơn thì score cao hơn
+            recency = 1.0 + 0.3 * (i / n)
+            similarities.append((intersect * recency, i + 1))
             
         similarities.sort(key=lambda x: -x[0])
         from collections import Counter
         mirror_votes = Counter()
-        for score, next_idx in similarities[:15]:
-            if score >= 2:
+        for score, next_idx in similarities[:20]:  # Top 20 thay vì 15
+            if score >= 2.5:
                 for num in self.data[next_idx]:
                     mirror_votes[num] += score
                     
         if not mirror_votes:
             return self.model_momentum_neural()
             
-        return [n for n, s in mirror_votes.most_common(15)]
+        return [n for n, s in mirror_votes.most_common(20)]
+
+    def model_pair_matrix(self):
+        """Pair Co-occurrence Matrix: Phát hiện các cặp số hay xuất hiện cùng nhau"""
+        if len(self.data) < 30:
+            return self.model_gap_overdue()
+        
+        from collections import Counter
+        from itertools import combinations
+        
+        # Xây dựng ma trận đồng xuất hiện với decay theo thời gian
+        pair_scores = Counter()
+        n = len(self.data)
+        for idx, draw in enumerate(self.data):
+            decay = 0.3 + 0.7 * (idx / n)  # Kỳ gần đây trọng số cao hơn
+            for p in combinations(sorted(draw[:6]), 2):
+                pair_scores[p] += decay
+        
+        # Với 6 số kỳ gần nhất, tìm các số hay đi kèm chúng
+        last_draw = set(self.data[-1][:6])
+        candidate_scores = Counter()
+        
+        for num in self.all_numbers:
+            if num in last_draw:
+                continue
+            for anchor in last_draw:
+                key = tuple(sorted([num, anchor]))
+                candidate_scores[num] += pair_scores.get(key, 0)
+        
+        # Thêm: Tìm triplet pattern (3 số đi cùng nhau)
+        triplet_bonus = Counter()
+        for idx in range(max(0, n - 100), n):
+            draw = self.data[idx]
+            for trip in combinations(sorted(draw[:6]), 3):
+                trip_set = set(trip)
+                overlap = trip_set & last_draw
+                if len(overlap) >= 2:  # Có ít nhất 2 số trùng với kỳ trước
+                    for num in trip_set - last_draw:
+                        triplet_bonus[num] += 1.5
+        
+        for num in triplet_bonus:
+            candidate_scores[num] += triplet_bonus[num]
+        
+        return [n for n, s in candidate_scores.most_common(15)]
+
+    def model_delta_momentum(self):
+        """Delta Momentum: Phát hiện xu hướng tăng/giảm tần suất ngắn hạn"""
+        if len(self.data) < 30:
+            return self.model_momentum_neural()
+        
+        # So sánh tần suất 5 kỳ gần nhất vs 5 kỳ trước đó (delta)
+        scores = {}
+        for num in self.all_numbers:
+            f5 = sum(1 for d in self.data[-5:] if num in d[:6]) / 5
+            f5_prev = sum(1 for d in self.data[-10:-5] if num in d[:6]) / 5
+            f15 = sum(1 for d in self.data[-15:] if num in d[:6]) / 15
+            f15_prev = sum(1 for d in self.data[-30:-15] if num in d[:6]) / 15
+            
+            # Delta ngắn hạn (5 kỳ) và trung hạn (15 kỳ)
+            delta_short = f5 - f5_prev
+            delta_mid = f15 - f15_prev
+            
+            # Số đang tăng momentum ở cả 2 scale => cực kỳ hot
+            momentum = delta_short * 3 + delta_mid * 2
+            
+            # Bonus cho số vừa xuất hiện (streak)
+            if num in self.data[-1][:6]:
+                momentum += 0.5
+            if len(self.data) >= 2 and num in self.data[-2][:6]:
+                momentum += 0.3
+            
+            scores[num] = momentum
+        
+        sorted_scores = sorted(scores.items(), key=lambda x: -x[1])
+        return [n for n, s in sorted_scores[:15]]
 
     def model_advanced_ml(self):
         """Machine Learning: Random Forest & K-Means Clustering"""
@@ -353,19 +431,25 @@ class RealWorldAIEngine:
             return self.model_momentum_neural()
 
     def optimize_ensemble(self):
-        """Tổng hợp bằng Trí Tuệ Nhân Tạo (Ensemble Machine Learning 100%)"""
+        """V604.0: 7-Model Ensemble với Pair Matrix + Delta Momentum"""
         from collections import Counter
         m1 = self.model_markov_chain()
-        m2 = self.model_gap_overdue()
+        m2 = self.model_gap_overdue(top_n=15)
         m3 = self.model_momentum_neural()
         m4 = self.model_advanced_ml()
+        m5 = self.model_knn_mirror()
+        m6 = self.model_pair_matrix()
+        m7 = self.model_delta_momentum()
         
-        # Trọng số bình chọn: Machine Learning (5), Overdue (3), Momentum (2), Markov (1)
+        # Trọng số bình chọn V604: KNN Mirror (8) + Pair Matrix (6) + ML (5) + Delta (4) + Overdue (3) + Momentum (2) + Markov (1)
         votes = Counter()
-        for num in m4: votes[num] += 5
-        for num in m2: votes[num] += 3
-        for num in m3: votes[num] += 2
-        for num in m1: votes[num] += 1
+        for num in m5[:15]: votes[num] += 8   # KNN Mirror cực mạnh
+        for num in m6[:15]: votes[num] += 6   # Pair co-occurrence  
+        for num in m4[:15]: votes[num] += 5   # Random Forest + KMeans
+        for num in m7[:15]: votes[num] += 4   # Delta Momentum
+        for num in m2[:15]: votes[num] += 3   # Overdue gap
+        for num in m3[:6]:  votes[num] += 2   # Neural momentum
+        for num in m1[:6]:  votes[num] += 1   # Markov chain
         
         best = [num for num, count in votes.most_common(6)]
         
@@ -937,21 +1021,25 @@ def main_app():
                             try:
                                 eng = RealWorldAIEngine(hist, max_number)
     
-                                # --- Lấy top-15 pool từ Ensemble ---
+                                # --- V604.0: 7-Model Ensemble ---
                                 from collections import Counter as _Counter
                                 m1 = eng.model_markov_chain()
                                 m2 = eng.model_gap_overdue(top_n=15)
                                 m3 = eng.model_momentum_neural()
                                 m4 = eng.model_advanced_ml()
                                 m5 = eng.model_knn_mirror()
+                                m6 = eng.model_pair_matrix()
+                                m7 = eng.model_delta_momentum()
     
-                                # Cho điểm tổng hợp có trọng số
+                                # Cho điểm tổng hợp V604 (7 models)
                                 vote = _Counter()
-                                for num in m5[:15]: vote[num] += 8  # KNN Mirror cực mạnh
-                                for num in m4[:15]: vote[num] += 5
-                                for num in m2[:15]: vote[num] += 3
-                                for num in m3[:15]: vote[num] += 2
-                                for num in m1[:15]: vote[num] += 1
+                                for num in m5[:15]: vote[num] += 8  # KNN Mirror V2
+                                for num in m6[:15]: vote[num] += 6  # Pair Matrix
+                                for num in m4[:15]: vote[num] += 5  # ML (RF+KMeans)
+                                for num in m7[:15]: vote[num] += 4  # Delta Momentum
+                                for num in m2[:15]: vote[num] += 3  # Overdue Gap
+                                for num in m3[:6]:  vote[num] += 2  # Neural Momentum
+                                for num in m1[:6]:  vote[num] += 1  # Markov
     
                                 ranked_pool = [n for n, _ in vote.most_common(20)]
                                 # V19.0: JACKPOT LOCK EVALUATION
