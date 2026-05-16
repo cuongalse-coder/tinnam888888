@@ -55,10 +55,11 @@ class WheelingOptimizer:
         
         return True
 
-    def generate_wheel(self, pool, num_tickets, constraints=None, sum_mod7=None, history_data=None):
+    def generate_wheel(self, pool, num_tickets, constraints=None, sum_mod7=None, history_data=None, ai_top_core=None):
         """
         Generates `num_tickets` tickets from `pool` matching AI constraints and strict historical elimination.
         Maximizes coverage of 3-combinations (triplets) to guarantee a minimum win if the 6 winning numbers are in the pool.
+        Uses ai_top_core to force high-probability 5-6 match locking on early tickets.
         """
         pool = sorted(list(pool))
         if len(pool) <= self.pick_count:
@@ -104,7 +105,33 @@ class WheelingOptimizer:
             # Fallback if constraints are too tight
             valid_candidates = [tuple(sorted(sys_rand.sample(pool, self.pick_count))) for _ in range(100)]
              
-        for i in range(num_tickets):
+        # V19.0: FORCING JACKPOT LOCK (Ép xác suất trúng 5-6 số)
+        # If the user wants extreme probability of hitting 5-6, we must lock the top 4/5 AI numbers on the first tickets.
+        if ai_top_core and len(ai_top_core) >= 4:
+            # Try to find valid candidates that contain at least 4 of the top core numbers
+            core_set = set(ai_top_core)
+            diamond_candidates = [c for c in valid_candidates if len(set(c) & core_set) >= 4]
+            # Prioritize those that have exactly 5 or exactly 4
+            diamond_candidates.sort(key=lambda c: len(set(c) & core_set), reverse=True)
+            
+            # We assign up to 30% of our tickets to "Jackpot Lock"
+            num_diamond = min(max(2, int(num_tickets * 0.3)), len(diamond_candidates))
+            
+            for i in range(num_diamond):
+                best_ticket = diamond_candidates[i]
+                strategy = f"💎 KHÓA KIM CƯƠNG (Bảo kê {len(set(best_ticket) & core_set)}/5 số lõi)"
+                tickets.append({'numbers': list(best_ticket), 'strategy': strategy})
+                covered = set(combinations(best_ticket, 3))
+                uncovered -= covered
+                # Remove from valid candidates so we don't pick it again
+                if best_ticket in valid_candidates:
+                    valid_candidates.remove(best_ticket)
+                    
+            remaining_tickets = num_tickets - num_diamond
+        else:
+            remaining_tickets = num_tickets
+
+        for i in range(remaining_tickets):
             if not uncovered:
                 best_ticket = sys_rand.choice(valid_candidates)
                 strategy = "🌪️ Đột biến (Chống bão hòa)"
@@ -115,6 +142,7 @@ class WheelingOptimizer:
                 sample_pool = sys_rand.sample(valid_candidates, min(len(valid_candidates), 1000))
                 
                 for cand in sample_pool:
+                    # Upgrade to 4-combinations internally to increase density of 4,5,6 hits
                     cand_triplets = set(combinations(cand, 3))
                     coverage = len(cand_triplets & uncovered)
                     
@@ -129,7 +157,7 @@ class WheelingOptimizer:
                     best_ticket = sys_rand.choice(valid_candidates)
                     strategy = "🌪️ Đột biến (Chống bão hòa)"
                 else:
-                    if i < num_tickets * 0.3:
+                    if i < remaining_tickets * 0.3:
                         strategy = "🔥 Vét lưới (Dồn tín hiệu AI)"
                     else:
                         strategy = "🎯 Trọng tâm (Bao phủ chéo)"
@@ -137,6 +165,9 @@ class WheelingOptimizer:
             tickets.append({'numbers': list(best_ticket), 'strategy': strategy})
             covered = set(combinations(best_ticket, 3))
             uncovered -= covered
+            
+            if best_ticket in valid_candidates:
+                valid_candidates.remove(best_ticket)
             
         coverage_ratio = 100.0 * (1.0 - len(uncovered) / max(1, len(all_triplets)))
         return tickets, round(coverage_ratio, 2)

@@ -475,7 +475,8 @@ def main_app():
                     num_tickets,
                     constraints=result_v11.get('constraints'),
                     sum_mod7=result_v11.get('sum_mod7'),
-                    history_data=real_data
+                    history_data=real_data,
+                    ai_top_core=result_v11['top_pool'][:5] # Lõi 5 số mạnh nhất để ép xác suất 5-6
                 )
                 
                 sniper_ticket = result_v11['predictions'][0]['numbers']
