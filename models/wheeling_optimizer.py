@@ -84,7 +84,7 @@ class WheelingOptimizer:
                     continue
                 # Strict Historical Elimination (V16.0 GOD MODE)
                 c_set = set(c)
-                if any(len(c_set & h) >= 4 for h in history_sets):
+                if any(len(c_set & h) >= 5 for h in history_sets):
                     continue
                 valid_candidates.append(c)
                 if len(valid_candidates) >= 3000: break
@@ -96,7 +96,7 @@ class WheelingOptimizer:
                 if not self._validate_ticket(c, constraints, sum_mod7):
                     continue
                 c_set = set(c)
-                if any(len(c_set & h) >= 4 for h in history_sets):
+                if any(len(c_set & h) >= 5 for h in history_sets):
                     continue
                 valid_candidates.append(c)
                     

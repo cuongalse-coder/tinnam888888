@@ -1,8 +1,8 @@
 """
-NEXUS ENGINE V400.0 — ADAPTIVE QUANTUM
-=======================================
-Wraps MegaExploitV15 and adds 8 high-impact signals + walk-forward calibration.
-V400 improvements: pair co-occurrence, temporal decay, adaptive weights.
+NEXUS ENGINE V600.0 — NEURAL APEX
+===================================
+Wraps MegaExploitV15 + StackingEngine (3-model stacking ensemble).
+V600 fixes: data leakage eliminated, 20-feature ML, proper walk-forward.
 """
 import math
 import numpy as np
@@ -100,11 +100,26 @@ class NexusEngine:
 
         predictions.sort(key=lambda x: -sum(scores[n] for n in x['numbers']))
 
-        # Absolute Final 6 (V500 Deep Learning)
+        # V600: Use StackingEngine for Absolute Final 6 (no data leakage)
         try:
-            absolute_final_6 = self._predict_absolute_final_6_v500(data)
+            from models.stacking_engine import StackingEngine
+            stacker = StackingEngine(self.max_number, self.pick_count)
+            stack_result = stacker.predict_top_pool(data, pool_size=20)
+            absolute_final_6 = stack_result['top6']
+            
+            # Boost top_pool with stacking scores
+            stack_scores = stack_result.get('scores', {})
+            for num, ss in stack_scores.items():
+                if ss > 0:
+                    scores[num] = scores.get(num, 0) + ss * 8.0
+            
+            # Re-rank after stacking boost
+            ranked = sorted(scores.items(), key=lambda x: -x[1])
+            top_pool = [n for n, s in ranked if s > 0][:30]
+            if len(top_pool) < self.pick_count:
+                top_pool = [n for n, _ in ranked[:30]]
         except Exception as e:
-            print(f"V500 ML Fallback: {e}")
+            print(f"V600 Stacking Fallback: {e}")
             absolute_final_6 = sorted([n for n, _ in ranked[:6]])
 
         # Merge weights
@@ -116,7 +131,7 @@ class NexusEngine:
 
         return {
             'predictions': predictions,
-            'strategy': 'NexusEngine_V500_HYBRID',
+            'strategy': 'NexusEngine_V600_NEURAL_APEX',
             'confidence': round(confidence, 1),
             'weights': {k: round(v, 3) if isinstance(v, float) else v for k, v in sorted(all_weights.items(), key=lambda x: -float(x[1]))},
             'scores': {n: round(s, 3) for n, s in ranked[:30]},
@@ -131,57 +146,7 @@ class NexusEngine:
     # V500 DEEP LEARNING (ABSOLUTE FINAL 6)
     # ================================================================
 
-    def _predict_absolute_final_6_v500(self, data):
-        """Train HistGradientBoostingRegressor on lightweight signals for the last 100 draws."""
-        if HistGradientBoostingRegressor is None or len(data) < 60:
-            return []
-        
-        train_window = 100
-        start_idx = max(50, len(data) - train_window)
-        X = []
-        y = []
-        
-        for i in range(start_idx, len(data)):
-            hist = data[:i]
-            actual = set(hist[-1][:self.pick_count] if hist else [])
-            # Actually, `actual` is data[i]
-            actual = set(data[i][:self.pick_count])
-            
-            s_sl = self._sig_sliding_window(hist)
-            s_ga = self._sig_gap_acceleration(hist)
-            s_dm = self._sig_delta_momentum(hist)
-            s_hc = self._sig_hot_cold_intersection(hist)
-            s_td = self._sig_temporal_decay(hist)
-            s_pb = self._sig_pair_boost(hist)
-            
-            for n in range(1, self.max_number + 1):
-                X.append([
-                    s_sl.get(n, 0), s_ga.get(n, 0), s_dm.get(n, 0),
-                    s_hc.get(n, 0), s_td.get(n, 0), s_pb.get(n, 0)
-                ])
-                y.append(1.0 if n in actual else 0.0)
-                
-        model = HistGradientBoostingRegressor(max_iter=50, max_depth=5, learning_rate=0.05, random_state=42)
-        model.fit(np.array(X), np.array(y))
-        
-        # Predict
-        s_sl = self._sig_sliding_window(data)
-        s_ga = self._sig_gap_acceleration(data)
-        s_dm = self._sig_delta_momentum(data)
-        s_hc = self._sig_hot_cold_intersection(data)
-        s_td = self._sig_temporal_decay(data)
-        s_pb = self._sig_pair_boost(data)
-        
-        X_pred = []
-        for n in range(1, self.max_number + 1):
-            X_pred.append([
-                s_sl.get(n, 0), s_ga.get(n, 0), s_dm.get(n, 0),
-                s_hc.get(n, 0), s_td.get(n, 0), s_pb.get(n, 0)
-            ])
-            
-        preds = model.predict(np.array(X_pred))
-        ranked = sorted([(n+1, preds[n]) for n in range(self.max_number)], key=lambda x: -x[1])
-        return sorted([n for n, _ in ranked[:6]])
+    # V500 _predict_absolute_final_6_v500 REMOVED — replaced by StackingEngine in predict()
 
     # ================================================================
     # 6 NEW HIGH-PRECISION SIGNALS
