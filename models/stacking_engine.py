@@ -208,15 +208,15 @@ class StackingEngine:
         models = []
 
         m1 = HistGradientBoostingRegressor(
-            max_iter=100, max_depth=4, learning_rate=0.05,
-            min_samples_leaf=20, l2_regularization=1.0, random_state=42
+            loss='log_loss', max_iter=250, max_depth=6, learning_rate=0.03,
+            min_samples_leaf=15, l2_regularization=0.5, random_state=42
         )
         m1.fit(X_train, y_train)
         models.append(('hgbr', m1))
 
         m2 = RandomForestRegressor(
-            n_estimators=100, max_depth=6, min_samples_leaf=10,
-            random_state=42, n_jobs=-1
+            n_estimators=200, max_depth=8, min_samples_leaf=5,
+            max_features='sqrt', random_state=42, n_jobs=-1
         )
         m2.fit(X_train, y_train)
         models.append(('rf', m2))

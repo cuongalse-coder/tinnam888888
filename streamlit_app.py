@@ -426,6 +426,8 @@ def main_app():
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         run_btn = st.button("🧬 KÍCH HOẠT V600.0 NEURAL APEX — STACKING ML 🧬", use_container_width=True)
+        
+    tab1, tab2, tab3, tab4 = st.tabs(["🔮 Dự Đoán AI", "🎯 Chiến Lược Bao", "📈 Phân Tích Lồng Cầu", "🧪 Backtest & Validation"])
 
     if run_btn:
         st.session_state.prediction_ready = False
@@ -525,7 +527,8 @@ def main_app():
         top_pool = st.session_state.get('v11_top_pool', [])
         st.success(f"✅ V600.0 NEURAL APEX HOÀN TẤT — Stacking ML + Walk-Forward Calibration | Hồ Tiềm Năng: {len(top_pool)} số.")
         
-        # === HỒ SỐ TIỀM NĂNG ===
+        with tab1:
+            # === HỒ SỐ TIỀM NĂNG ===
         st.markdown("<div class='card'>", unsafe_allow_html=True)
         st.markdown(f"<h2 style='text-align: center; color: #00ffcc !important;'>🧬 HỒ SỐ ĐỘT BIẾN ({len(top_pool)} SỐ TỪ V600 NEURAL APEX) 🧬</h2>", unsafe_allow_html=True)
         st.markdown("<p style='text-align: center; color: #888;'><em>(Stacking Ensemble: HistGBR + RandomForest + Ridge — Tối ưu cho dàn Bao 10 & 15 số)</em></p>", unsafe_allow_html=True)
@@ -554,12 +557,69 @@ def main_app():
             st.markdown(f"<div style='text-align:center; padding: 15px;'>{f6_html}</div>", unsafe_allow_html=True)
             st.markdown("<p style='text-align:center; color:#ff0055; font-weight:bold;'>⚡ ĐÂY LÀ LỰA CHỌN SỐ 1 CỦA HỆ THỐNG. Nếu chỉ muốn mua 1 VÉ DUY NHẤT — hãy dùng 6 số này. ⚡</p>", unsafe_allow_html=True)
             st.markdown("</div>", unsafe_allow_html=True)
+            
+            # === PHÂN TÍCH CHUYÊN SÂU TỪ KỲ LIỀN KỀ ===
+            st.markdown("<div class='card' style='border-color: #00ffcc;'>", unsafe_allow_html=True)
+            st.markdown("<h2 style='text-align: center; color: #00ffcc !important;'>🔮 DỰ ĐOÁN CHUYÊN SÂU TỪ KỲ LIỀN KỀ 🔮</h2>", unsafe_allow_html=True)
+            
+            last_draw_balls = real_data[-1][:6]
+            balls_html_last = "".join([f"<div class='ball {ball_class}' style='width:30px;height:30px;font-size:12px;'>{num:02d}</div>" for num in last_draw_balls])
+            st.markdown(f"Dựa vào 6 quả bóng vừa nổ ở kỳ trước: <div style='display:inline-block;'>{balls_html_last}</div>", unsafe_allow_html=True)
+            st.markdown("Hệ thống đã trích xuất dữ liệu Chuỗi Markov (Markov Chain) để tìm ra những con số có xác suất **NỔ THEO ĐUÔI** các quả bóng này cao nhất trong lịch sử:")
+            
+            # Calculate trailing balls (Transition Matrix)
+            follow_counts = {}
+            for i in range(len(real_data) - 1):
+                intersect = set(real_data[i][:6]) & set(last_draw_balls)
+                if intersect:
+                    weight = len(intersect) ** 2  # Exponential weight for more matches
+                    for n in real_data[i+1][:6]:
+                        if n not in last_draw_balls:
+                            follow_counts[n] = follow_counts.get(n, 0) + weight
+                            
+            top_followers = sorted(follow_counts.items(), key=lambda x: -x[1])[:10]
+            
+            col_f1, col_f2 = st.columns(2)
+            with col_f1:
+                st.markdown("#### TOP 5 Số Dễ Rơi Nhất Kỳ Này")
+                for rank, (num, score) in enumerate(top_followers[:5]):
+                    st.markdown(f"**#{rank+1}. Số {num:02d}** (Điểm tương quan: {score})")
+            with col_f2:
+                st.markdown("#### Các số bám đuôi tiếp theo")
+                for rank, (num, score) in enumerate(top_followers[5:10]):
+                    st.markdown(f"**#{rank+6}. Số {num:02d}** (Điểm tương quan: {score})")
+                    
+            st.info("💡 BÍ KÍP TỰ CHƠI: Nếu bạn không muốn mua theo Dàn Bao của AI, bạn có thể tự bốc 6 số từ danh sách TOP 10 Bóng Theo Đuôi ở trên để mua 1 vé duy nhất. Xác suất rơi của chúng cực kỳ cao!")
+            st.markdown("</div>", unsafe_allow_html=True)
+            
+            # === V18.0: QUẢN TRỊ VỐN KELLY ===
+            st.markdown("<div class='card' style='border-color: #ff9900;'>", unsafe_allow_html=True)
+            st.markdown(f"<h2 style='text-align: center; color: #ff9900 !important;'>⚖️ AI QUẢN TRỊ RỦI RO (KELLY CRITERION) ⚖️</h2>", unsafe_allow_html=True)
+            
+            v11_weights = st.session_state.get('v11_weights', {})
+            if v11_weights:
+                weight_values = list(v11_weights.values())
+                if weight_values:
+                    max_w = max(weight_values)
+                    avg_w = sum(weight_values) / len(weight_values)
+                    coherence = min(100, max(0, int((max_w / (avg_w + 1e-5) - 1) * 25)))
+                    
+                    st.metric("Độ Nhất Quán Tín Hiệu (Signal Coherence)", f"{coherence}%")
+                    
+                    if coherence < 30:
+                        st.error("⚠️ TÍN HIỆU NHIỄU LOẠN: Các thuật toán AI đang mâu thuẫn dữ dội. Lồng cầu đang ở trạng thái cực kỳ hỗn loạn và phi logic. KHUYẾN NGHỊ: Dừng mua vé kỳ này để bảo toàn vốn, hoặc chỉ đánh 1-2 vé dò đường.")
+                    elif coherence < 60:
+                        st.warning("⚠️ TÍN HIỆU TRUNG BÌNH: Đã xuất hiện xu hướng nhưng chưa thực sự bứt phá. KHUYẾN NGHỊ: Đánh ở mức an toàn (10-20% quỹ mạo hiểm).")
+                    else:
+                        st.success("🔥 TÍN HIỆU ĐỒNG THUẬN CAO (SINGULARITY): 32 Thuật toán lượng tử hội tụ về cùng một lưới xác suất. Đây là 'Điểm Rơi' hoàn hảo của lồng cầu. KHUYẾN NGHỊ: Tấn công mạnh, mua đủ danh sách vé AI đề xuất.")
+            st.markdown("</div>", unsafe_allow_html=True)
         
-        # === DÀN VÉ RÚT GỌN ===
-        all_preds = st.session_state.get('all_predictions', [])
-        st.markdown("<div class='card' style='border-color: #00ff00;'>", unsafe_allow_html=True)
-        st.markdown(f"<h2 style='text-align: center; color: #00ff00 !important;'>🎯 DÀN {len(all_preds)} VÉ BAO RÚT GỌN CHỐT SỐ 🎯</h2>", unsafe_allow_html=True)
-        st.markdown(f"<p style='text-align: center; color: #888;'><em>(Ma trận tổ hợp bao phủ chéo giúp tiết kiệm tiền mà vẫn vét được lưới xác suất)</em></p>", unsafe_allow_html=True)
+        with tab2:
+            # === DÀN VÉ RÚT GỌN ===
+            all_preds = st.session_state.get('all_predictions', [])
+            st.markdown("<div class='card' style='border-color: #00ff00;'>", unsafe_allow_html=True)
+            st.markdown(f"<h2 style='text-align: center; color: #00ff00 !important;'>🎯 DÀN {len(all_preds)} VÉ BAO RÚT GỌN CHỐT SỐ 🎯</h2>", unsafe_allow_html=True)
+            st.markdown(f"<p style='text-align: center; color: #888;'><em>(Ma trận tổ hợp bao phủ chéo giúp tiết kiệm tiền mà vẫn vét được lưới xác suất)</em></p>", unsafe_allow_html=True)
         
         ticket_texts = []
         for i, pred in enumerate(all_preds):
@@ -582,76 +642,10 @@ def main_app():
             file_name=f"vietlott_{game_choice.replace(' ', '_')}_dan_{len(all_preds)}_ve.txt",
             mime="text/plain"
         )
-        st.markdown("</div>", unsafe_allow_html=True)
-        
-        # === PHÂN TÍCH CHUYÊN SÂU TỪ KỲ LIỀN KỀ ===
-        st.markdown("<div class='card' style='border-color: #00ffcc;'>", unsafe_allow_html=True)
-        st.markdown("<h2 style='text-align: center; color: #00ffcc !important;'>🔮 DỰ ĐOÁN CHUYÊN SÂU TỪ KỲ LIỀN KỀ 🔮</h2>", unsafe_allow_html=True)
-        
-        last_draw_balls = real_data[-1][:6]
-        balls_html_last = "".join([f"<div class='ball {ball_class}' style='width:30px;height:30px;font-size:12px;'>{num:02d}</div>" for num in last_draw_balls])
-        st.markdown(f"Dựa vào 6 quả bóng vừa nổ ở kỳ trước: <div style='display:inline-block;'>{balls_html_last}</div>", unsafe_allow_html=True)
-        st.markdown("Hệ thống đã trích xuất dữ liệu Chuỗi Markov (Markov Chain) để tìm ra những con số có xác suất **NỔ THEO ĐUÔI** các quả bóng này cao nhất trong lịch sử:")
-        
-        # Calculate trailing balls (Transition Matrix)
-        follow_counts = {}
-        for i in range(len(real_data) - 1):
-            intersect = set(real_data[i][:6]) & set(last_draw_balls)
-            if intersect:
-                weight = len(intersect) ** 2  # Exponential weight for more matches
-                for n in real_data[i+1][:6]:
-                    if n not in last_draw_balls:
-                        follow_counts[n] = follow_counts.get(n, 0) + weight
-                        
-        top_followers = sorted(follow_counts.items(), key=lambda x: -x[1])[:10]
-        
-        col_f1, col_f2 = st.columns(2)
-        with col_f1:
-            st.markdown("#### TOP 5 Số Dễ Rơi Nhất Kỳ Này")
-            for rank, (num, score) in enumerate(top_followers[:5]):
-                st.markdown(f"**#{rank+1}. Số {num:02d}** (Điểm tương quan: {score})")
-        with col_f2:
-            st.markdown("#### Các số bám đuôi tiếp theo")
-            for rank, (num, score) in enumerate(top_followers[5:10]):
-                st.markdown(f"**#{rank+6}. Số {num:02d}** (Điểm tương quan: {score})")
-                
-        st.info("💡 BÍ KÍP TỰ CHƠI: Nếu bạn không muốn mua theo Dàn Bao của AI, bạn có thể tự bốc 6 số từ danh sách TOP 10 Bóng Theo Đuôi ở trên để mua 1 vé duy nhất. Xác suất rơi của chúng cực kỳ cao!")
-        st.markdown("</div>", unsafe_allow_html=True)
-        
-        # === V18.0: QUẢN TRỊ VỐN KELLY & ĐỘ NHẤT QUÁN TÍN HIỆU ===
-        st.markdown("<div class='card' style='border-color: #ff9900;'>", unsafe_allow_html=True)
-        st.markdown(f"<h2 style='text-align: center; color: #ff9900 !important;'>⚖️ AI QUẢN TRỊ RỦI RO (KELLY CRITERION) ⚖️</h2>", unsafe_allow_html=True)
-        
-        v11_weights = st.session_state.get('v11_weights', {})
-        if v11_weights:
-            weight_values = list(v11_weights.values())
-            if weight_values:
-                max_w = max(weight_values)
-                avg_w = sum(weight_values) / len(weight_values)
-                # Coherence: How strongly the top signals dominate the average.
-                coherence = min(100, max(0, int((max_w / (avg_w + 1e-5) - 1) * 25)))
-                
-                st.metric("Độ Nhất Quán Tín Hiệu (Signal Coherence)", f"{coherence}%")
-                
-                if coherence < 30:
-                    st.error("⚠️ TÍN HIỆU NHIỄU LOẠN: Các thuật toán AI đang mâu thuẫn dữ dội. Lồng cầu đang ở trạng thái cực kỳ hỗn loạn và phi logic. KHUYẾN NGHỊ: Dừng mua vé kỳ này để bảo toàn vốn, hoặc chỉ đánh 1-2 vé dò đường.")
-                elif coherence < 60:
-                    st.warning("⚠️ TÍN HIỆU TRUNG BÌNH: Đã xuất hiện xu hướng nhưng chưa thực sự bứt phá. KHUYẾN NGHỊ: Đánh ở mức an toàn (10-20% quỹ mạo hiểm).")
-                else:
-                    st.success("🔥 TÍN HIỆU ĐỒNG THUẬN CAO (SINGULARITY): 32 Thuật toán lượng tử hội tụ về cùng một lưới xác suất. Đây là 'Điểm Rơi' hoàn hảo của lồng cầu. KHUYẾN NGHỊ: Tấn công mạnh, mua đủ danh sách vé AI đề xuất.")
-        st.markdown("</div>", unsafe_allow_html=True)
-        
-        # === TRỌNG SỐ TÍN HIỆU ===
-        v11_weights = st.session_state.get('v11_weights', {})
-        if v11_weights:
-            with st.expander("🧠 XEM TRỌNG SỐ 33 TÍN HIỆU AI (Dynamic ELO & Deep Learning)", expanded=False):
-                import pandas as pd
-                w_data = [{"Tín hiệu": k, "Trọng số": v} for k, v in v11_weights.items()]
-                df_w = pd.DataFrame(w_data)
-                st.dataframe(df_w, use_container_width=True)
-
-    st.markdown("---")
-    st.markdown("### 📊 THEO DÕI ĐIỂM NỔ (OVERDUE GAP)")
+            st.markdown("</div>", unsafe_allow_html=True)
+            
+    with tab3:
+        st.markdown("### 📊 THEO DÕI ĐIỂM NỔ (OVERDUE GAP)")
     with st.expander("Bấm để xem Phân tích Số Quá Hạn"):
         st.info("💡 Điểm nổ > 1 nghĩa là con số đó đã quá chu kỳ nghỉ trung bình, xác suất rơi vào kỳ tới rất cao.")
         gap_scores = ai_engine.model_gap_overdue()
@@ -737,8 +731,8 @@ def main_app():
                 df_sorted.index = df_sorted.index + 1
                 st.dataframe(df_sorted[['Số', 'Lần xuất hiện', 'Tỷ lệ rơi (%)', 'Độ lệch (Z-Score)', 'Ngủ đông Max (Kỳ)', 'Hiện chưa ra (Kỳ)']], use_container_width=True)
 
-    st.markdown("---")
-    st.markdown("### 🧪 KIỂM THỬ ĐỘ CHÍNH XÁC DÀN BAO (WHEELING BACKTEST)")
+    with tab4:
+        st.markdown("### 🧪 KIỂM THỬ ĐỘ CHÍNH XÁC DÀN BAO (WHEELING BACKTEST)")
     with st.expander("Bấm để chạy Backtest (Kiểm thử thực tế với thuật toán Dàn Bao)"):
         st.warning(f"⚠️ Hệ thống sẽ tua ngược thời gian, ẩn đi kết quả thật và dùng AI tạo Dàn Bao {num_tickets} vé từ Hồ {pool_size} số ở các kỳ quá khứ, sau đó đối chiếu với kết quả ĐÃ XẢY RA để tính lãi/lỗ.")
         
@@ -858,8 +852,9 @@ def main_app():
     # =====================================================================
     # FULL HISTORICAL WIN-RATE TEST (dùng RealWorldAIEngine — NHANH)
     # =====================================================================
-    st.markdown("---")
-    st.markdown("### 🏆 TOÀN BỘ LỊCH SỬ — TỶ LỆ TRÚNG THỰC TẾ (FULL BACKTEST)")
+    with tab4:
+        st.markdown("---")
+        st.markdown("### 🏆 TOÀN BỘ LỊCH SỬ — TỶ LỆ TRÚNG THỰC TẾ (FULL BACKTEST)")
     with st.expander("📊 Bấm để kiểm tra tỷ lệ AI trúng trên TẤT CẢ các kỳ lịch sử"):
         st.info(
             "⚡ **Chế độ quét nhanh toàn lịch sử:** Hệ thống sẽ tua ngược về từng kỳ (từ kỳ 60 đến nay), "
