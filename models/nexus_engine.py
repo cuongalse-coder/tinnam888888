@@ -22,7 +22,7 @@ class NexusEngine:
         self.max_number = max_number
         self.pick_count = pick_count
 
-    def predict(self, data, n_sets=5):
+    def predict(self, data, n_sets=5, use_elastic_filter=True):
         n = len(data)
         if n < 60:
             return {'predictions': [], 'top_pool': [], 'weights': {}, 'confidence': 0, 'absolute_final_6': [], 'constraints': {}, 'sum_mod7': []}
@@ -79,7 +79,8 @@ class NexusEngine:
         if len(top_pool) < self.pick_count:
             top_pool = [n for n, _ in ranked[:30]]
 
-        constraints = base_result.get('constraints', self._learn_constraints(data))
+        # ALWAYS generate new constraints to respect use_elastic_filter setting
+        constraints = self._learn_constraints(data, use_elastic_filter)
         sum_mod7 = base_result.get('sum_mod7', list(range(7)))
         if isinstance(sum_mod7, list):
             sum_mod7 = set(sum_mod7)
@@ -489,7 +490,7 @@ class NexusEngine:
     # COMBO GENERATION
     # ================================================================
 
-    def _learn_constraints(self, data):
+    def _learn_constraints(self, data, use_elastic_filter=True):
         recent = data[-50:]
         sums = [sum(d[:self.pick_count]) for d in recent]
         odds = [sum(1 for x in d[:self.pick_count] if x % 2 == 1) for d in recent]
@@ -500,7 +501,7 @@ class NexusEngine:
         range_hi = int(np.percentile(ranges, 92))
         
         # --- ELASTIC SPREAD FILTER (User Intuition) ---
-        if len(data) >= 2:
+        if use_elastic_filter and len(data) >= 2:
             s_t1 = max(data[-1][:self.pick_count]) - min(data[-1][:self.pick_count])
             s_t2 = max(data[-2][:self.pick_count]) - min(data[-2][:self.pick_count])
             

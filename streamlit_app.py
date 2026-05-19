@@ -641,17 +641,25 @@ def main_app():
         num_tickets = st.selectbox("Ngân sách đầu tư (Số vé mua):", [5, 10, 20, 50, 100], index=1)
         pool_size = st.selectbox("Kích thước Hồ Tiềm Năng (Mở rộng):", [10, 12, 15, 18, 20, 25, 30, 33, 35], index=4)
         st.markdown("---")
-        st.markdown("### 💎 BẠCH THỦ LÔ (ÉP TRÚNG 6/6)")
-        head_tail_pin = st.checkbox("🎯 Chốt Đầu - Đuôi Tự Động (MỚI)", value=True)
-        st.info("💡 AI tự động khoanh vùng số Đầu (1-10) và Đuôi (36-45) mạnh nhất để làm 2 số Bạch Thủ.")
+        st.markdown("### 🏆 CHIẾN THUẬT AI (TỰ ĐỘNG)")
+        strategy_mode = st.radio("Chọn Phương Pháp Chơi:", [
+            "🔥 Bắn Tỉa Tối Thượng (Khóa cứng 4 Số Lõi - Dành cho vốn ít)",
+            "🌊 Lưới Quét Diện Rộng (Bật Lọc Dây Thun - Dành cho vốn lớn)"
+        ], index=0)
         
-        middle_pair_pin = st.checkbox("🔥 Chốt Thêm 1 Cặp Số Giữa (Ép Siêu Cấp)", value=False)
-        st.info("💡 Tìm và ép cứng thêm 1 cặp số lõi (ví dụ 22-23) hay đi chung nhất. Khóa 4/6 số!")
-        
-        if not head_tail_pin and not middle_pair_pin:
-            hard_core_lock = st.selectbox("Hoặc chọn Số lượng Bạch Thủ Lô chung:", [0, 1, 2], index=0)
+        # Parse the strategy
+        if "Bắn Tỉa" in strategy_mode:
+            head_tail_pin = True
+            middle_pair_pin = True
+            use_elastic_filter = False
+            hard_core_lock = 4
+            st.info("💡 Lối chơi: Ép cứng Đầu, Đuôi và 1 Cặp Số Giữa. Vô hiệu hóa Lọc Dây Thun (do khoảng cách đã bị khóa).")
         else:
-            hard_core_lock = (2 if head_tail_pin else 0) + (2 if middle_pair_pin else 0)
+            head_tail_pin = False
+            middle_pair_pin = False
+            use_elastic_filter = True
+            hard_core_lock = 0
+            st.info("💡 Lối chơi: Bao Lô 20 số, kích hoạt Bộ Lọc Hít Thở (Dây Thun) và Bộ Lọc Cạn Kiệt Nhóm để diệt hàng chục ngàn vé rác.")
             
         st.markdown("---")
         st.markdown("**Trạng thái:** 🟢 Kết nối API Thực Tế")
@@ -751,7 +759,7 @@ def main_app():
             from models.nexus_engine import NexusEngine
             
             engine = NexusEngine(max_number, 6)
-            result_v11 = engine.predict(real_data, n_sets=5)
+            result_v11 = engine.predict(real_data, n_sets=5, use_elastic_filter=use_elastic_filter)
             
             if result_v11['top_pool']:
                 if pool_size == 10:
