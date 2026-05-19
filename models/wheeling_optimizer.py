@@ -261,6 +261,10 @@ class WheelingOptimizer:
                 word = "".join("A" if x<=9 else "B" if x<=19 else "C" if x<=29 else "D" if x<=39 else "E" for x in combo)
                 if word != micro_sector['alphabet']:
                     return False
+            if 'mod_x' in micro_sector:
+                if sum(combo[:3]) % 8 != micro_sector['mod_x']: return False
+            if 'mod_y' in micro_sector:
+                if sum(combo[3:]) % 8 != micro_sector['mod_y']: return False
         
         return True
 

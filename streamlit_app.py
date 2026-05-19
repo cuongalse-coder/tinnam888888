@@ -665,15 +665,16 @@ def main_app():
         st.markdown("<h3 style='color: #00ffcc;'>🎯 KHOANH VÙNG LƯỢNG TỬ (MICRO-SECTOR TARGETING)</h3>", unsafe_allow_html=True)
         st.info("💡 Nếu bạn để 'Tự động (AI Quyết Định)', AI sẽ quét lưới toàn bộ không gian. Nếu bạn tự chốt Ô, Không gian sẽ tụt xuống chỉ còn vài trăm vé!")
         
-        col_ms1, col_ms2, col_ms3, col_ms4 = st.columns(4)
+        col_ms1, col_ms2, col_ms3 = st.columns(3)
         with col_ms1:
-            target_odd = st.selectbox("Tỷ lệ Chẵn/Lẻ (Odd)", ["Tự động (AI Quyết Định)", "0 Lẻ (6 Chẵn)", "1 Lẻ (5 Chẵn)", "2 Lẻ (4 Chẵn)", "3 Lẻ (3 Chẵn)", "4 Lẻ (2 Chẵn)", "5 Lẻ (1 Chẵn)", "6 Lẻ (0 Chẵn)"], index=0)
+            target_odd = st.selectbox("Tỷ lệ Chẵn/Lẻ", ["Tự động", "0 Lẻ", "1 Lẻ", "2 Lẻ", "3 Lẻ", "4 Lẻ", "5 Lẻ", "6 Lẻ"], index=0)
+            target_alphabet = st.text_input("Mật mã Chữ Cái", value="", placeholder="VD: ABCCDD")
         with col_ms2:
-            target_high = st.selectbox("Tỷ lệ Cao/Thấp (High)", ["Tự động (AI Quyết Định)", "0 Cao (6 Thấp)", "1 Cao (5 Thấp)", "2 Cao (4 Thấp)", "3 Cao (3 Thấp)", "4 Cao (2 Thấp)", "5 Cao (1 Thấp)", "6 Cao (0 Thấp)"], index=0)
+            target_high = st.selectbox("Tỷ lệ Cao/Thấp", ["Tự động", "0 Cao", "1 Cao", "2 Cao", "3 Cao", "4 Cao", "5 Cao", "6 Cao"], index=0)
+            target_mod_x = st.selectbox("Tọa độ Dư Đầu (Ngang)", ["Tự động", "Dư 0", "Dư 1", "Dư 2", "Dư 3", "Dư 4", "Dư 5", "Dư 6", "Dư 7"], index=0)
         with col_ms3:
-            target_overlap = st.selectbox("Rơi lại từ kỳ trước (Overlap)", ["Tự động (AI Quyết Định)", "0 Số (Không rơi lại)", "1 Số", "2 Số", "3 Số trở lên"], index=0)
-        with col_ms4:
-            target_alphabet = st.text_input("Mật mã Chữ Cái (VD: ABCCDD)", value="", placeholder="Để trống = Tự động")
+            target_overlap = st.selectbox("Rơi lại kỳ trước", ["Tự động", "0 Số", "1 Số", "2 Số", "3 Số trở lên"], index=0)
+            target_mod_y = st.selectbox("Tọa độ Dư Cuối (Dọc)", ["Tự động", "Dư 0", "Dư 1", "Dư 2", "Dư 3", "Dư 4", "Dư 5", "Dư 6", "Dư 7"], index=0)
             
         st.markdown("---")
         st.markdown("**Trạng thái:** 🟢 Kết nối API Thực Tế")
@@ -817,6 +818,10 @@ def main_app():
                     micro_sector['overlap'] = int(target_overlap[0])
                 if target_alphabet.strip() != "":
                     micro_sector['alphabet'] = target_alphabet.strip().upper()
+                if "Tự động" not in target_mod_x:
+                    micro_sector['mod_x'] = int(target_mod_x.replace("Dư ", ""))
+                if "Tự động" not in target_mod_y:
+                    micro_sector['mod_y'] = int(target_mod_y.replace("Dư ", ""))
                 
                 from models.wheeling_optimizer import WheelingOptimizer
                 wheel_opt = WheelingOptimizer(6, max_number)
@@ -957,24 +962,20 @@ def main_app():
             
             # === BÀN CỜ LƯỢNG TỬ 8x8 (QUANTUM CHESSBOARD MATRIX) ===
             st.markdown("<div class='card' style='border-color: #ff00ff;'>", unsafe_allow_html=True)
-            st.markdown("<h2 style='text-align: center; color: #ff00ff !important; text-shadow: 0 0 10px #ff00ff;'>♟️ BÀN CỜ LƯỢNG TỬ 8x8 (TỌA ĐỘ VÉ) ♟️</h2>", unsafe_allow_html=True)
-            st.markdown("<p style='text-align: center;'>AI đã chẻ đôi 6 quả bóng để tạo thành Ma trận Tọa độ Đề-các (Cartesian Matrix).<br><b>Trục Ngang (Cột A-H)</b>: Cấu trúc 3 bóng đầu | <b>Trục Dọc (Hàng 1-8)</b>: Cấu trúc 3 bóng cuối.</p>", unsafe_allow_html=True)
+            st.markdown("<h2 style='text-align: center; color: #ff00ff !important; text-shadow: 0 0 10px #ff00ff;'>♟️ BÀN CỜ 64 Ô CÂN BẰNG TỔNG (MODULO MATRIX) ♟️</h2>", unsafe_allow_html=True)
+            st.markdown("<p style='text-align: center;'>AI đã áp dụng Toán học Modulo để chia <b>RẤT ĐỀU</b> 2 triệu vé vào 64 Ô (Không có ô nào rỗng).<br><b>Trục Ngang (Cột A-H)</b>: [Tổng 3 bóng Đầu] chia dư 8 | <b>Trục Dọc (Hàng 1-8)</b>: [Tổng 3 bóng Cuối] chia dư 8.</p>", unsafe_allow_html=True)
             
-            def get_half_sig(balls):
-                bin_str = "".join(['1' if x % 2 == 1 else '0' for x in balls])
-                return int(bin_str, 2)
+            def get_modulo_coord(balls):
+                return sum(balls) % 8
             
             def get_chess_notation(x, y):
                 cols = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
                 return f"{cols[x]}{y + 1}"
                 
-            def bin_to_struct(val):
-                return bin(val)[2:].zfill(3).replace('0', 'C').replace('1', 'L')
-                
             if len(real_data) >= 2:
                 last_draw = real_data[-1][:6]
-                last_x = get_half_sig(last_draw[:3])
-                last_y = get_half_sig(last_draw[3:])
+                last_x = get_modulo_coord(last_draw[:3])
+                last_y = get_modulo_coord(last_draw[3:])
                 last_sq = get_chess_notation(last_x, last_y)
                 
                 # Tính toán Transition Matrix 8x8 -> 8x8
@@ -982,10 +983,10 @@ def main_app():
                 for i in range(1, len(real_data)):
                     p_draw = real_data[i-1][:6]
                     c_draw = real_data[i][:6]
-                    p_x = get_half_sig(p_draw[:3])
-                    p_y = get_half_sig(p_draw[3:])
-                    c_x = get_half_sig(c_draw[:3])
-                    c_y = get_half_sig(c_draw[3:])
+                    p_x = get_modulo_coord(p_draw[:3])
+                    p_y = get_modulo_coord(p_draw[3:])
+                    c_x = get_modulo_coord(c_draw[:3])
+                    c_y = get_modulo_coord(c_draw[3:])
                     
                     p_sq = get_chess_notation(p_x, p_y)
                     c_sq = get_chess_notation(c_x, c_y)
@@ -994,7 +995,7 @@ def main_app():
                         transition_map[p_sq] = {}
                     transition_map[p_sq][c_sq] = transition_map[p_sq].get(c_sq, 0) + 1
                     
-                st.markdown(f"<h4 style='color:#fff;'>📍 Kỳ trước Jackpot nổ tại Tọa độ: <span style='color:#ff00ff; font-size:1.5em;'>{last_sq}</span> (Đầu: {bin_to_struct(last_x)} | Cuối: {bin_to_struct(last_y)})</h4>", unsafe_allow_html=True)
+                st.markdown(f"<h4 style='color:#fff;'>📍 Kỳ trước Jackpot nổ tại Tọa độ: <span style='color:#ff00ff; font-size:1.5em;'>{last_sq}</span> (Mod Ngang: {last_x} | Mod Dọc: {last_y})</h4>", unsafe_allow_html=True)
                 
                 if last_sq in transition_map:
                     next_moves = sorted(transition_map[last_sq].items(), key=lambda item: item[1], reverse=True)
@@ -1007,14 +1008,12 @@ def main_app():
                         # Phân tích ngược lại từ tên Ô ra cấu trúc
                         x_idx = ord(sq_name[0]) - 65
                         y_idx = int(sq_name[1]) - 1
-                        struct_x = bin_to_struct(x_idx)
-                        struct_y = bin_to_struct(y_idx)
                         
                         col.markdown(f"""
                         <div style='background: linear-gradient(145deg, #222, #111); border: 1px solid #ff00ff; padding: 15px; border-radius: 10px; text-align: center;'>
                             <h3 style='color: #ff00ff; margin:0;'>MỤC TIÊU {rank}</h3>
                             <h1 style='color: #fff; margin:10px 0; font-size: 3em; text-shadow: 0 0 15px #ff00ff;'>{sq_name}</h1>
-                            <p style='color: #888; font-size: 0.9em;'>Trục Ngang: <b>{struct_x}</b><br>Trục Dọc: <b>{struct_y}</b></p>
+                            <p style='color: #888; font-size: 0.9em;'>Dư Đầu: <b>{x_idx}</b><br>Dư Cuối: <b>{y_idx}</b></p>
                             <span style='color: #00ffcc;'>Tần suất lịch sử: {count} lần</span>
                         </div>
                         """, unsafe_allow_html=True)
