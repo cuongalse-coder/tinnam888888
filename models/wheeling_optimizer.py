@@ -129,6 +129,16 @@ class WheelingOptimizer:
             if overlap > 2 or contact > 4:
                 if stats is not None: stats['go_board'] += 1
                 return False
+                
+        # Sliding Window Filter (Lô Gan / Hot)
+        missing_pool = constraints.get('missing_pool')
+        hot_pool = constraints.get('hot_pool')
+        if missing_pool is not None and hot_pool is not None:
+            missing_hit = sum(1 for x in combo if x in missing_pool)
+            hot_hit = sum(1 for x in combo if x in hot_pool)
+            if missing_hit > 3 or hot_hit > 3:
+                if stats is not None: stats['sliding_window'] += 1
+                return False
         
         odd = sum(1 for x in combo if x % 2 == 1)
         if odd < constraints.get('odd_lo', 0) or odd > constraints.get('odd_hi', 6):
@@ -191,7 +201,7 @@ class WheelingOptimizer:
         stats = {
             'sum_range': 0, 'sum_block': 0, 'col_bounds': 0, 'delta': 0,
             'digit_freq': 0, 'adj_digits': 0, 'wave_break': 0, 'rubik_matrix': 0, 'color_palette': 0,
-            'go_board': 0, 'odd_even': 0, 'high_low': 0, 'elastic': 0,
+            'go_board': 0, 'sliding_window': 0, 'odd_even': 0, 'high_low': 0, 'elastic': 0,
             'consec': 0, 'decade': 0, 'psych': 0, 'mod7': 0
         }
         total_generated = 0

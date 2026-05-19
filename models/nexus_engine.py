@@ -570,6 +570,17 @@ class NexusEngine:
             for b in prev_draw:
                 if b in go_board_liberties:
                     go_board_liberties.remove(b)
+                    
+        missing_pool = set()
+        hot_pool = set()
+        if len(data) >= 10:
+            window = data[-10:]
+            counts = [0] * 46
+            for d in window:
+                for x in d[:self.pick_count]: counts[x] += 1
+            for n in range(1, 46):
+                if counts[n] == 0: missing_pool.add(n)
+                elif counts[n] >= 2: hot_pool.add(n)
             
         return {
             'sum_lo': sum_lo,
@@ -584,7 +595,9 @@ class NexusEngine:
             'col_bounds': col_bounds,
             'delta_hi': delta_hi,
             'go_board_liberties': go_board_liberties,
-            'prev_draw_set': prev_draw_set
+            'prev_draw_set': prev_draw_set,
+            'missing_pool': missing_pool,
+            'hot_pool': hot_pool
         }
 
     def _validate(self, combo, c):
@@ -681,6 +694,15 @@ class NexusEngine:
             overlap = sum(1 for x in combo if x in prev_draw_set)
             contact = sum(1 for x in combo if x in go_board_liberties)
             if overlap > 2 or contact > 4:
+                return False
+                
+        # Sliding Window Filter (Lô Gan / Hot)
+        missing_pool = c.get('missing_pool')
+        hot_pool = c.get('hot_pool')
+        if missing_pool is not None and hot_pool is not None:
+            missing_hit = sum(1 for x in combo if x in missing_pool)
+            hot_hit = sum(1 for x in combo if x in hot_pool)
+            if missing_hit > 3 or hot_hit > 3:
                 return False
             
         odd = sum(1 for x in combo if x % 2 == 1)

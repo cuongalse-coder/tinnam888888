@@ -910,7 +910,7 @@ def main_app():
                 fc8.metric("Điểm Ngắt Sóng", f"{(filter_stats.get('wave_break',0)/total_gen*100):.1f}%", f"-{filter_stats.get('wave_break',0):,} vé")
                 
                 fc9, fc10, fc11, fc12 = st.columns(4)
-                fc9.metric("Ma Trận Rubik", f"{(filter_stats.get('rubik_matrix',0)/total_gen*100):.1f}%", f"-{filter_stats.get('rubik_matrix',0):,} vé")
+                fc9.metric("Lọc Chu Kỳ (Sliding)", f"{(filter_stats.get('sliding_window',0)/total_gen*100):.1f}%", f"-{filter_stats.get('sliding_window',0):,} vé")
                 fc10.metric("Lọc Bảng Màu", f"{(filter_stats.get('color_palette',0)/total_gen*100):.1f}%", f"-{filter_stats.get('color_palette',0):,} vé")
                 fc11.metric("Lọc Địa Bàn (Cờ Vây)", f"{(filter_stats.get('go_board',0)/total_gen*100):.1f}%", f"-{filter_stats.get('go_board',0):,} vé")
                 fc12.metric("Lọc Chẵn/Lẻ", f"{(filter_stats.get('odd_even',0)/total_gen*100):.1f}%", f"-{filter_stats.get('odd_even',0):,} vé")

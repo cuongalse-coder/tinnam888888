@@ -37,9 +37,22 @@ async function main() {
         col_bounds.push({ min: percentile(col, 3), max: percentile(col, 97) });
     }
     
+    
     let prevDraw = hist[hist.length-1].slice(0,6);
     let prevSum = prevDraw.reduce((a,b)=>a+b, 0);
     let banned_sum_block = [prevSum - 10, prevSum + 10];
+    
+    // Go Board Setup
+    let prev_draw_set = new Set(prevDraw);
+    let go_board_liberties = new Set();
+    for(let b of prevDraw) {
+        let r=Math.floor((b-1)/9), c=(b-1)%9;
+        if(r>0) go_board_liberties.add((r-1)*9+c+1);
+        if(r<4) go_board_liberties.add((r+1)*9+c+1);
+        if(c>0) go_board_liberties.add(r*9+(c-1)+1);
+        if(c<8) go_board_liberties.add(r*9+(c+1)+1);
+    }
+    for(let b of prevDraw) go_board_liberties.delete(b);
     
     if (prevSum <= 100) sum_lo = Math.max(sum_lo, 110);
     if (prevSum >= 180) sum_hi = Math.min(sum_hi, 170);
@@ -57,6 +70,9 @@ async function main() {
         survive_wave: 0,
         survive_odd_high: 0,
         survive_consec_dec: 0,
+        survive_rubik: 0,
+        survive_color: 0,
+        survive_go: 0,
         final_survivors: 0
     };
 
@@ -144,6 +160,41 @@ async function main() {
                             for(let x of combo) decs[Math.min(Math.floor((x-1)/10), 4)]++;
                             if (Math.max(...decs) > 3) continue;
                             
+                            // 10. Lọc Ma Trận Rubik
+                            let matrix = Array(5).fill().map(()=>Array(10).fill(0));
+                            for(let x of combo){ let r=Math.floor(x/10); let c=x%10; if(r<5&&c<10) matrix[r][c]=1; }
+                            let has_2x2=false, has_diag3=false;
+                            for(let r=0;r<4;r++)for(let c=0;c<9;c++)if(matrix[r][c]&&matrix[r][c+1]&&matrix[r+1][c]&&matrix[r+1][c+1]) has_2x2=true;
+                            for(let r=0;r<3;r++){
+                                for(let c=0;c<8;c++)if(matrix[r][c]&&matrix[r+1][c+1]&&matrix[r+2][c+2]) has_diag3=true;
+                                for(let c=2;c<10;c++)if(matrix[r][c]&&matrix[r+1][c-1]&&matrix[r+2][c-2]) has_diag3=true;
+                            }
+                            if(has_2x2 || has_diag3) continue;
+                            stats.survive_rubik++;
+                            
+                            // 11. Lọc Bảng Màu Ngũ Hành
+                            let colors = [0,0,0,0,0];
+                            for(let x of combo){
+                                let ld=x%10;
+                                if(ld===1||ld===6) colors[0]++;
+                                else if(ld===2||ld===7) colors[1]++;
+                                else if(ld===3||ld===8) colors[2]++;
+                                else if(ld===4||ld===9) colors[3]++;
+                                else if(ld===5||ld===0) colors[4]++;
+                            }
+                            let uColors = colors.filter(c=>c>0).length;
+                            if(uColors<=2 || Math.max(...colors)>=4) continue;
+                            stats.survive_color++;
+                            
+                            // 12. Lọc Cờ Vây (Go Board)
+                            let overlap=0, contact=0;
+                            for(let x of combo){
+                                if(prev_draw_set.has(x)) overlap++;
+                                else if(go_board_liberties.has(x)) contact++;
+                            }
+                            if(overlap>2 || contact>4) continue;
+                            stats.survive_go++;
+                            
                             stats.final_survivors++;
                         }
                     }
@@ -173,7 +224,11 @@ async function main() {
     step("Lọc Chữ Số Kề Nhau", stats.survive_adj);
     step("Lọc Điểm Ngắt Sóng", stats.survive_wave);
     step("Lọc Chẵn Lẻ/Cao Thấp", stats.survive_odd_high);
-    step("Lọc Thập kỷ/Liên tiếp", stats.final_survivors);
+    step("Lọc Thập kỷ/Liên tiếp", stats.survive_consec_dec);
+    step("Lọc Ma Trận Rubik", stats.survive_rubik);
+    step("Lọc Màu Ngũ Hành", stats.survive_color);
+    step("Lọc Địa Bàn Cờ Vây", stats.survive_go);
+    step("LỌC TỔNG CUỐI CÙNG", stats.final_survivors);
     
     let finalPct = ((stats.total - stats.final_survivors) / stats.total * 100).toFixed(2);
     console.log('========================================================================');
