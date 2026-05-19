@@ -240,10 +240,31 @@ class WheelingOptimizer:
         if sum_mod7 and s % 7 not in sum_mod7:
             if stats is not None: stats['mod7'] += 1
             return False
+            
+        # Micro-Sector Targeting Filter
+        micro_sector = constraints.get('micro_sector')
+        if micro_sector:
+            if 'odd' in micro_sector and odd != micro_sector['odd']:
+                return False
+            if 'high' in micro_sector and high != micro_sector['high']:
+                return False
+            if 'overlap' in micro_sector:
+                prev_draw_set_loc = constraints.get('prev_draw_set')
+                if prev_draw_set_loc:
+                    overlap_count = sum(1 for x in combo if x in prev_draw_set_loc)
+                    ov_target = micro_sector['overlap']
+                    if ov_target == 3:
+                        if overlap_count < 3: return False
+                    elif overlap_count != ov_target:
+                        return False
+            if 'alphabet' in micro_sector and alphabet_patterns is not None:
+                word = "".join("A" if x<=9 else "B" if x<=19 else "C" if x<=29 else "D" if x<=39 else "E" for x in combo)
+                if word != micro_sector['alphabet']:
+                    return False
         
         return True
 
-    def generate_wheel(self, pool, num_tickets, constraints=None, sum_mod7=None, history_data=None, ai_top_core=None, hard_core_lock=0):
+    def generate_wheel(self, pool, num_tickets, constraints=None, sum_mod7=None, history_data=None, ai_top_core=None, hard_core_lock=0, micro_sector=None):
         """
         Generates `num_tickets` tickets from `pool` matching AI constraints and strict historical elimination.
         V700: Maximizes coverage of 3-combinations AND 4-combinations (quadruplets) 

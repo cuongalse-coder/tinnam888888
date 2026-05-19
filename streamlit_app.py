@@ -662,6 +662,20 @@ def main_app():
             st.info("💡 Lối chơi: Bao Lô 20 số, kích hoạt Bộ Lọc Hít Thở (Dây Thun) và Bộ Lọc Cạn Kiệt Nhóm để diệt hàng chục ngàn vé rác.")
             
         st.markdown("---")
+        st.markdown("<h3 style='color: #00ffcc;'>🎯 KHOANH VÙNG LƯỢNG TỬ (MICRO-SECTOR TARGETING)</h3>", unsafe_allow_html=True)
+        st.info("💡 Nếu bạn để 'Tự động (AI Quyết Định)', AI sẽ quét lưới toàn bộ không gian. Nếu bạn tự chốt Ô, Không gian sẽ tụt xuống chỉ còn vài trăm vé!")
+        
+        col_ms1, col_ms2, col_ms3, col_ms4 = st.columns(4)
+        with col_ms1:
+            target_odd = st.selectbox("Tỷ lệ Chẵn/Lẻ (Odd)", ["Tự động (AI Quyết Định)", "0 Lẻ (6 Chẵn)", "1 Lẻ (5 Chẵn)", "2 Lẻ (4 Chẵn)", "3 Lẻ (3 Chẵn)", "4 Lẻ (2 Chẵn)", "5 Lẻ (1 Chẵn)", "6 Lẻ (0 Chẵn)"], index=0)
+        with col_ms2:
+            target_high = st.selectbox("Tỷ lệ Cao/Thấp (High)", ["Tự động (AI Quyết Định)", "0 Cao (6 Thấp)", "1 Cao (5 Thấp)", "2 Cao (4 Thấp)", "3 Cao (3 Thấp)", "4 Cao (2 Thấp)", "5 Cao (1 Thấp)", "6 Cao (0 Thấp)"], index=0)
+        with col_ms3:
+            target_overlap = st.selectbox("Rơi lại từ kỳ trước (Overlap)", ["Tự động (AI Quyết Định)", "0 Số (Không rơi lại)", "1 Số", "2 Số", "3 Số trở lên"], index=0)
+        with col_ms4:
+            target_alphabet = st.text_input("Mật mã Chữ Cái (VD: ABCCDD)", value="", placeholder="Để trống = Tự động")
+            
+        st.markdown("---")
         st.markdown("**Trạng thái:** 🟢 Kết nối API Thực Tế")
         st.markdown(f"**Hôm nay:** {datetime.now().strftime('%d/%m/%Y')}")
         st.markdown("---")
@@ -793,6 +807,17 @@ def main_app():
                 else:
                     ai_top_core = result_v11['top_pool'][:5]
                 
+                # Build micro-sector dictionary
+                micro_sector = {}
+                if "Tự động" not in target_odd:
+                    micro_sector['odd'] = int(target_odd[0])
+                if "Tự động" not in target_high:
+                    micro_sector['high'] = int(target_high[0])
+                if "Tự động" not in target_overlap:
+                    micro_sector['overlap'] = int(target_overlap[0])
+                if target_alphabet.strip() != "":
+                    micro_sector['alphabet'] = target_alphabet.strip().upper()
+                
                 from models.wheeling_optimizer import WheelingOptimizer
                 wheel_opt = WheelingOptimizer(6, max_number)
                 tickets, coverage, filter_stats, total_generated = wheel_opt.generate_wheel(
@@ -802,7 +827,8 @@ def main_app():
                     sum_mod7=result_v11.get('sum_mod7'),
                     history_data=real_data,
                     ai_top_core=ai_top_core, # Lõi mạnh nhất để ép xác suất
-                    hard_core_lock=hard_core_lock
+                    hard_core_lock=hard_core_lock,
+                    micro_sector=micro_sector
                 )
                 
                 st.session_state.filter_stats = filter_stats
