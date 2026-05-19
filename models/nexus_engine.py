@@ -497,8 +497,25 @@ class NexusEngine:
         mid = self.max_number // 2
         highs = [sum(1 for x in d[:self.pick_count] if x > mid) for d in recent]
         ranges = [max(d[:self.pick_count]) - min(d[:self.pick_count]) for d in recent]
+        sum_lo = int(np.percentile(sums, 8))
+        sum_hi = int(np.percentile(sums, 92))
+        
         range_lo = int(np.percentile(ranges, 8))
         range_hi = int(np.percentile(ranges, 92))
+        
+        banned_sum_block = None
+        
+        if len(data) >= 1:
+            prev_sum = sum(data[-1][:self.pick_count])
+            
+            # Khối Tổng có tỷ lệ lặp lại tại chỗ chỉ 19% -> Block Khối +-10
+            banned_sum_block = [prev_sum - 10, prev_sum + 10]
+            
+            # Hiệu ứng Bật Tường (Rebound) ở Cực hạn
+            if prev_sum <= 100:
+                sum_lo = max(sum_lo, 110)
+            elif prev_sum >= 180:
+                sum_hi = min(sum_hi, 170)
         
         # --- ELASTIC SPREAD FILTER (User Intuition) ---
         if use_elastic_filter and len(data) >= 2:
@@ -520,21 +537,30 @@ class NexusEngine:
         if range_lo > range_hi:
             range_lo, range_hi = range_hi, range_lo
             
+        if sum_lo > sum_hi:
+            sum_lo, sum_hi = sum_hi, sum_lo
+            
         return {
-            'sum_lo': int(np.percentile(sums, 8)),
-            'sum_hi': int(np.percentile(sums, 92)),
+            'sum_lo': sum_lo,
+            'sum_hi': sum_hi,
             'odd_lo': max(0, int(np.percentile(odds, 8))),
             'odd_hi': min(self.pick_count, int(np.percentile(odds, 92))),
             'high_lo': max(0, int(np.percentile(highs, 8))),
             'high_hi': min(self.pick_count, int(np.percentile(highs, 92))),
             'range_lo': range_lo,
             'range_hi': range_hi,
+            'banned_sum_block': banned_sum_block,
         }
 
     def _validate(self, combo, c):
         s = sum(combo)
         if s < c.get('sum_lo', 0) or s > c.get('sum_hi', 999):
             return False
+            
+        banned_sum_block = c.get('banned_sum_block')
+        if banned_sum_block and banned_sum_block[0] <= s <= banned_sum_block[1]:
+            return False
+            
         odd = sum(1 for x in combo if x % 2 == 1)
         if odd < c.get('odd_lo', 0) or odd > c.get('odd_hi', 6):
             return False
