@@ -795,7 +795,7 @@ def main_app():
                 
                 from models.wheeling_optimizer import WheelingOptimizer
                 wheel_opt = WheelingOptimizer(6, max_number)
-                tickets, coverage = wheel_opt.generate_wheel(
+                tickets, coverage, filter_stats, total_generated = wheel_opt.generate_wheel(
                     st.session_state.v11_top_pool, 
                     num_tickets,
                     constraints=result_v11.get('constraints'),
@@ -804,6 +804,9 @@ def main_app():
                     ai_top_core=ai_top_core, # Lõi mạnh nhất để ép xác suất
                     hard_core_lock=hard_core_lock
                 )
+                
+                st.session_state.filter_stats = filter_stats
+                st.session_state.total_generated = total_generated
                 
                 sniper_ticket = result_v11['predictions'][0]['numbers']
                 sniper_obj = {'numbers': sniper_ticket, 'strategy': '🌌 VÉ CHÂN LÝ (ABSOLUTE TRUTH - LẤY TỪ TƯƠNG LAI)'}
@@ -883,6 +886,29 @@ def main_app():
                 f6_html = "".join([f"<div class='ball {ball_class}' style='width:65px;height:65px;font-size:24px; background: linear-gradient(145deg,#ff0055,#ff6600); border-color:#ff0055; box-shadow: 0 0 30px #ff0055;'>{n:02d}</div>" for n in final_6])
                 st.markdown(f"<div style='text-align:center; padding: 15px;'>{f6_html}</div>", unsafe_allow_html=True)
                 st.markdown("<p style='text-align:center; color:#ff0055; font-weight:bold;'>⚡ ĐÂY LÀ LỰA CHỌN SỐ 1 CỦA HỆ THỐNG. Nếu chỉ muốn mua 1 VÉ DUY NHẤT — hãy dùng 6 số này. ⚡</p>", unsafe_allow_html=True)
+                st.markdown("</div>", unsafe_allow_html=True)
+                
+            # === BẢNG ĐIỀU KHIỂN BỘ LỌC (FILTER DASHBOARD) ===
+            filter_stats = st.session_state.get('filter_stats')
+            total_gen = st.session_state.get('total_generated', 0)
+            if filter_stats and total_gen > 0:
+                st.markdown("<div class='card' style='border-color: #f1c40f;'>", unsafe_allow_html=True)
+                st.markdown("<h3 style='text-align: center; color: #f1c40f !important;'>🛡️ HIỆU SUẤT CÁC BỘ LỌC (FILTER DASHBOARD) 🛡️</h3>", unsafe_allow_html=True)
+                st.markdown(f"<p style='text-align: center;'>AI vừa khởi tạo <b>{total_gen:,}</b> tổ hợp nháp để tìm ra {num_tickets} vé hoàn hảo nhất. Dưới đây là bảng phong thần các bộ lọc:</p>", unsafe_allow_html=True)
+                
+                # Render metrics
+                fc1, fc2, fc3, fc4 = st.columns(4)
+                fc1.metric("Lọc Cột (Vị Trí)", f"{(filter_stats.get('col_bounds',0)/total_gen*100):.1f}%", f"-{filter_stats.get('col_bounds',0):,} vé")
+                fc2.metric("Lọc Tổng (Range)", f"{(filter_stats.get('sum_range',0)/total_gen*100):.1f}%", f"-{filter_stats.get('sum_range',0):,} vé")
+                fc3.metric("Lọc Khối Tổng", f"{(filter_stats.get('sum_block',0)/total_gen*100):.1f}%", f"-{filter_stats.get('sum_block',0):,} vé")
+                fc4.metric("Lọc Dây Thun", f"{(filter_stats.get('elastic',0)/total_gen*100):.1f}%", f"-{filter_stats.get('elastic',0):,} vé")
+                
+                fc5, fc6, fc7, fc8 = st.columns(4)
+                fc5.metric("Lọc Delta System", f"{(filter_stats.get('delta',0)/total_gen*100):.1f}%", f"-{filter_stats.get('delta',0):,} vé")
+                fc6.metric("Lọc Chữ Số", f"{(filter_stats.get('digit_freq',0)/total_gen*100):.1f}%", f"-{filter_stats.get('digit_freq',0):,} vé")
+                fc7.metric("Quá Hạn Nhóm", f"{(filter_stats.get('decade',0)/total_gen*100):.1f}%", f"-{filter_stats.get('decade',0):,} vé")
+                fc8.metric("Chẵn Lẻ/Cao Thấp", f"{((filter_stats.get('odd_even',0)+filter_stats.get('high_low',0))/total_gen*100):.1f}%", f"-{(filter_stats.get('odd_even',0)+filter_stats.get('high_low',0)):,} vé")
+                
                 st.markdown("</div>", unsafe_allow_html=True)
             
             # === PHÂN TÍCH CHUYÊN SÂU TỪ KỲ LIỀN KỀ ===
@@ -1123,7 +1149,7 @@ def main_app():
                             
                         # 2. Sinh dàn bao
                         wheel_opt = WheelingOptimizer(6, max_number)
-                        tickets, _ = wheel_opt.generate_wheel(
+                        tickets, _, _, _ = wheel_opt.generate_wheel(
                             pool, 
                             num_tickets,
                             constraints=res.get('constraints'),

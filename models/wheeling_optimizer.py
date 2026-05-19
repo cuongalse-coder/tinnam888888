@@ -15,24 +15,33 @@ class WheelingOptimizer:
         self.pick_count = pick_count
         self.max_number = max_number
 
-    def _validate_ticket(self, combo, constraints, sum_mod7):
+    def _validate_ticket(self, combo, constraints, sum_mod7, stats=None):
         if not constraints: return True
         s = sum(combo)
-        if s < constraints.get('sum_lo', 0) or s > constraints.get('sum_hi', 999): return False
+        if s < constraints.get('sum_lo', 0) or s > constraints.get('sum_hi', 999):
+            if stats is not None: stats['sum_range'] += 1
+            return False
+            
         banned_sum_block = constraints.get('banned_sum_block')
-        if banned_sum_block and banned_sum_block[0] <= s <= banned_sum_block[1]: return False
+        if banned_sum_block and banned_sum_block[0] <= s <= banned_sum_block[1]:
+            if stats is not None: stats['sum_block'] += 1
+            return False
         
         col_bounds = constraints.get('col_bounds')
         if col_bounds:
             for i, n in enumerate(combo):
-                if n < col_bounds[i][0] or n > col_bounds[i][1]: return False
+                if n < col_bounds[i][0] or n > col_bounds[i][1]:
+                    if stats is not None: stats['col_bounds'] += 1
+                    return False
                 
         # Delta System Filter (Global Research)
         max_delta = combo[0]
         for i in range(1, 6):
             if combo[i] - combo[i-1] > max_delta:
                 max_delta = combo[i] - combo[i-1]
-        if max_delta > constraints.get('delta_hi', 45): return False
+        if max_delta > constraints.get('delta_hi', 45):
+            if stats is not None: stats['delta'] += 1
+            return False
         
         # Digit Frequency Filter (User's Invention)
         digit_counts = [0] * 10
@@ -40,15 +49,23 @@ class WheelingOptimizer:
             s_val = str(n).zfill(2)
             digit_counts[int(s_val[0])] += 1
             digit_counts[int(s_val[1])] += 1
-        if max(digit_counts) > 4: return False
+        if max(digit_counts) > 4:
+            if stats is not None: stats['digit_freq'] += 1
+            return False
         
         odd = sum(1 for x in combo if x % 2 == 1)
-        if odd < constraints.get('odd_lo', 0) or odd > constraints.get('odd_hi', 6): return False
+        if odd < constraints.get('odd_lo', 0) or odd > constraints.get('odd_hi', 6):
+            if stats is not None: stats['odd_even'] += 1
+            return False
         mid = self.max_number // 2
         high = sum(1 for x in combo if x > mid)
-        if high < constraints.get('high_lo', 0) or high > constraints.get('high_hi', 6): return False
+        if high < constraints.get('high_lo', 0) or high > constraints.get('high_hi', 6):
+            if stats is not None: stats['high_low'] += 1
+            return False
         rng = max(combo) - min(combo)
-        if rng < constraints.get('range_lo', 0) or rng > constraints.get('range_hi', 999): return False
+        if rng < constraints.get('range_lo', 0) or rng > constraints.get('range_hi', 999):
+            if stats is not None: stats['elastic'] += 1
+            return False
         
         # Avoid more than 3 consecutive numbers
         consec = 1
@@ -59,22 +76,27 @@ class WheelingOptimizer:
                 max_consec = max(max_consec, consec)
             else:
                 consec = 1
-        if max_consec > 3: return False
+        if max_consec > 3:
+            if stats is not None: stats['consec'] += 1
+            return False
         
         # Avoid decade overload (e.g. 4 numbers in the 20s)
         dec = [0] * 6
         for n in combo:
             dec[min((n - 1) // 10, 5)] += 1
-        if max(dec) > 3: return False
+        if max(dec) > 3:
+            if stats is not None: stats['decade'] += 1
+            return False
         
-        # Psychological Avoidance (V17.0 OMNISCIENCE):
-        # People love picking birth dates (1-31). If we win with those, we share the jackpot.
-        # We enforce at least 1-2 numbers > 31 to guarantee a less-shared jackpot.
-        # If max_number is 45 or 55, requiring at least 1 number > 31 is statistically sound.
+        # Psychological Avoidance
         count_over_31 = sum(1 for n in combo if n > 31)
-        if count_over_31 < 1: return False
+        if count_over_31 < 1:
+            if stats is not None: stats['psych'] += 1
+            return False
         
-        if sum_mod7 and s % 7 not in sum_mod7: return False
+        if sum_mod7 and s % 7 not in sum_mod7:
+            if stats is not None: stats['mod7'] += 1
+            return False
         
         return True
 
@@ -106,7 +128,8 @@ class WheelingOptimizer:
             all_cands = list(combinations(pool, self.pick_count))
             sys_rand.shuffle(all_cands)
             for c in all_cands:
-                if not self._validate_ticket(c, constraints, sum_mod7):
+                total_generated += 1
+                if not self._validate_ticket(c, constraints, sum_mod7, stats):
                     continue
                 # Strict Historical Elimination (V16.0 GOD MODE)
                 c_set = set(c)
@@ -119,7 +142,8 @@ class WheelingOptimizer:
             while len(valid_candidates) < 4000 and attempts < 30000:
                 attempts += 1
                 c = tuple(sorted(sys_rand.sample(pool, self.pick_count)))
-                if not self._validate_ticket(c, constraints, sum_mod7):
+                total_generated += 1
+                if not self._validate_ticket(c, constraints, sum_mod7, stats):
                     continue
                 c_set = set(c)
                 if any(len(c_set & h) >= 5 for h in history_sets):
@@ -166,13 +190,13 @@ class WheelingOptimizer:
 
         for i in range(remaining_tickets):
             if not uncovered:
-                best_ticket = sys_rand.choice(valid_candidates)
+                best_ticket = sys_rand.choice(valid_candidates) if valid_candidates else tuple(sys_rand.sample(pool, self.pick_count))
                 strategy = "🌪️ Đột biến (Chống bão hòa)"
             else:
                 best_ticket = None
                 best_coverage = -1
                 
-                sample_pool = sys_rand.sample(valid_candidates, min(len(valid_candidates), 1000))
+                sample_pool = sys_rand.sample(valid_candidates, min(len(valid_candidates), 1000)) if valid_candidates else []
                 
                 for cand in sample_pool:
                     cand_triplets = set(combinations(cand, 3))
@@ -188,7 +212,7 @@ class WheelingOptimizer:
                         break
                         
                 if not best_ticket:
-                    best_ticket = sys_rand.choice(valid_candidates)
+                    best_ticket = sys_rand.choice(valid_candidates) if valid_candidates else tuple(sys_rand.sample(pool, self.pick_count))
                     strategy = "🌪️ Đột biến (Chống bão hòa)"
                 else:
                     if i < remaining_tickets * 0.3:
@@ -203,5 +227,5 @@ class WheelingOptimizer:
             if best_ticket in valid_candidates:
                 valid_candidates.remove(best_ticket)
             
-        coverage_ratio = 100.0 * (1.0 - len(uncovered) / max(1, len(all_triplets)))
-        return tickets, round(coverage_ratio, 2)
+        cov = (len(all_triplets) - len(uncovered)) / len(all_triplets) * 100.0 if all_triplets else 100.0
+        return tickets, round(cov, 2), stats, total_generated
