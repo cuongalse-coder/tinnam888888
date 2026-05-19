@@ -52,6 +52,16 @@ class WheelingOptimizer:
         if max(digit_counts) > 4:
             if stats is not None: stats['digit_freq'] += 1
             return False
+            
+        # Adjacent Digit Pairs Filter (User's Invention)
+        s_str = "".join([str(n).zfill(2) for n in combo])
+        adj_pairs = 0
+        for i in range(1, 12):
+            if s_str[i] == s_str[i-1]:
+                adj_pairs += 1
+        if adj_pairs > 2:
+            if stats is not None: stats['adj_digits'] += 1
+            return False
         
         odd = sum(1 for x in combo if x % 2 == 1)
         if odd < constraints.get('odd_lo', 0) or odd > constraints.get('odd_hi', 6):

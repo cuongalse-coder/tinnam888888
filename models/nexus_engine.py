@@ -600,6 +600,14 @@ class NexusEngine:
         if max(digit_counts) > 4:
             return False
             
+        s_str = "".join([str(n).zfill(2) for n in combo])
+        adj_pairs = 0
+        for i in range(1, 12):
+            if s_str[i] == s_str[i-1]:
+                adj_pairs += 1
+        if adj_pairs > 2:
+            return False
+            
         odd = sum(1 for x in combo if x % 2 == 1)
         if odd < c.get('odd_lo', 0) or odd > c.get('odd_hi', 6):
             return False
