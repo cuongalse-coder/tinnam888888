@@ -22,6 +22,11 @@ class WheelingOptimizer:
         banned_sum_block = constraints.get('banned_sum_block')
         if banned_sum_block and banned_sum_block[0] <= s <= banned_sum_block[1]: return False
         
+        col_bounds = constraints.get('col_bounds')
+        if col_bounds:
+            for i, n in enumerate(combo):
+                if n < col_bounds[i][0] or n > col_bounds[i][1]: return False
+                
         odd = sum(1 for x in combo if x % 2 == 1)
         if odd < constraints.get('odd_lo', 0) or odd > constraints.get('odd_hi', 6): return False
         mid = self.max_number // 2

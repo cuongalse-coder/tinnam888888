@@ -497,6 +497,13 @@ class NexusEngine:
         mid = self.max_number // 2
         highs = [sum(1 for x in d[:self.pick_count] if x > mid) for d in recent]
         ranges = [max(d[:self.pick_count]) - min(d[:self.pick_count]) for d in recent]
+        
+        # --- COL BOUNDS FILTER ---
+        col_bounds = []
+        for i in range(self.pick_count):
+            col_vals = [d[i] for d in data[-200:]] # Use 200 history for stable bounds
+            col_bounds.append((int(np.percentile(col_vals, 3)), int(np.percentile(col_vals, 97))))
+            
         sum_lo = int(np.percentile(sums, 8))
         sum_hi = int(np.percentile(sums, 92))
         
@@ -550,6 +557,7 @@ class NexusEngine:
             'range_lo': range_lo,
             'range_hi': range_hi,
             'banned_sum_block': banned_sum_block,
+            'col_bounds': col_bounds,
         }
 
     def _validate(self, combo, c):
@@ -560,6 +568,12 @@ class NexusEngine:
         banned_sum_block = c.get('banned_sum_block')
         if banned_sum_block and banned_sum_block[0] <= s <= banned_sum_block[1]:
             return False
+            
+        col_bounds = c.get('col_bounds')
+        if col_bounds:
+            for i, n in enumerate(combo):
+                if n < col_bounds[i][0] or n > col_bounds[i][1]:
+                    return False
             
         odd = sum(1 for x in combo if x % 2 == 1)
         if odd < c.get('odd_lo', 0) or odd > c.get('odd_hi', 6):
