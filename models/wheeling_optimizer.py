@@ -34,6 +34,14 @@ class WheelingOptimizer:
                 max_delta = combo[i] - combo[i-1]
         if max_delta > constraints.get('delta_hi', 45): return False
         
+        # Digit Frequency Filter (User's Invention)
+        digit_counts = [0] * 10
+        for n in combo:
+            s_val = str(n).zfill(2)
+            digit_counts[int(s_val[0])] += 1
+            digit_counts[int(s_val[1])] += 1
+        if max(digit_counts) > 4: return False
+        
         odd = sum(1 for x in combo if x % 2 == 1)
         if odd < constraints.get('odd_lo', 0) or odd > constraints.get('odd_hi', 6): return False
         mid = self.max_number // 2

@@ -592,6 +592,14 @@ class NexusEngine:
         if max_delta > c.get('delta_hi', 45):
             return False
             
+        digit_counts = [0] * 10
+        for n in combo:
+            s_val = str(n).zfill(2)
+            digit_counts[int(s_val[0])] += 1
+            digit_counts[int(s_val[1])] += 1
+        if max(digit_counts) > 4:
+            return False
+            
         odd = sum(1 for x in combo if x % 2 == 1)
         if odd < c.get('odd_lo', 0) or odd > c.get('odd_hi', 6):
             return False
