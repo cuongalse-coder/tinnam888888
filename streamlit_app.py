@@ -955,6 +955,77 @@ def main_app():
                 
                 st.markdown("</div>", unsafe_allow_html=True)
             
+            # === BÀN CỜ LƯỢNG TỬ 8x8 (QUANTUM CHESSBOARD MATRIX) ===
+            st.markdown("<div class='card' style='border-color: #ff00ff;'>", unsafe_allow_html=True)
+            st.markdown("<h2 style='text-align: center; color: #ff00ff !important; text-shadow: 0 0 10px #ff00ff;'>♟️ BÀN CỜ LƯỢNG TỬ 8x8 (TỌA ĐỘ VÉ) ♟️</h2>", unsafe_allow_html=True)
+            st.markdown("<p style='text-align: center;'>AI đã chẻ đôi 6 quả bóng để tạo thành Ma trận Tọa độ Đề-các (Cartesian Matrix).<br><b>Trục Ngang (Cột A-H)</b>: Cấu trúc 3 bóng đầu | <b>Trục Dọc (Hàng 1-8)</b>: Cấu trúc 3 bóng cuối.</p>", unsafe_allow_html=True)
+            
+            def get_half_sig(balls):
+                bin_str = "".join(['1' if x % 2 == 1 else '0' for x in balls])
+                return int(bin_str, 2)
+            
+            def get_chess_notation(x, y):
+                cols = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
+                return f"{cols[x]}{y + 1}"
+                
+            def bin_to_struct(val):
+                return bin(val)[2:].zfill(3).replace('0', 'C').replace('1', 'L')
+                
+            if len(real_data) >= 2:
+                last_draw = real_data[-1][:6]
+                last_x = get_half_sig(last_draw[:3])
+                last_y = get_half_sig(last_draw[3:])
+                last_sq = get_chess_notation(last_x, last_y)
+                
+                # Tính toán Transition Matrix 8x8 -> 8x8
+                transition_map = {}
+                for i in range(1, len(real_data)):
+                    p_draw = real_data[i-1][:6]
+                    c_draw = real_data[i][:6]
+                    p_x = get_half_sig(p_draw[:3])
+                    p_y = get_half_sig(p_draw[3:])
+                    c_x = get_half_sig(c_draw[:3])
+                    c_y = get_half_sig(c_draw[3:])
+                    
+                    p_sq = get_chess_notation(p_x, p_y)
+                    c_sq = get_chess_notation(c_x, c_y)
+                    
+                    if p_sq not in transition_map:
+                        transition_map[p_sq] = {}
+                    transition_map[p_sq][c_sq] = transition_map[p_sq].get(c_sq, 0) + 1
+                    
+                st.markdown(f"<h4 style='color:#fff;'>📍 Kỳ trước Jackpot nổ tại Tọa độ: <span style='color:#ff00ff; font-size:1.5em;'>{last_sq}</span> (Đầu: {bin_to_struct(last_x)} | Cuối: {bin_to_struct(last_y)})</h4>", unsafe_allow_html=True)
+                
+                if last_sq in transition_map:
+                    next_moves = sorted(transition_map[last_sq].items(), key=lambda item: item[1], reverse=True)
+                    st.success("🤖 Dựa trên Chuỗi Markov, AI dò tìm thấy Tọa độ tiếp theo khả năng cao nhất rơi vào:")
+                    
+                    c_sq1, c_sq2, c_sq3 = st.columns(3)
+                    
+                    def render_target_sq(col, rank, sq_data):
+                        sq_name, count = sq_data
+                        # Phân tích ngược lại từ tên Ô ra cấu trúc
+                        x_idx = ord(sq_name[0]) - 65
+                        y_idx = int(sq_name[1]) - 1
+                        struct_x = bin_to_struct(x_idx)
+                        struct_y = bin_to_struct(y_idx)
+                        
+                        col.markdown(f"""
+                        <div style='background: linear-gradient(145deg, #222, #111); border: 1px solid #ff00ff; padding: 15px; border-radius: 10px; text-align: center;'>
+                            <h3 style='color: #ff00ff; margin:0;'>MỤC TIÊU {rank}</h3>
+                            <h1 style='color: #fff; margin:10px 0; font-size: 3em; text-shadow: 0 0 15px #ff00ff;'>{sq_name}</h1>
+                            <p style='color: #888; font-size: 0.9em;'>Trục Ngang: <b>{struct_x}</b><br>Trục Dọc: <b>{struct_y}</b></p>
+                            <span style='color: #00ffcc;'>Tần suất lịch sử: {count} lần</span>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
+                    if len(next_moves) > 0: render_target_sq(c_sq1, 1, next_moves[0])
+                    if len(next_moves) > 1: render_target_sq(c_sq2, 2, next_moves[1])
+                    if len(next_moves) > 2: render_target_sq(c_sq3, 3, next_moves[2])
+                    
+                    st.info("💡 BÍ KÍP ĐÁNH LƯỚI: Nhìn vào cấu trúc Trục Ngang (Đầu trận) và Trục Dọc (Cuối trận) của MỤC TIÊU 1 ở trên, nhập thủ công vào Bảng KHOANH VÙNG LƯỢNG TỬ ở phía trên cùng để ép AI bốc vé đúng vào Ô này!")
+            st.markdown("</div>", unsafe_allow_html=True)
+            
             # === PHÂN TÍCH CHUYÊN SÂU TỪ KỲ LIỀN KỀ ===
             st.markdown("<div class='card' style='border-color: #00ffcc;'>", unsafe_allow_html=True)
             st.markdown("<h2 style='text-align: center; color: #00ffcc !important;'>🔮 DỰ ĐOÁN CHUYÊN SÂU TỪ KỲ LIỀN KỀ 🔮</h2>", unsafe_allow_html=True)
