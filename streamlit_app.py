@@ -907,7 +907,7 @@ def main_app():
                 fc5.metric("Lọc Delta System", f"{(filter_stats.get('delta',0)/total_gen*100):.1f}%", f"-{filter_stats.get('delta',0):,} vé")
                 fc6.metric("Lọc Chữ Số", f"{(filter_stats.get('digit_freq',0)/total_gen*100):.1f}%", f"-{filter_stats.get('digit_freq',0):,} vé")
                 fc7.metric("Cặp Chữ Số Kề Nhau", f"{(filter_stats.get('adj_digits',0)/total_gen*100):.1f}%", f"-{filter_stats.get('adj_digits',0):,} vé")
-                fc8.metric("Chẵn Lẻ/Cao Thấp", f"{((filter_stats.get('odd_even',0)+filter_stats.get('high_low',0))/total_gen*100):.1f}%", f"-{(filter_stats.get('odd_even',0)+filter_stats.get('high_low',0)):,} vé")
+                fc8.metric("Điểm Ngắt Sóng", f"{(filter_stats.get('wave_break',0)/total_gen*100):.1f}%", f"-{filter_stats.get('wave_break',0):,} vé")
                 
                 st.markdown("</div>", unsafe_allow_html=True)
             

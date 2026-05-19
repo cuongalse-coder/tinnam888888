@@ -62,6 +62,22 @@ class WheelingOptimizer:
         if adj_pairs > 2:
             if stats is not None: stats['adj_digits'] += 1
             return False
+            
+        # Wave Inflection Points Filter (User's Invention)
+        ones = [n % 10 for n in combo]
+        breaks = 0
+        currentDir = 0
+        for i in range(1, 6):
+            s_val_dir = 0
+            if ones[i] > ones[i-1]: s_val_dir = 1
+            elif ones[i] < ones[i-1]: s_val_dir = -1
+            if s_val_dir != 0:
+                if currentDir != 0 and currentDir != s_val_dir:
+                    breaks += 1
+                currentDir = s_val_dir
+        if breaks == 0:
+            if stats is not None: stats['wave_break'] += 1
+            return False
         
         odd = sum(1 for x in combo if x % 2 == 1)
         if odd < constraints.get('odd_lo', 0) or odd > constraints.get('odd_hi', 6):
@@ -121,7 +137,12 @@ class WheelingOptimizer:
         pool = sorted(list(pool))
         if len(pool) <= self.pick_count:
             return [{'numbers': pool, 'strategy': '🎯 Trọng tâm (Duy nhất)'}] * num_tickets, 100.0
-
+        stats = {
+            'sum_range': 0, 'sum_block': 0, 'col_bounds': 0, 'delta': 0,
+            'digit_freq': 0, 'adj_digits': 0, 'wave_break': 0, 'odd_even': 0, 'high_low': 0, 'elastic': 0,
+            'consec': 0, 'decade': 0, 'psych': 0, 'mod7': 0
+        }
+        total_generated = 0
         all_triplets = set(combinations(pool, 3))
         uncovered = set(all_triplets)
         

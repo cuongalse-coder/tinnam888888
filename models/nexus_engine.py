@@ -608,6 +608,20 @@ class NexusEngine:
         if adj_pairs > 2:
             return False
             
+        ones = [n % 10 for n in combo]
+        breaks = 0
+        currentDir = 0
+        for i in range(1, 6):
+            s_val_dir = 0
+            if ones[i] > ones[i-1]: s_val_dir = 1
+            elif ones[i] < ones[i-1]: s_val_dir = -1
+            if s_val_dir != 0:
+                if currentDir != 0 and currentDir != s_val_dir:
+                    breaks += 1
+                currentDir = s_val_dir
+        if breaks == 0:
+            return False
+            
         odd = sum(1 for x in combo if x % 2 == 1)
         if odd < c.get('odd_lo', 0) or odd > c.get('odd_hi', 6):
             return False
