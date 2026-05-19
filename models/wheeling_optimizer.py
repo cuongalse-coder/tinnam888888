@@ -55,11 +55,13 @@ class WheelingOptimizer:
         
         return True
 
-    def generate_wheel(self, pool, num_tickets, constraints=None, sum_mod7=None, history_data=None, ai_top_core=None):
+    def generate_wheel(self, pool, num_tickets, constraints=None, sum_mod7=None, history_data=None, ai_top_core=None, hard_core_lock=0):
         """
         Generates `num_tickets` tickets from `pool` matching AI constraints and strict historical elimination.
-        Maximizes coverage of 3-combinations (triplets) to guarantee a minimum win if the 6 winning numbers are in the pool.
-        Uses ai_top_core to force high-probability 5-6 match locking on early tickets.
+        V700: Maximizes coverage of 3-combinations AND 4-combinations (quadruplets) 
+        to guarantee a minimum win if the 6 winning numbers are in the pool.
+        Uses ai_top_core to force high-probability 5-6 match locking on 40% of tickets.
+        If hard_core_lock > 0, forces the top 1-2 numbers into EVERY SINGLE TICKET.
         """
         pool = sorted(list(pool))
         if len(pool) <= self.pick_count:
@@ -104,6 +106,14 @@ class WheelingOptimizer:
         if not valid_candidates:
             # Fallback if constraints are too tight
             valid_candidates = [tuple(sorted(sys_rand.sample(pool, self.pick_count))) for _ in range(100)]
+            
+        # V20.0: BẠCH THỦ LÔ (HARD CORE LOCK)
+        # Force the top 1-2 numbers into EVERY ticket if requested
+        if hard_core_lock > 0 and ai_top_core and len(ai_top_core) >= hard_core_lock:
+            core_lock_set = set(ai_top_core[:hard_core_lock])
+            locked_candidates = [c for c in valid_candidates if core_lock_set.issubset(set(c))]
+            if len(locked_candidates) > 10:
+                valid_candidates = locked_candidates
              
         # V19.0: FORCING JACKPOT LOCK (Ép xác suất trúng 5-6 số)
         # If the user wants extreme probability of hitting 5-6, we must lock the top 4/5 AI numbers on the first tickets.
@@ -114,8 +124,8 @@ class WheelingOptimizer:
             # Prioritize those that have exactly 5 or exactly 4
             diamond_candidates.sort(key=lambda c: len(set(c) & core_set), reverse=True)
             
-            # We assign up to 30% of our tickets to "Jackpot Lock"
-            num_diamond = min(max(2, int(num_tickets * 0.3)), len(diamond_candidates))
+            # We assign up to 40% of our tickets to "Jackpot Lock" (V700: was 30%)
+            num_diamond = min(max(3, int(num_tickets * 0.4)), len(diamond_candidates))
             
             for i in range(num_diamond):
                 best_ticket = diamond_candidates[i]
@@ -142,9 +152,10 @@ class WheelingOptimizer:
                 sample_pool = sys_rand.sample(valid_candidates, min(len(valid_candidates), 1000))
                 
                 for cand in sample_pool:
-                    # Upgrade to 4-combinations internally to increase density of 4,5,6 hits
                     cand_triplets = set(combinations(cand, 3))
-                    coverage = len(cand_triplets & uncovered)
+                    # V700: Also track quadruplet coverage for 5-6 hit optimization
+                    cand_quads = set(combinations(cand, 4))
+                    coverage = len(cand_triplets & uncovered) + len(cand_quads) * 0.3
                     
                     if coverage > best_coverage:
                         best_coverage = coverage

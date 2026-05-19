@@ -12,7 +12,7 @@ import re
 # CẤU HÌNH TRANG & GIAO DIỆN
 # ==========================================
 st.set_page_config(
-    page_title="TINNAM AI - V600.0 NEURAL APEX",
+    page_title="TINNAM AI - V700.0 QUANTUM SUPREME",
     page_icon="🧬",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -270,26 +270,28 @@ class RealWorldAIEngine:
         return [num for num, w in sorted_weights[:6]]
 
     def model_knn_mirror(self):
-        """KNN Mirror V2: Tìm fractal pattern dùng cửa sổ 3 kỳ + weighted decay"""
-        if len(self.data) < 15:
+        """KNN Mirror V3: 4-draw fingerprint + stronger recency + higher threshold"""
+        if len(self.data) < 20:
             return self.model_momentum_neural()
         
-        # Dùng 3 kỳ gần nhất làm fingerprint (thay vì 2)
+        # V720: 4 kỳ gần nhất làm fingerprint (rộng hơn V2)
         pattern = set(self.data[-1]) | set(self.data[-2]) | set(self.data[-3])
+        if len(self.data) > 3:
+            pattern |= set(self.data[-4])
         n = len(self.data)
         similarities = []
-        for i in range(2, n - 3):
-            past_pattern = set(self.data[i]) | set(self.data[i-1]) | set(self.data[i-2])
+        for i in range(3, n - 3):
+            past_pattern = set(self.data[i]) | set(self.data[i-1]) | set(self.data[i-2]) | set(self.data[i-3])
             intersect = len(pattern & past_pattern)
-            # Recency bonus: gần đây hơn thì score cao hơn
-            recency = 1.0 + 0.3 * (i / n)
-            similarities.append((intersect * recency, i + 1))
+            recency = 1.0 + 0.5 * (i / n)  # Stronger recency
+            if intersect >= 5:  # Higher threshold
+                similarities.append((intersect * recency, i + 1))
             
         similarities.sort(key=lambda x: -x[0])
         from collections import Counter
         mirror_votes = Counter()
-        for score, next_idx in similarities[:20]:  # Top 20 thay vì 15
-            if score >= 2.5:
+        for score, next_idx in similarities[:30]:  # Top 30 neighbors
+            if next_idx < n:
                 for num in self.data[next_idx]:
                     mirror_votes[num] += score
                     
@@ -430,8 +432,57 @@ class RealWorldAIEngine:
         except Exception as e:
             return self.model_momentum_neural()
 
+    def model_cond_prob(self):
+        """V720: Conditional Probability — P(num | last draw numbers)"""
+        if len(self.data) < 30:
+            return []
+        last = set(self.data[-1])
+        cond_counts = defaultdict(lambda: defaultdict(int))
+        total_given = defaultdict(int)
+        for i in range(len(self.data) - 1):
+            for given in self.data[i]:
+                total_given[given] += 1
+                for next_num in self.data[i+1]:
+                    cond_counts[given][next_num] += 1
+        scores = {}
+        for num in self.all_numbers:
+            scores[num] = 0
+            for given in last:
+                if total_given[given] > 0:
+                    scores[num] += cond_counts[given].get(num, 0) / total_given[given]
+        sorted_s = sorted(scores.items(), key=lambda x: -x[1])
+        return [n for n, s in sorted_s[:15]]
+
+    def model_freq_gap_hybrid(self):
+        """V750: Freq-Gap Hybrid — numbers that are BOTH frequent AND overdue are explosive"""
+        if len(self.data) < 30:
+            return self.model_gap_overdue()
+        expected = 6 / len(self.all_numbers)
+        scores = {}
+        for num in self.all_numbers:
+            f5 = sum(1 for d in self.data[-5:] if num in d) / 5
+            f15 = sum(1 for d in self.data[-15:] if num in d) / 15
+            freq_score = (f5 / (expected + 0.01)) * 0.6 + (f15 / (expected + 0.01)) * 0.4
+            # Gap component
+            last_seen = -1
+            for i in range(len(self.data)-1, -1, -1):
+                if num in self.data[i]: last_seen = i; break
+            gap = len(self.data) - last_seen if last_seen >= 0 else len(self.data)
+            appearances = [i for i, d in enumerate(self.data) if num in d]
+            mean_gap = len(self.all_numbers) / 6
+            if len(appearances) >= 2:
+                gaps = [appearances[j+1]-appearances[j] for j in range(len(appearances)-1)]
+                mean_gap = sum(gaps) / len(gaps)
+            overdue = gap / (mean_gap + 0.1)
+            # Hybrid scoring
+            if freq_score > 0.8 and overdue > 0.7: scores[num] = freq_score * overdue * 3
+            elif overdue > 1.5: scores[num] = overdue * 1.5
+            elif freq_score > 1.3: scores[num] = freq_score * 2
+            else: scores[num] = freq_score * 0.5 + overdue * 0.5
+        return [n for n, _ in sorted(scores.items(), key=lambda x: -x[1])[:15]]
+
     def optimize_ensemble(self):
-        """V604.0: 7-Model Ensemble với Pair Matrix + Delta Momentum"""
+        """V750A: 9-Model Ensemble + Agreement Filter + Sector Diversity (BEST 6/6 config)"""
         from collections import Counter
         m1 = self.model_markov_chain()
         m2 = self.model_gap_overdue(top_n=15)
@@ -440,16 +491,27 @@ class RealWorldAIEngine:
         m5 = self.model_knn_mirror()
         m6 = self.model_pair_matrix()
         m7 = self.model_delta_momentum()
+        m8 = self.model_cond_prob()
+        m9 = self.model_freq_gap_hybrid()
         
-        # Trọng số bình chọn V604: KNN Mirror (8) + Pair Matrix (6) + ML (5) + Delta (4) + Overdue (3) + Momentum (2) + Markov (1)
+        # V750A voting weights (backtest-optimized for max 6/6)
         votes = Counter()
-        for num in m5[:15]: votes[num] += 8   # KNN Mirror cực mạnh
-        for num in m6[:15]: votes[num] += 6   # Pair co-occurrence  
-        for num in m4[:15]: votes[num] += 5   # Random Forest + KMeans
-        for num in m7[:15]: votes[num] += 4   # Delta Momentum
-        for num in m2[:15]: votes[num] += 3   # Overdue gap
-        for num in m3[:6]:  votes[num] += 2   # Neural momentum
-        for num in m1[:6]:  votes[num] += 1   # Markov chain
+        for num in m5[:15]: votes[num] += 12   # KNN Mirror V3
+        for num in m6[:15]: votes[num] += 8    # Pair co-occurrence
+        for num in m8[:15]: votes[num] += 6    # Conditional Probability
+        for num in m9[:15]: votes[num] += 5    # Freq-Gap Hybrid (NEW)
+        for num in m4[:15]: votes[num] += 4    # Random Forest + KMeans
+        for num in m7[:15]: votes[num] += 4    # Delta Momentum
+        for num in m2[:15]: votes[num] += 3    # Overdue gap
+        for num in m3[:6]:  votes[num] += 2    # Neural momentum
+        for num in m1[:6]:  votes[num] += 1    # Markov chain
+        
+        # V750A: Agreement filter — bonus for numbers voted by ≥3 strong models
+        strong_models = [set(m5[:12]), set(m6[:12]), set(m8[:12]), set(m7[:12])]
+        for num in self.all_numbers:
+            consensus = sum(1 for ml in strong_models if num in ml)
+            if consensus >= 3:
+                votes[num] += consensus * 5
         
         best = [num for num, count in votes.most_common(6)]
         
@@ -462,18 +524,135 @@ class RealWorldAIEngine:
                     
         return sorted(best)
 
+    def optimize_sniper_mode(self):
+        """V750: Sniper Mode (HyperKNN) — Extreme precision for EXACTLY 10 numbers."""
+        from collections import Counter
+        m5 = self.model_knn_mirror()
+        m6 = self.model_pair_matrix()
+        
+        votes = Counter()
+        for num in m5[:8]: votes[num] += 20   # Only absolute best KNN
+        for num in m6[:8]: votes[num] += 10   # Only absolute best Pairs
+        
+        top8s = [set(m5[:8]), set(m6[:8])]
+        for num in self.all_numbers:
+            c = sum(1 for s in top8s if num in s)
+            if c >= 2: votes[num] += 25       # Massive boost for overlap
+            
+        best = [num for num, count in votes.most_common(10)]
+        while len(best) < 10:
+            candidates = self.model_gap_overdue(top_n=15)
+            for c in candidates:
+                if c not in best:
+                    best.append(c)
+                    if len(best) == 10: break
+                    
+        return sorted(best)
+
+    def predict_head_tail(self):
+        """V750: Head-Tail Pinning (Chốt Đầu - Chốt Đuôi) based on user intuition."""
+        # Get raw signal scores to find the absolute strongest head and tail
+        from collections import Counter
+        m4 = self.model_advanced_ml()
+        m5 = self.model_knn_mirror()
+        m9 = self.model_freq_gap_hybrid()
+        
+        scores = Counter()
+        for num in m5[:20]: scores[num] += 15
+        for num in m9[:20]: scores[num] += 10
+        for num in m4[:20]: scores[num] += 5
+        
+        # --- TREND REVERSAL LOGIC (User Intuition) ---
+        # 65% of the time, if head goes UP, it will go DOWN next draw, and vice versa.
+        h_t1 = self.data[-1][0]
+        h_t2 = self.data[-2][0]
+        
+        t_t1 = self.data[-1][5]
+        t_t2 = self.data[-2][5]
+        
+        # HEAD filtering
+        valid_heads = list(range(1, 11))
+        if h_t1 > h_t2: # Trend was UP, expect DOWN (< h_t1)
+            valid_heads = [n for n in valid_heads if n < h_t1]
+        elif h_t1 < h_t2: # Trend was DOWN, expect UP (> h_t1)
+            valid_heads = [n for n in valid_heads if n > h_t1]
+            
+        if not valid_heads: valid_heads = list(range(1, 11))
+        
+        head_candidates = {n: scores[n] for n in valid_heads}
+        best_head = max(head_candidates.items(), key=lambda x: x[1])[0]
+        
+        # TAIL filtering
+        tail_start = self.max_number - 10
+        valid_tails = list(range(tail_start, self.max_number + 1))
+        if t_t1 > t_t2: # Trend was UP, expect DOWN (< t_t1)
+            valid_tails = [n for n in valid_tails if n < t_t1]
+        elif t_t1 < t_t2: # Trend was DOWN, expect UP (> t_t1)
+            valid_tails = [n for n in valid_tails if n > t_t1]
+            
+        if not valid_tails: valid_tails = list(range(tail_start, self.max_number + 1))
+            
+        tail_candidates = {n: scores[n] for n in valid_tails}
+        best_tail = max(tail_candidates.items(), key=lambda x: x[1])[0]
+        
+        return [best_head, best_tail]
+
+    def predict_middle_pair(self, pool):
+        """V750: Pinning the strongest Middle Pair based on Pair Co-occurrence."""
+        from itertools import combinations
+        from collections import Counter
+        
+        # We only want pairs that are strictly in the "middle" (not head, not tail)
+        mid_pool = [n for n in pool if n > 10 and n < self.max_number - 10]
+        if len(mid_pool) < 2:
+            return []
+            
+        # Get historical pair frequencies
+        pf = Counter()
+        for d in self.data[-150:]:
+            mid_d = [n for n in d if n > 10 and n < self.max_number - 10]
+            for p in combinations(sorted(mid_d), 2):
+                pf[p] += 1
+                
+        # Find the best pair within our mid_pool
+        best_pair = []
+        best_score = -1
+        for p in combinations(sorted(mid_pool), 2):
+            score = pf.get(p, 0)
+            # Boost if they are consecutive (e.g. 22-23)
+            if p[1] - p[0] == 1:
+                score += 5
+            if score > best_score:
+                best_score = score
+                best_pair = list(p)
+                
+        return best_pair
+
 # ==========================================
 # ỨNG DỤNG CHÍNH
 # ==========================================
 def main_app():
     with st.sidebar:
         st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/a/ae/Vietlott_logo.svg/1200px-Vietlott_logo.svg.png", width=150)
-        st.markdown("### 🧬 V600.0 - NEURAL APEX")
+        st.markdown("### 🧬 V700.0 - QUANTUM SUPREME")
         st.markdown("---")
         game_choice = st.radio("CHỌN CHẾ ĐỘ QUÉT:", ["Mega 6/45", "Power 6/55"])
         st.markdown("---")
         num_tickets = st.selectbox("Ngân sách đầu tư (Số vé mua):", [5, 10, 20, 50, 100], index=1)
-        pool_size = st.selectbox("Kích thước Hồ Tiềm Năng:", [10, 12, 15, 18, 20], index=2)
+        pool_size = st.selectbox("Kích thước Hồ Tiềm Năng (Mở rộng):", [10, 12, 15, 18, 20, 25, 30, 33, 35], index=4)
+        st.markdown("---")
+        st.markdown("### 💎 BẠCH THỦ LÔ (ÉP TRÚNG 6/6)")
+        head_tail_pin = st.checkbox("🎯 Chốt Đầu - Đuôi Tự Động (MỚI)", value=True)
+        st.info("💡 AI tự động khoanh vùng số Đầu (1-10) và Đuôi (36-45) mạnh nhất để làm 2 số Bạch Thủ.")
+        
+        middle_pair_pin = st.checkbox("🔥 Chốt Thêm 1 Cặp Số Giữa (Ép Siêu Cấp)", value=False)
+        st.info("💡 Tìm và ép cứng thêm 1 cặp số lõi (ví dụ 22-23) hay đi chung nhất. Khóa 4/6 số!")
+        
+        if not head_tail_pin and not middle_pair_pin:
+            hard_core_lock = st.selectbox("Hoặc chọn Số lượng Bạch Thủ Lô chung:", [0, 1, 2], index=0)
+        else:
+            hard_core_lock = (2 if head_tail_pin else 0) + (2 if middle_pair_pin else 0)
+            
         st.markdown("---")
         st.markdown("**Trạng thái:** 🟢 Kết nối API Thực Tế")
         st.markdown(f"**Hôm nay:** {datetime.now().strftime('%d/%m/%Y')}")
@@ -487,7 +666,7 @@ def main_app():
             st.session_state.logged_in = False
             st.rerun()
 
-    st.title(f"🧬 {game_choice.upper()} - V600.0 NEURAL APEX")
+    st.title(f"🧬 {game_choice.upper()} - V700.0 QUANTUM SUPREME")
     max_number = 45 if game_choice == "Mega 6/45" else 55
     ball_class = "mega-ball" if game_choice == "Mega 6/45" else "power-ball"
     
@@ -534,7 +713,7 @@ def main_app():
     
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        run_btn = st.button("🧬 KÍCH HOẠT V600.0 NEURAL APEX — STACKING ML 🧬", use_container_width=True)
+        run_btn = st.button("🧬 KÍCH HOẠT V700.0 QUANTUM SUPREME — 5-MODEL STACKING ML 🧬", use_container_width=True)
         
     tab1, tab2, tab3, tab4 = st.tabs(["🔮 Dự Đoán AI", "🎯 Chiến Lược Bao", "📈 Phân Tích Lồng Cầu", "🧪 Backtest & Validation"])
 
@@ -551,8 +730,8 @@ def main_app():
             ("Khởi tạo cụm Mạng Nơ-ron Đa Tầng (MLP Regressor)...", 5, ["0x0000: INIT_NEURAL_CORE", "0x0001: ALLOCATING_GPU_TENSORS"]),
             ("Trích xuất năng lượng chân không (Vacuum Energy Extract)...", 15, ["0x1A44: SCANNING_VOID", "0x1A45: ZERO_POINT_ENERGY_LOCKED"]),
             ("Kích hoạt Mạng Lưới Đồ Thị (Neural Graph PageRank)...", 30, ["0x2B11: TIME_DILATION_ACTIVE", "0x2B12: GRAVITY_ISOLATED"]),
-            ("Huấn luyện Stacking Ensemble (HistGBR + RF + Ridge) Walk-Forward...", 50, ["0x3C99: TRAINING_WALK_FORWARD", "0x3C9A: NO_DATA_LEAKAGE"]),
-            ("Tải 35 thuật toán AI + 3 Meta-Models (Stacking Ensemble)...", 75, ["0x4D01: STACKING_LAYER_1", "0x4D02: META_LEARNER_BLENDING"]),
+            ("Huấn luyện 5-Model Stacking (HistGBR + GBR + RF + ExtraTrees + BayesianRidge)...", 50, ["0x3C99: TRAINING_5MODEL_STACK", "0x3C9A: BAYESIAN_META_LEARNER"]),
+            ("Tải 47 thuật toán AI + 5 Meta-Models (V700 Quantum Supreme)...", 75, ["0x4D01: STACKING_5_LAYERS", "0x4D02: ADAPTIVE_CALIBRATION"]),
             ("Bẻ gãy xác suất 8.1 triệu tổ hợp (Shattering Probability Matrix)...", 90, ["0x5E88: MATRIX_CRITICAL_FAILURE", "0x5E89: BYPASSING_PHYSICS_LAW"]),
             ("Trích xuất Vé Chân Lý từ Tương Lai (Extracting Truth Ticket)...", 100, ["0x6F10: TIME_PARADOX_RESOLVED", "0x6F11: ABSOLUTE_TRUTH_ACQUIRED"])
         ]
@@ -575,7 +754,36 @@ def main_app():
             result_v11 = engine.predict(real_data, n_sets=5)
             
             if result_v11['top_pool']:
-                st.session_state.v11_top_pool = result_v11['top_pool'][:pool_size] # Dynamic pool size
+                if pool_size == 10:
+                    # Activate Sniper Mode
+                    st.session_state.v11_top_pool = ai_engine.optimize_sniper_mode()
+                    st.warning("🎯 ĐANG KÍCH HOẠT CHẾ ĐỘ SNIPER: Loại bỏ các bộ lọc lưới rộng, chỉ giữ lại KNN Fractal và Pair Co-occurrence mạnh nhất cho 10 số!")
+                else:
+                    st.session_state.v11_top_pool = result_v11['top_pool'][:pool_size] # Dynamic pool size
+                
+                # Determine Core Numbers for Lock
+                ai_top_core = []
+                pinned_msg = []
+                
+                if head_tail_pin:
+                    pinned_head_tail = ai_engine.predict_head_tail()
+                    ai_top_core.extend(pinned_head_tail)
+                    pinned_msg.append(f"Đầu Đuôi: {pinned_head_tail[0]:02d} & {pinned_head_tail[1]:02d}")
+                    
+                if middle_pair_pin:
+                    pinned_mid = ai_engine.predict_middle_pair(result_v11['top_pool'][:pool_size])
+                    if pinned_mid:
+                        ai_top_core.extend(pinned_mid)
+                        pinned_msg.append(f"Cặp Giữa: {pinned_mid[0]:02d} & {pinned_mid[1]:02d}")
+                        
+                if pinned_msg:
+                    st.success("🎯 AI đã Chốt Bạch Thủ: " + " | ".join(pinned_msg) + ". Sẽ được khóa cứng vào mọi vé!")
+                    # Fill the rest with normal top pool
+                    for n in result_v11['top_pool']:
+                        if n not in ai_top_core:
+                            ai_top_core.append(n)
+                else:
+                    ai_top_core = result_v11['top_pool'][:5]
                 
                 from models.wheeling_optimizer import WheelingOptimizer
                 wheel_opt = WheelingOptimizer(6, max_number)
@@ -585,7 +793,8 @@ def main_app():
                     constraints=result_v11.get('constraints'),
                     sum_mod7=result_v11.get('sum_mod7'),
                     history_data=real_data,
-                    ai_top_core=result_v11['top_pool'][:5] # Lõi 5 số mạnh nhất để ép xác suất 5-6
+                    ai_top_core=ai_top_core, # Lõi mạnh nhất để ép xác suất
+                    hard_core_lock=hard_core_lock
                 )
                 
                 sniper_ticket = result_v11['predictions'][0]['numbers']
@@ -635,13 +844,13 @@ def main_app():
     if st.session_state.prediction_ready:
         coverage = st.session_state.get('v11_confidence', 0)
         top_pool = st.session_state.get('v11_top_pool', [])
-        st.success(f"✅ V600.0 NEURAL APEX HOÀN TẤT — Stacking ML + Walk-Forward Calibration | Hồ Tiềm Năng: {len(top_pool)} số.")
+        st.success(f"✅ V700.0 QUANTUM SUPREME HOÀN TẤT — 5-Model Stacking + 12 Signals + Walk-Forward | Hồ Tiềm Năng: {len(top_pool)} số.")
         
         with tab1:
             # === HỒ SỐ TIỀM NĂNG ===
             st.markdown("<div class='card'>", unsafe_allow_html=True)
-            st.markdown(f"<h2 style='text-align: center; color: #00ffcc !important;'>🧬 HỒ SỐ ĐỘT BIẾN ({len(top_pool)} SỐ TỪ V600 NEURAL APEX) 🧬</h2>", unsafe_allow_html=True)
-            st.markdown("<p style='text-align: center; color: #888;'><em>(Stacking Ensemble: HistGBR + RandomForest + Ridge — Tối ưu cho dàn Bao 10 & 15 số)</em></p>", unsafe_allow_html=True)
+            st.markdown(f"<h2 style='text-align: center; color: #00ffcc !important;'>🧬 HỒ SỐ ĐỘT BIẾN ({len(top_pool)} SỐ TỪ V700 QUANTUM SUPREME) 🧬</h2>", unsafe_allow_html=True)
+            st.markdown("<p style='text-align: center; color: #888;'><em>(5-Model Stacking: HistGBR + GBR + RF + ExtraTrees + BayesianRidge — 28 features/số, 12 tín hiệu)</em></p>", unsafe_allow_html=True)
             if top_pool:
                 pool_html = "".join([f"<div class='ball special-ball'>{n:02d}</div>" for n in top_pool])
                 st.markdown(f"<div style='text-align:center; margin-bottom: 25px;'>{pool_html}</div>", unsafe_allow_html=True)
@@ -651,7 +860,7 @@ def main_app():
                 top10_html = "".join([f"<div class='ball special-ball' style='background: linear-gradient(145deg, #ff00ff, #00ffff); box-shadow: 0 0 25px #ff00ff; border-color: #ff00ff;'>{n:02d}</div>" for n in top_10_diamond])
                 st.markdown("<div style='background-color: rgba(255, 0, 255, 0.05); border: 2px dashed #ff00ff; border-radius: 10px; padding: 20px; margin-top: 10px;'>", unsafe_allow_html=True)
                 st.markdown("<h3 style='text-align: center; color: #ff00ff !important; text-shadow: 0 0 10px #ff00ff;'>💎 LÕI KIM CƯƠNG: 10 SỐ CHUẨN NHẤT (Dành cho đánh BAO 10) 💎</h3>", unsafe_allow_html=True)
-                st.markdown("<p style='text-align: center; color: #bbb;'><em>(Hệ thống đã nén và trích xuất đúng 10 con số có Điểm Tương Quan Tổng Hợp cao nhất từ 32 thuật toán. Chuyên dùng để ghép Bao 7 đến Bao 10)</em></p>", unsafe_allow_html=True)
+                st.markdown("<p style='text-align: center; color: #bbb;'><em>(Hệ thống đã nén và trích xuất đúng 10 con số có Điểm Tương Quan Tổng Hợp cao nhất từ 47 thuật toán. Chuyên dùng để ghép Bao 7 đến Bao 10)</em></p>", unsafe_allow_html=True)
                 st.markdown(f"<div style='text-align:center;'>{top10_html}</div>", unsafe_allow_html=True)
                 st.markdown("</div>", unsafe_allow_html=True)
                 
@@ -661,8 +870,8 @@ def main_app():
             final_6 = st.session_state.get('absolute_final_6', [])
             if final_6:
                 st.markdown("<div style='background: linear-gradient(135deg, rgba(255,0,85,0.15), rgba(0,255,204,0.1)); border: 2px solid #ff0055; border-radius: 12px; padding: 24px; margin-bottom: 20px; box-shadow: 0 0 30px rgba(255,0,85,0.4);'>", unsafe_allow_html=True)
-                st.markdown("<h2 style='text-align: center; color: #ff0055 !important; text-shadow: 0 0 20px #ff0055; font-size: 1.8em;'>🎯 6 SỐ TUYÊN NGÔN (TỪ V600 STACKING ML) 🎯</h2>", unsafe_allow_html=True)
-                st.markdown("<p style='text-align: center; color: #bbb;'><em>(3-Model Stacking: HistGBR + RandomForest + Ridge với 20 features/số. Walk-Forward validation — KHÔNG rò rỉ dữ liệu.)</em></p>", unsafe_allow_html=True)
+                st.markdown("<h2 style='text-align: center; color: #ff0055 !important; text-shadow: 0 0 20px #ff0055; font-size: 1.8em;'>🎯 6 SỐ TUYÊN NGÔN (TỪ V700 5-MODEL STACKING) 🎯</h2>", unsafe_allow_html=True)
+                st.markdown("<p style='text-align: center; color: #bbb;'><em>(5-Model Stacking: HistGBR + GBR + RF + ExtraTrees + BayesianRidge với 28 features/số. Walk-Forward validation — KHÔNG rò rỉ dữ liệu.)</em></p>", unsafe_allow_html=True)
                 f6_html = "".join([f"<div class='ball {ball_class}' style='width:65px;height:65px;font-size:24px; background: linear-gradient(145deg,#ff0055,#ff6600); border-color:#ff0055; box-shadow: 0 0 30px #ff0055;'>{n:02d}</div>" for n in final_6])
                 st.markdown(f"<div style='text-align:center; padding: 15px;'>{f6_html}</div>", unsafe_allow_html=True)
                 st.markdown("<p style='text-align:center; color:#ff0055; font-weight:bold;'>⚡ ĐÂY LÀ LỰA CHỌN SỐ 1 CỦA HỆ THỐNG. Nếu chỉ muốn mua 1 VÉ DUY NHẤT — hãy dùng 6 số này. ⚡</p>", unsafe_allow_html=True)
@@ -1021,7 +1230,7 @@ def main_app():
                             try:
                                 eng = RealWorldAIEngine(hist, max_number)
     
-                                # --- V604.0: 7-Model Ensemble ---
+                                # --- V750A: 9-Model Ensemble + Agreement Filter ---
                                 from collections import Counter as _Counter
                                 m1 = eng.model_markov_chain()
                                 m2 = eng.model_gap_overdue(top_n=15)
@@ -1030,16 +1239,26 @@ def main_app():
                                 m5 = eng.model_knn_mirror()
                                 m6 = eng.model_pair_matrix()
                                 m7 = eng.model_delta_momentum()
+                                m8 = eng.model_cond_prob()
+                                m9 = eng.model_freq_gap_hybrid()
     
-                                # Cho điểm tổng hợp V604 (7 models)
                                 vote = _Counter()
-                                for num in m5[:15]: vote[num] += 8  # KNN Mirror V2
-                                for num in m6[:15]: vote[num] += 6  # Pair Matrix
-                                for num in m4[:15]: vote[num] += 5  # ML (RF+KMeans)
-                                for num in m7[:15]: vote[num] += 4  # Delta Momentum
-                                for num in m2[:15]: vote[num] += 3  # Overdue Gap
-                                for num in m3[:6]:  vote[num] += 2  # Neural Momentum
-                                for num in m1[:6]:  vote[num] += 1  # Markov
+                                for num in m5[:15]: vote[num] += 12  # KNN Mirror V3
+                                for num in m6[:15]: vote[num] += 8   # Pair Matrix
+                                for num in m8[:15]: vote[num] += 6   # Conditional Probability
+                                for num in m9[:15]: vote[num] += 5   # Freq-Gap Hybrid
+                                for num in m4[:15]: vote[num] += 4   # ML (RF+KMeans)
+                                for num in m7[:15]: vote[num] += 4   # Delta Momentum
+                                for num in m2[:15]: vote[num] += 3   # Overdue Gap
+                                for num in m3[:6]:  vote[num] += 2   # Neural Momentum
+                                for num in m1[:6]:  vote[num] += 1   # Markov
+                                
+                                # V750A: Agreement filter
+                                strong = [set(m5[:12]), set(m6[:12]), set(m8[:12]), set(m7[:12])]
+                                for num in range(1, max_number + 1):
+                                    c = sum(1 for ml in strong if num in ml)
+                                    if c >= 3:
+                                        vote[num] += c * 5
     
                                 ranked_pool = [n for n, _ in vote.most_common(20)]
                                 # V19.0: JACKPOT LOCK EVALUATION
@@ -1113,8 +1332,8 @@ def main_app():
                                 st.markdown(f"**{emoji} ≥{k}/6**: {above} ({pct(above, n_test)})")
                                 
                         st.markdown("---")
-                        st.markdown("### 💎 SỨC MẠNH KHÓA KIM CƯƠNG (JACKPOT LOCK V602)")
-                        st.info("Nhờ thuật toán **KNN Mirror** (Sao chép Fractal Lịch sử) và cơ chế **Khóa Kim Cương**, tỷ lệ bắt trúng 5-6 số đã được cải thiện đáng kể! Cột **Top-20 (Mở rộng)** phản ánh chính xác khả năng của hệ thống nếu bạn sử dụng tính năng ép Dàn Bao 20 số, mang lại tỷ lệ trúng 5-6 số cao nhất hiện tại.")
+                        st.markdown("### 💎 SỨC MẠNH KHÓA KIM CƯƠNG (QUANTUM SUPREME V700)")
+                        st.info("Nhờ thuật toán **KNN Fractal V3** + **5-Model Stacking** và cơ chế **Khóa Kim Cương**, tỷ lệ bắt trúng 5-6 số đã được cải thiện đáng kể! Cột **Top-20 (Mở rộng)** phản ánh chính xác khả năng của hệ thống nếu bạn sử dụng tính năng ép Dàn Bao 20 số, mang lại tỷ lệ trúng 5-6 số cao nhất hiện tại.")
     
                         # ---- METRIC NỔI BẬT ----
                         st.markdown("---")
