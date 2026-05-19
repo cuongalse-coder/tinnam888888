@@ -594,6 +594,7 @@ class NexusEngine:
                 top_frequent.add(arr[i][0])
                 
         markov_transitions = [{} for _ in range(self.pick_count)]
+        alphabet_patterns = set()
         if len(data) >= 2:
             for i in range(1, len(data)):
                 p_draw = data[i-1][:self.pick_count]
@@ -604,6 +605,10 @@ class NexusEngine:
                     if p_val not in markov_transitions[c]:
                         markov_transitions[c][p_val] = set()
                     markov_transitions[c][p_val].add(c_val)
+                    
+            for d in data:
+                word = "".join("A" if x<=9 else "B" if x<=19 else "C" if x<=29 else "D" if x<=39 else "E" for x in d[:self.pick_count])
+                alphabet_patterns.add(word)
             
         return {
             'sum_lo': sum_lo,
@@ -623,6 +628,7 @@ class NexusEngine:
             'hot_pool': hot_pool,
             'top_frequent': top_frequent,
             'markov_transitions': markov_transitions,
+            'alphabet_patterns': alphabet_patterns,
             'prev_draw': data[-1][:self.pick_count] if len(data) >= 1 else None
         }
 
@@ -772,6 +778,13 @@ class NexusEngine:
                     old_col = prev_draw.index(num)
                     if abs(new_col - old_col) >= 3:
                         return False
+                        
+        # Alphabet Decade Cipher
+        alphabet_patterns = c.get('alphabet_patterns')
+        if alphabet_patterns is not None:
+            word = "".join("A" if x<=9 else "B" if x<=19 else "C" if x<=29 else "D" if x<=39 else "E" for x in combo)
+            if word not in alphabet_patterns:
+                return False
             
         odd = sum(1 for x in combo if x % 2 == 1)
         if odd < c.get('odd_lo', 0) or odd > c.get('odd_hi', 6):

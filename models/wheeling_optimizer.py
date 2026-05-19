@@ -187,6 +187,14 @@ class WheelingOptimizer:
                         if abs(new_col - old_col) >= 3:
                             if stats is not None: stats['col_migration'] += 1
                             return False
+                            
+        # Alphabet Decade Cipher
+        alphabet_patterns = constraints.get('alphabet_patterns')
+        if alphabet_patterns is not None:
+            word = "".join("A" if x<=9 else "B" if x<=19 else "C" if x<=29 else "D" if x<=39 else "E" for x in combo)
+            if word not in alphabet_patterns:
+                if stats is not None: stats['alphabet_cipher'] += 1
+                return False
             
         odd = sum(1 for x in combo if x % 2 == 1)
         if odd < constraints.get('odd_lo', 0) or odd > constraints.get('odd_hi', 6):
@@ -250,7 +258,7 @@ class WheelingOptimizer:
             'sum_range': 0, 'sum_block': 0, 'col_bounds': 0, 'delta': 0,
             'digit_freq': 0, 'adj_digits': 0, 'wave_break': 0, 'rubik_matrix': 0, 'color_palette': 0,
             'go_board': 0, 'sliding_window': 0, 'markov_chain': 0, 'hacker_cipher': 0, 'freq_polarity': 0,
-            'col_migration': 0, 'odd_even': 0, 'high_low': 0, 'elastic': 0,
+            'col_migration': 0, 'alphabet_cipher': 0, 'odd_even': 0, 'high_low': 0, 'elastic': 0,
             'consec': 0, 'decade': 0, 'psych': 0, 'mod7': 0
         }
         total_generated = 0

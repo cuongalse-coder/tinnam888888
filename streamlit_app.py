@@ -919,7 +919,13 @@ def main_app():
                 fc13.metric("Lọc Chu Kỳ (Sliding)", f"{(filter_stats.get('sliding_window',0)/total_gen*100):.1f}%", f"-{filter_stats.get('sliding_window',0):,} vé")
                 fc14.metric("Đường Rẽ (Markov)", f"{(filter_stats.get('markov_chain',0)/total_gen*100):.1f}%", f"-{filter_stats.get('markov_chain',0):,} vé")
                 fc15.metric("Mật Mã Hacker", f"{(filter_stats.get('hacker_cipher',0)/total_gen*100):.1f}%", f"-{filter_stats.get('hacker_cipher',0):,} vé")
-                fc16.metric("Di Cư Cột (Migration)", f"{(filter_stats.get('col_migration',0)/total_gen*100):.1f}%", f"-{filter_stats.get('col_migration',0):,} vé")
+                fc16.metric("Cân Bằng Tần Suất", f"{(filter_stats.get('freq_polarity',0)/total_gen*100):.1f}%", f"-{filter_stats.get('freq_polarity',0):,} vé")
+                
+                fc17, fc18, fc19, fc20 = st.columns(4)
+                fc17.metric("Di Cư Cột (Migration)", f"{(filter_stats.get('col_migration',0)/total_gen*100):.1f}%", f"-{filter_stats.get('col_migration',0):,} vé")
+                fc18.metric("Mật Mã Chữ Cái", f"{(filter_stats.get('alphabet_cipher',0)/total_gen*100):.1f}%", f"-{filter_stats.get('alphabet_cipher',0):,} vé")
+                fc19.metric("Lọc Cao/Thấp", f"{(filter_stats.get('high_low',0)/total_gen*100):.1f}%", f"-{filter_stats.get('high_low',0):,} vé")
+                fc20.metric("Lọc Thập Kỷ", f"{(filter_stats.get('decade',0)/total_gen*100):.1f}%", f"-{filter_stats.get('decade',0):,} vé")
                 
                 st.markdown("</div>", unsafe_allow_html=True)
             
