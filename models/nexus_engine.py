@@ -582,6 +582,17 @@ class NexusEngine:
                 if counts[n] == 0: missing_pool.add(n)
                 elif counts[n] >= 2: hot_pool.add(n)
                 
+        top_frequent = set()
+        if len(data) >= 100:
+            window = data[-100:]
+            freqs = [0] * 46
+            for d in window:
+                for x in d[:self.pick_count]: freqs[x] += 1
+            arr = [(n, freqs[n]) for n in range(1, 46)]
+            arr.sort(key=lambda x: x[1], reverse=True)
+            for i in range(22):
+                top_frequent.add(arr[i][0])
+                
         markov_transitions = [{} for _ in range(self.pick_count)]
         if len(data) >= 2:
             for i in range(1, len(data)):
@@ -610,6 +621,7 @@ class NexusEngine:
             'prev_draw_set': prev_draw_set,
             'missing_pool': missing_pool,
             'hot_pool': hot_pool,
+            'top_frequent': top_frequent,
             'markov_transitions': markov_transitions,
             'prev_draw': data[-1][:self.pick_count] if len(data) >= 1 else None
         }
@@ -744,6 +756,13 @@ class NexusEngine:
         is_alt = (s_bin == "010101010101" or s_bin == "101010101010")
         if max_0 >= 7 or max_1 >= 7 or is_pal or is_alt:
             return False
+            
+        # Frequency Polarity Filter
+        top_frequent = c.get('top_frequent')
+        if top_frequent:
+            hit_top = sum(1 for x in combo if x in top_frequent)
+            if hit_top < 2 or hit_top > 4:
+                return False
             
         odd = sum(1 for x in combo if x % 2 == 1)
         if odd < c.get('odd_lo', 0) or odd > c.get('odd_hi', 6):

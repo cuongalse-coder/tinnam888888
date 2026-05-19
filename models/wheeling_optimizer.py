@@ -168,6 +168,14 @@ class WheelingOptimizer:
             if stats is not None: stats['hacker_cipher'] += 1
             return False
             
+        # Frequency Polarity Filter
+        top_frequent = constraints.get('top_frequent')
+        if top_frequent:
+            hit_top = sum(1 for x in combo if x in top_frequent)
+            if hit_top < 2 or hit_top > 4:
+                if stats is not None: stats['freq_polarity'] += 1
+                return False
+            
         odd = sum(1 for x in combo if x % 2 == 1)
         if odd < constraints.get('odd_lo', 0) or odd > constraints.get('odd_hi', 6):
             if stats is not None: stats['odd_even'] += 1
@@ -229,7 +237,7 @@ class WheelingOptimizer:
         stats = {
             'sum_range': 0, 'sum_block': 0, 'col_bounds': 0, 'delta': 0,
             'digit_freq': 0, 'adj_digits': 0, 'wave_break': 0, 'rubik_matrix': 0, 'color_palette': 0,
-            'go_board': 0, 'sliding_window': 0, 'markov_chain': 0, 'hacker_cipher': 0, 
+            'go_board': 0, 'sliding_window': 0, 'markov_chain': 0, 'hacker_cipher': 0, 'freq_polarity': 0,
             'odd_even': 0, 'high_low': 0, 'elastic': 0,
             'consec': 0, 'decade': 0, 'psych': 0, 'mod7': 0
         }
