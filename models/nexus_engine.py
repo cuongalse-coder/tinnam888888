@@ -556,6 +556,21 @@ class NexusEngine:
         if sum_lo > sum_hi:
             sum_lo, sum_hi = sum_hi, sum_lo
             
+        go_board_liberties = set()
+        prev_draw_set = set()
+        if len(data) >= 1:
+            prev_draw = data[-1][:self.pick_count]
+            prev_draw_set = set(prev_draw)
+            for b in prev_draw:
+                r, c = (b-1) // 9, (b-1) % 9
+                if r > 0: go_board_liberties.add((r-1)*9 + c + 1)
+                if r < 4: go_board_liberties.add((r+1)*9 + c + 1)
+                if c > 0: go_board_liberties.add(r*9 + (c-1) + 1)
+                if c < 8: go_board_liberties.add(r*9 + (c+1) + 1)
+            for b in prev_draw:
+                if b in go_board_liberties:
+                    go_board_liberties.remove(b)
+            
         return {
             'sum_lo': sum_lo,
             'sum_hi': sum_hi,
@@ -568,6 +583,8 @@ class NexusEngine:
             'banned_sum_block': banned_sum_block,
             'col_bounds': col_bounds,
             'delta_hi': delta_hi,
+            'go_board_liberties': go_board_liberties,
+            'prev_draw_set': prev_draw_set
         }
 
     def _validate(self, combo, c):
@@ -656,6 +673,15 @@ class NexusEngine:
         max_color = max(colors)
         if unique_colors <= 2 or max_color >= 4:
             return False
+            
+        # Go Board Filter
+        prev_draw_set = c.get('prev_draw_set')
+        go_board_liberties = c.get('go_board_liberties')
+        if prev_draw_set is not None and go_board_liberties is not None:
+            overlap = sum(1 for x in combo if x in prev_draw_set)
+            contact = sum(1 for x in combo if x in go_board_liberties)
+            if overlap > 2 or contact > 4:
+                return False
             
         odd = sum(1 for x in combo if x % 2 == 1)
         if odd < c.get('odd_lo', 0) or odd > c.get('odd_hi', 6):
