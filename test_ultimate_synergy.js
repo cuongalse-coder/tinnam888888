@@ -42,6 +42,39 @@ async function main() {
     let prevSum = prevDraw.reduce((a,b)=>a+b, 0);
     let banned_sum_block = [prevSum - 10, prevSum + 10];
     
+    // Sliding Window
+    let missing_pool = new Set();
+    let hot_pool = new Set();
+    let window10 = data.slice(data.length - 10);
+    let counts10 = Array(46).fill(0);
+    for(let d of window10) for(let x of d.slice(0,6)) counts10[x]++;
+    for(let n=1; n<=45; n++) {
+        if(counts10[n] === 0) missing_pool.add(n);
+        else if(counts10[n] >= 2) hot_pool.add(n);
+    }
+    
+    // Markov Transitions
+    let markov_transitions = [{},{},{},{},{},{}];
+    for(let i=1; i<data.length; i++){
+        let p_draw = data[i-1].slice(0,6);
+        let c_draw = data[i].slice(0,6);
+        for(let c=0; c<6; c++){
+            let pv = p_draw[c], cv = c_draw[c];
+            if(!markov_transitions[c][pv]) markov_transitions[c][pv] = new Set();
+            markov_transitions[c][pv].add(cv);
+        }
+    }
+    
+    // Frequency Polarity
+    let top_frequent = new Set();
+    let window100 = data.slice(data.length - 100);
+    let freqs100 = Array(46).fill(0);
+    for(let d of window100) for(let x of d.slice(0,6)) freqs100[x]++;
+    let arr100 = [];
+    for(let n=1; n<=45; n++) arr100.push({n, c: freqs100[n]});
+    arr100.sort((a,b) => b.c - a.c);
+    for(let i=0; i<22; i++) top_frequent.add(arr100[i].n);
+    
     // Go Board Setup
     let prev_draw_set = new Set(prevDraw);
     let go_board_liberties = new Set();
@@ -73,6 +106,10 @@ async function main() {
         survive_rubik: 0,
         survive_color: 0,
         survive_go: 0,
+        survive_sliding: 0,
+        survive_markov: 0,
+        survive_hacker: 0,
+        survive_polarity: 0,
         final_survivors: 0
     };
 
@@ -195,6 +232,52 @@ async function main() {
                             if(overlap>2 || contact>4) continue;
                             stats.survive_go++;
                             
+                            // 13. Lọc Chu Kỳ 10 Kỳ (Sliding Window)
+                            let missing_hit = 0;
+                            let hot_hit = 0;
+                            for(let x of combo) {
+                                if (missing_pool.has(x)) missing_hit++;
+                                else if (hot_pool.has(x)) hot_hit++;
+                            }
+                            if (missing_hit > 3 || hot_hit > 3) continue;
+                            stats.survive_sliding++;
+                            
+                            // 14. Đường Rẽ Markov (Markov Transitions)
+                            let markov_pass = 0;
+                            for(let i=0; i<6; i++) {
+                                let p_val = prevDraw[i];
+                                let c_val = combo[i];
+                                if (markov_transitions[i] && markov_transitions[i][p_val] && markov_transitions[i][p_val].has(c_val)) {
+                                    markov_pass++;
+                                }
+                            }
+                            if (markov_pass < 4) continue;
+                            stats.survive_markov++;
+                            
+                            // 15. Mật Mã Hacker 12-bit (Hacker Cipher)
+                            let s_bin = "";
+                            for(let x of combo) {
+                                let x_str = x.toString().padStart(2, '0');
+                                s_bin += parseInt(x_str[0]) % 2 === 0 ? "0" : "1";
+                                s_bin += parseInt(x_str[1]) % 2 === 0 ? "0" : "1";
+                            }
+                            let max_0 = 0, c0 = 0;
+                            for(let b of s_bin) { if (b === "0") { c0++; if(c0>max_0) max_0=c0; } else c0=0; }
+                            let max_1 = 0, c1 = 0;
+                            for(let b of s_bin) { if (b === "1") { c1++; if(c1>max_1) max_1=c1; } else c1=0; }
+                            let is_pal = s_bin === s_bin.split('').reverse().join('');
+                            let is_alt = s_bin === "010101010101" || s_bin === "101010101010";
+                            if (max_0 >= 7 || max_1 >= 7 || is_pal || is_alt) continue;
+                            stats.survive_hacker++;
+                            
+                            // 16. Cân Bằng Tần Suất (Frequency Polarity)
+                            let top_hit = 0;
+                            for(let x of combo) {
+                                if (top_frequent.has(x)) top_hit++;
+                            }
+                            if (top_hit < 2 || top_hit > 4) continue;
+                            stats.survive_polarity++;
+                            
                             stats.final_survivors++;
                         }
                     }
@@ -204,7 +287,7 @@ async function main() {
     }
     
     console.log('\n========================================================================');
-    console.log('🏆 PHỄU LỌC TỔNG HỢP: 10 LỚP KHIÊN BẢO VỆ (THE ULTIMATE SYNERGY GAUNTLET)');
+    console.log('🏆 PHỄU LỌC TỔNG HỢP: 16 LỚP KHIÊN BẢO VỆ (THE ULTIMATE SYNERGY GAUNTLET)');
     console.log('========================================================================');
     console.log(`Bắt đầu với KHÔNG GIAN TOÀN VẸN: ${stats.total.toLocaleString()} tổ hợp`);
     
@@ -228,6 +311,10 @@ async function main() {
     step("Lọc Ma Trận Rubik", stats.survive_rubik);
     step("Lọc Màu Ngũ Hành", stats.survive_color);
     step("Lọc Địa Bàn Cờ Vây", stats.survive_go);
+    step("Lọc Chu Kỳ (Sliding)", stats.survive_sliding);
+    step("Đường Rẽ (Markov)", stats.survive_markov);
+    step("Mật Mã Hacker", stats.survive_hacker);
+    step("Cân Bằng Tần Suất", stats.survive_polarity);
     step("LỌC TỔNG CUỐI CÙNG", stats.final_survivors);
     
     let finalPct = ((stats.total - stats.final_survivors) / stats.total * 100).toFixed(2);

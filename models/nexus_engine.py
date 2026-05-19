@@ -763,6 +763,15 @@ class NexusEngine:
             hit_top = sum(1 for x in combo if x in top_frequent)
             if hit_top < 2 or hit_top > 4:
                 return False
+                
+        # Column Migration Filter
+        if prev_draw is not None:
+            for new_col in range(len(combo)):
+                num = combo[new_col]
+                if num in prev_draw_set:
+                    old_col = prev_draw.index(num)
+                    if abs(new_col - old_col) >= 3:
+                        return False
             
         odd = sum(1 for x in combo if x % 2 == 1)
         if odd < c.get('odd_lo', 0) or odd > c.get('odd_hi', 6):
