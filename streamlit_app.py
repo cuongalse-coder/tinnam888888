@@ -910,10 +910,16 @@ def main_app():
                 fc8.metric("Điểm Ngắt Sóng", f"{(filter_stats.get('wave_break',0)/total_gen*100):.1f}%", f"-{filter_stats.get('wave_break',0):,} vé")
                 
                 fc9, fc10, fc11, fc12 = st.columns(4)
-                fc9.metric("Lọc Chu Kỳ (Sliding)", f"{(filter_stats.get('sliding_window',0)/total_gen*100):.1f}%", f"-{filter_stats.get('sliding_window',0):,} vé")
+                fc9.metric("Ma Trận Rubik", f"{(filter_stats.get('rubik_matrix',0)/total_gen*100):.1f}%", f"-{filter_stats.get('rubik_matrix',0):,} vé")
                 fc10.metric("Lọc Bảng Màu", f"{(filter_stats.get('color_palette',0)/total_gen*100):.1f}%", f"-{filter_stats.get('color_palette',0):,} vé")
                 fc11.metric("Lọc Địa Bàn (Cờ Vây)", f"{(filter_stats.get('go_board',0)/total_gen*100):.1f}%", f"-{filter_stats.get('go_board',0):,} vé")
                 fc12.metric("Lọc Chẵn/Lẻ", f"{(filter_stats.get('odd_even',0)/total_gen*100):.1f}%", f"-{filter_stats.get('odd_even',0):,} vé")
+                
+                fc13, fc14, fc15, fc16 = st.columns(4)
+                fc13.metric("Lọc Chu Kỳ (Sliding)", f"{(filter_stats.get('sliding_window',0)/total_gen*100):.1f}%", f"-{filter_stats.get('sliding_window',0):,} vé")
+                fc14.metric("Đường Rẽ (Markov)", f"{(filter_stats.get('markov_chain',0)/total_gen*100):.1f}%", f"-{filter_stats.get('markov_chain',0):,} vé")
+                fc15.metric("Lọc Cao/Thấp", f"{(filter_stats.get('high_low',0)/total_gen*100):.1f}%", f"-{filter_stats.get('high_low',0):,} vé")
+                fc16.metric("Lọc Thập Kỷ", f"{(filter_stats.get('decade',0)/total_gen*100):.1f}%", f"-{filter_stats.get('decade',0):,} vé")
                 
                 st.markdown("</div>", unsafe_allow_html=True)
             

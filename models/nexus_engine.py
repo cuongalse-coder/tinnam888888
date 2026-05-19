@@ -581,6 +581,18 @@ class NexusEngine:
             for n in range(1, 46):
                 if counts[n] == 0: missing_pool.add(n)
                 elif counts[n] >= 2: hot_pool.add(n)
+                
+        markov_transitions = [{} for _ in range(self.pick_count)]
+        if len(data) >= 2:
+            for i in range(1, len(data)):
+                p_draw = data[i-1][:self.pick_count]
+                c_draw = data[i][:self.pick_count]
+                for c in range(self.pick_count):
+                    p_val = p_draw[c]
+                    c_val = c_draw[c]
+                    if p_val not in markov_transitions[c]:
+                        markov_transitions[c][p_val] = set()
+                    markov_transitions[c][p_val].add(c_val)
             
         return {
             'sum_lo': sum_lo,
@@ -597,7 +609,9 @@ class NexusEngine:
             'go_board_liberties': go_board_liberties,
             'prev_draw_set': prev_draw_set,
             'missing_pool': missing_pool,
-            'hot_pool': hot_pool
+            'hot_pool': hot_pool,
+            'markov_transitions': markov_transitions,
+            'prev_draw': data[-1][:self.pick_count] if len(data) >= 1 else None
         }
 
     def _validate(self, combo, c):
@@ -703,6 +717,19 @@ class NexusEngine:
             missing_hit = sum(1 for x in combo if x in missing_pool)
             hot_hit = sum(1 for x in combo if x in hot_pool)
             if missing_hit > 3 or hot_hit > 3:
+                return False
+                
+        # Markov Transition Filter
+        markov_transitions = c.get('markov_transitions')
+        prev_draw = c.get('prev_draw')
+        if markov_transitions is not None and prev_draw is not None:
+            markov_pass = 0
+            for i in range(len(combo)):
+                p_val = prev_draw[i]
+                c_val = combo[i]
+                if p_val in markov_transitions[i] and c_val in markov_transitions[i][p_val]:
+                    markov_pass += 1
+            if markov_pass < 4:
                 return False
             
         odd = sum(1 for x in combo if x % 2 == 1)
