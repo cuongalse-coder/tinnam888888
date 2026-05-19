@@ -669,12 +669,15 @@ def main_app():
         with col_ms1:
             target_odd = st.selectbox("Tỷ lệ Chẵn/Lẻ", ["Tự động", "0 Lẻ", "1 Lẻ", "2 Lẻ", "3 Lẻ", "4 Lẻ", "5 Lẻ", "6 Lẻ"], index=0)
             target_alphabet = st.text_input("Mật mã Chữ Cái", value="", placeholder="VD: ABCCDD")
+            target_delta = st.number_input("Giãn cách B6 - B1 (X Phụ)", min_value=0, max_value=44, value=0, help="Để 0 = Tự động")
         with col_ms2:
             target_high = st.selectbox("Tỷ lệ Cao/Thấp", ["Tự động", "0 Cao", "1 Cao", "2 Cao", "3 Cao", "4 Cao", "5 Cao", "6 Cao"], index=0)
             target_mod_x = st.selectbox("Tọa độ Dư Đầu (Ngang)", ["Tự động", "Dư 0", "Dư 1", "Dư 2", "Dư 3", "Dư 4", "Dư 5", "Dư 6", "Dư 7"], index=0)
+            target_midsum = st.number_input("Tổng lõi B3 + B4 (Y Phụ)", min_value=0, max_value=90, value=0, help="Để 0 = Tự động")
         with col_ms3:
             target_overlap = st.selectbox("Rơi lại kỳ trước", ["Tự động", "0 Số", "1 Số", "2 Số", "3 Số trở lên"], index=0)
             target_mod_y = st.selectbox("Tọa độ Dư Cuối (Dọc)", ["Tự động", "Dư 0", "Dư 1", "Dư 2", "Dư 3", "Dư 4", "Dư 5", "Dư 6", "Dư 7"], index=0)
+            st.markdown("<p style='font-size: 11px; color:#ff00ff; margin-top: 30px;'>🔥 BOM XUYÊN PHÁ: Ép Không gian xuống còn 20 vé!</p>", unsafe_allow_html=True)
             
         st.markdown("---")
         st.markdown("**Trạng thái:** 🟢 Kết nối API Thực Tế")
@@ -822,6 +825,10 @@ def main_app():
                     micro_sector['mod_x'] = int(target_mod_x.replace("Dư ", ""))
                 if "Tự động" not in target_mod_y:
                     micro_sector['mod_y'] = int(target_mod_y.replace("Dư ", ""))
+                if target_delta > 0:
+                    micro_sector['sub_delta'] = target_delta
+                if target_midsum > 0:
+                    micro_sector['sub_midsum'] = target_midsum
                 
                 from models.wheeling_optimizer import WheelingOptimizer
                 wheel_opt = WheelingOptimizer(6, max_number)

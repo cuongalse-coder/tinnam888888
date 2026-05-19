@@ -265,6 +265,10 @@ class WheelingOptimizer:
                 if sum(combo[:3]) % 8 != micro_sector['mod_x']: return False
             if 'mod_y' in micro_sector:
                 if sum(combo[3:]) % 8 != micro_sector['mod_y']: return False
+            if 'sub_delta' in micro_sector:
+                if (combo[5] - combo[0]) != micro_sector['sub_delta']: return False
+            if 'sub_midsum' in micro_sector:
+                if (combo[2] + combo[3]) != micro_sector['sub_midsum']: return False
         
         return True
 
