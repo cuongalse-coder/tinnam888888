@@ -27,6 +27,13 @@ class WheelingOptimizer:
             for i, n in enumerate(combo):
                 if n < col_bounds[i][0] or n > col_bounds[i][1]: return False
                 
+        # Delta System Filter (Global Research)
+        max_delta = combo[0]
+        for i in range(1, 6):
+            if combo[i] - combo[i-1] > max_delta:
+                max_delta = combo[i] - combo[i-1]
+        if max_delta > constraints.get('delta_hi', 45): return False
+        
         odd = sum(1 for x in combo if x % 2 == 1)
         if odd < constraints.get('odd_lo', 0) or odd > constraints.get('odd_hi', 6): return False
         mid = self.max_number // 2

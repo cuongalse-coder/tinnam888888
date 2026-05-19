@@ -498,6 +498,15 @@ class NexusEngine:
         highs = [sum(1 for x in d[:self.pick_count] if x > mid) for d in recent]
         ranges = [max(d[:self.pick_count]) - min(d[:self.pick_count]) for d in recent]
         
+        # --- GLOBAL DELTA SYSTEM ---
+        deltas = []
+        for d in data[-200:]:
+            md = d[0]
+            for i in range(1, self.pick_count):
+                if d[i] - d[i-1] > md: md = d[i] - d[i-1]
+            deltas.append(md)
+        delta_hi = int(np.percentile(deltas, 95))
+        
         # --- COL BOUNDS FILTER ---
         col_bounds = []
         for i in range(self.pick_count):
@@ -558,6 +567,7 @@ class NexusEngine:
             'range_hi': range_hi,
             'banned_sum_block': banned_sum_block,
             'col_bounds': col_bounds,
+            'delta_hi': delta_hi,
         }
 
     def _validate(self, combo, c):
@@ -574,6 +584,13 @@ class NexusEngine:
             for i, n in enumerate(combo):
                 if n < col_bounds[i][0] or n > col_bounds[i][1]:
                     return False
+                    
+        max_delta = combo[0]
+        for i in range(1, len(combo)):
+            if combo[i] - combo[i-1] > max_delta:
+                max_delta = combo[i] - combo[i-1]
+        if max_delta > c.get('delta_hi', 45):
+            return False
             
         odd = sum(1 for x in combo if x % 2 == 1)
         if odd < c.get('odd_lo', 0) or odd > c.get('odd_hi', 6):
