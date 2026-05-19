@@ -102,6 +102,23 @@ class WheelingOptimizer:
         if has_2x2 or has_diag3:
             if stats is not None: stats['rubik_matrix'] += 1
             return False
+            
+        # Color Palette Filter (User's Invention)
+        # Colors: 0:(1,6), 1:(2,7), 2:(3,8), 3:(4,9), 4:(5,0)
+        colors = [0, 0, 0, 0, 0]
+        for n in combo:
+            ld = n % 10
+            if ld == 1 or ld == 6: colors[0] += 1
+            elif ld == 2 or ld == 7: colors[1] += 1
+            elif ld == 3 or ld == 8: colors[2] += 1
+            elif ld == 4 or ld == 9: colors[3] += 1
+            elif ld == 5 or ld == 0: colors[4] += 1
+        
+        unique_colors = sum(1 for c in colors if c > 0)
+        max_color = max(colors)
+        if unique_colors <= 2 or max_color >= 4:
+            if stats is not None: stats['color_palette'] += 1
+            return False
         
         odd = sum(1 for x in combo if x % 2 == 1)
         if odd < constraints.get('odd_lo', 0) or odd > constraints.get('odd_hi', 6):
@@ -163,7 +180,7 @@ class WheelingOptimizer:
             return [{'numbers': pool, 'strategy': '🎯 Trọng tâm (Duy nhất)'}] * num_tickets, 100.0
         stats = {
             'sum_range': 0, 'sum_block': 0, 'col_bounds': 0, 'delta': 0,
-            'digit_freq': 0, 'adj_digits': 0, 'wave_break': 0, 'rubik_matrix': 0, 
+            'digit_freq': 0, 'adj_digits': 0, 'wave_break': 0, 'rubik_matrix': 0, 'color_palette': 0,
             'odd_even': 0, 'high_low': 0, 'elastic': 0,
             'consec': 0, 'decade': 0, 'psych': 0, 'mod7': 0
         }

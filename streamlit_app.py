@@ -905,8 +905,8 @@ def main_app():
                 
                 fc5, fc6, fc7, fc8 = st.columns(4)
                 fc5.metric("Ma Trận Rubik", f"{(filter_stats.get('rubik_matrix',0)/total_gen*100):.1f}%", f"-{filter_stats.get('rubik_matrix',0):,} vé")
-                fc6.metric("Lọc Chữ Số", f"{(filter_stats.get('digit_freq',0)/total_gen*100):.1f}%", f"-{filter_stats.get('digit_freq',0):,} vé")
-                fc7.metric("Cặp Chữ Số Kề Nhau", f"{(filter_stats.get('adj_digits',0)/total_gen*100):.1f}%", f"-{filter_stats.get('adj_digits',0):,} vé")
+                fc6.metric("Lọc Bảng Màu", f"{(filter_stats.get('color_palette',0)/total_gen*100):.1f}%", f"-{filter_stats.get('color_palette',0):,} vé")
+                fc7.metric("Cặp Số Kề Nhau", f"{(filter_stats.get('adj_digits',0)/total_gen*100):.1f}%", f"-{filter_stats.get('adj_digits',0):,} vé")
                 fc8.metric("Điểm Ngắt Sóng", f"{(filter_stats.get('wave_break',0)/total_gen*100):.1f}%", f"-{filter_stats.get('wave_break',0):,} vé")
                 
                 st.markdown("</div>", unsafe_allow_html=True)

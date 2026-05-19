@@ -643,6 +643,20 @@ class NexusEngine:
         if has_2x2 or has_diag3:
             return False
             
+        colors = [0, 0, 0, 0, 0]
+        for n in combo:
+            ld = n % 10
+            if ld == 1 or ld == 6: colors[0] += 1
+            elif ld == 2 or ld == 7: colors[1] += 1
+            elif ld == 3 or ld == 8: colors[2] += 1
+            elif ld == 4 or ld == 9: colors[3] += 1
+            elif ld == 5 or ld == 0: colors[4] += 1
+        
+        unique_colors = sum(1 for c in colors if c > 0)
+        max_color = max(colors)
+        if unique_colors <= 2 or max_color >= 4:
+            return False
+            
         odd = sum(1 for x in combo if x % 2 == 1)
         if odd < c.get('odd_lo', 0) or odd > c.get('odd_hi', 6):
             return False
