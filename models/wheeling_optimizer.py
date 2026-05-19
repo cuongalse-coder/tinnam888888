@@ -78,6 +78,30 @@ class WheelingOptimizer:
         if breaks == 0:
             if stats is not None: stats['wave_break'] += 1
             return False
+            
+        # Rubik Matrix Topology Filter (User's Invention)
+        # Map to 5x10 grid
+        matrix = [[0]*10 for _ in range(5)]
+        for n in combo:
+            r, c_idx = n // 10, n % 10
+            if r < 5 and c_idx < 10:
+                matrix[r][c_idx] = 1
+        has_2x2 = False
+        has_diag3 = False
+        for r in range(4):
+            for c_idx in range(9):
+                if matrix[r][c_idx] and matrix[r][c_idx+1] and matrix[r+1][c_idx] and matrix[r+1][c_idx+1]:
+                    has_2x2 = True
+        for r in range(3):
+            for c_idx in range(8):
+                if matrix[r][c_idx] and matrix[r+1][c_idx+1] and matrix[r+2][c_idx+2]:
+                    has_diag3 = True
+            for c_idx in range(2, 10):
+                if matrix[r][c_idx] and matrix[r+1][c_idx-1] and matrix[r+2][c_idx-2]:
+                    has_diag3 = True
+        if has_2x2 or has_diag3:
+            if stats is not None: stats['rubik_matrix'] += 1
+            return False
         
         odd = sum(1 for x in combo if x % 2 == 1)
         if odd < constraints.get('odd_lo', 0) or odd > constraints.get('odd_hi', 6):
@@ -139,7 +163,8 @@ class WheelingOptimizer:
             return [{'numbers': pool, 'strategy': '🎯 Trọng tâm (Duy nhất)'}] * num_tickets, 100.0
         stats = {
             'sum_range': 0, 'sum_block': 0, 'col_bounds': 0, 'delta': 0,
-            'digit_freq': 0, 'adj_digits': 0, 'wave_break': 0, 'odd_even': 0, 'high_low': 0, 'elastic': 0,
+            'digit_freq': 0, 'adj_digits': 0, 'wave_break': 0, 'rubik_matrix': 0, 
+            'odd_even': 0, 'high_low': 0, 'elastic': 0,
             'consec': 0, 'decade': 0, 'psych': 0, 'mod7': 0
         }
         total_generated = 0

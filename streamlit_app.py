@@ -904,7 +904,7 @@ def main_app():
                 fc4.metric("Lọc Dây Thun", f"{(filter_stats.get('elastic',0)/total_gen*100):.1f}%", f"-{filter_stats.get('elastic',0):,} vé")
                 
                 fc5, fc6, fc7, fc8 = st.columns(4)
-                fc5.metric("Lọc Delta System", f"{(filter_stats.get('delta',0)/total_gen*100):.1f}%", f"-{filter_stats.get('delta',0):,} vé")
+                fc5.metric("Ma Trận Rubik", f"{(filter_stats.get('rubik_matrix',0)/total_gen*100):.1f}%", f"-{filter_stats.get('rubik_matrix',0):,} vé")
                 fc6.metric("Lọc Chữ Số", f"{(filter_stats.get('digit_freq',0)/total_gen*100):.1f}%", f"-{filter_stats.get('digit_freq',0):,} vé")
                 fc7.metric("Cặp Chữ Số Kề Nhau", f"{(filter_stats.get('adj_digits',0)/total_gen*100):.1f}%", f"-{filter_stats.get('adj_digits',0):,} vé")
                 fc8.metric("Điểm Ngắt Sóng", f"{(filter_stats.get('wave_break',0)/total_gen*100):.1f}%", f"-{filter_stats.get('wave_break',0):,} vé")

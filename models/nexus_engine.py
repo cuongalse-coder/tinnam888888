@@ -622,6 +622,27 @@ class NexusEngine:
         if breaks == 0:
             return False
             
+        matrix = [[0]*10 for _ in range(5)]
+        for n in combo:
+            r, c_idx = n // 10, n % 10
+            if r < 5 and c_idx < 10:
+                matrix[r][c_idx] = 1
+        has_2x2 = False
+        has_diag3 = False
+        for r in range(4):
+            for c_idx in range(9):
+                if matrix[r][c_idx] and matrix[r][c_idx+1] and matrix[r+1][c_idx] and matrix[r+1][c_idx+1]:
+                    has_2x2 = True
+        for r in range(3):
+            for c_idx in range(8):
+                if matrix[r][c_idx] and matrix[r+1][c_idx+1] and matrix[r+2][c_idx+2]:
+                    has_diag3 = True
+            for c_idx in range(2, 10):
+                if matrix[r][c_idx] and matrix[r+1][c_idx-1] and matrix[r+2][c_idx-2]:
+                    has_diag3 = True
+        if has_2x2 or has_diag3:
+            return False
+            
         odd = sum(1 for x in combo if x % 2 == 1)
         if odd < c.get('odd_lo', 0) or odd > c.get('odd_hi', 6):
             return False
