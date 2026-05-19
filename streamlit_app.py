@@ -918,8 +918,8 @@ def main_app():
                 fc13, fc14, fc15, fc16 = st.columns(4)
                 fc13.metric("Lọc Chu Kỳ (Sliding)", f"{(filter_stats.get('sliding_window',0)/total_gen*100):.1f}%", f"-{filter_stats.get('sliding_window',0):,} vé")
                 fc14.metric("Đường Rẽ (Markov)", f"{(filter_stats.get('markov_chain',0)/total_gen*100):.1f}%", f"-{filter_stats.get('markov_chain',0):,} vé")
-                fc15.metric("Lọc Cao/Thấp", f"{(filter_stats.get('high_low',0)/total_gen*100):.1f}%", f"-{filter_stats.get('high_low',0):,} vé")
-                fc16.metric("Lọc Thập Kỷ", f"{(filter_stats.get('decade',0)/total_gen*100):.1f}%", f"-{filter_stats.get('decade',0):,} vé")
+                fc15.metric("Mật Mã Hacker", f"{(filter_stats.get('hacker_cipher',0)/total_gen*100):.1f}%", f"-{filter_stats.get('hacker_cipher',0):,} vé")
+                fc16.metric("Lọc C.L/C.T", f"{(filter_stats.get('high_low',0)/total_gen*100):.1f}%", f"-{filter_stats.get('high_low',0):,} vé")
                 
                 st.markdown("</div>", unsafe_allow_html=True)
             

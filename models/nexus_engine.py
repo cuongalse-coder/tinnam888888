@@ -731,6 +731,19 @@ class NexusEngine:
                     markov_pass += 1
             if markov_pass < 4:
                 return False
+                
+        # Hacker Cipher 12-bit Filter
+        s_bin = ""
+        for n in combo:
+            n_str = str(n).zfill(2)
+            s_bin += "0" if int(n_str[0]) % 2 == 0 else "1"
+            s_bin += "0" if int(n_str[1]) % 2 == 0 else "1"
+        max_0 = max(len(c) for c in s_bin.split("1"))
+        max_1 = max(len(c) for c in s_bin.split("0"))
+        is_pal = (s_bin == s_bin[::-1])
+        is_alt = (s_bin == "010101010101" or s_bin == "101010101010")
+        if max_0 >= 7 or max_1 >= 7 or is_pal or is_alt:
+            return False
             
         odd = sum(1 for x in combo if x % 2 == 1)
         if odd < c.get('odd_lo', 0) or odd > c.get('odd_hi', 6):

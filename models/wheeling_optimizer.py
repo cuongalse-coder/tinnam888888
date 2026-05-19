@@ -154,6 +154,20 @@ class WheelingOptimizer:
                 if stats is not None: stats['markov_chain'] += 1
                 return False
         
+        # Hacker Cipher 12-bit Filter (User's Invention)
+        s_bin = ""
+        for n in combo:
+            n_str = str(n).zfill(2)
+            s_bin += "0" if int(n_str[0]) % 2 == 0 else "1"
+            s_bin += "0" if int(n_str[1]) % 2 == 0 else "1"
+        max_0 = max(len(c) for c in s_bin.split("1"))
+        max_1 = max(len(c) for c in s_bin.split("0"))
+        is_pal = (s_bin == s_bin[::-1])
+        is_alt = (s_bin == "010101010101" or s_bin == "101010101010")
+        if max_0 >= 7 or max_1 >= 7 or is_pal or is_alt:
+            if stats is not None: stats['hacker_cipher'] += 1
+            return False
+            
         odd = sum(1 for x in combo if x % 2 == 1)
         if odd < constraints.get('odd_lo', 0) or odd > constraints.get('odd_hi', 6):
             if stats is not None: stats['odd_even'] += 1
@@ -215,7 +229,8 @@ class WheelingOptimizer:
         stats = {
             'sum_range': 0, 'sum_block': 0, 'col_bounds': 0, 'delta': 0,
             'digit_freq': 0, 'adj_digits': 0, 'wave_break': 0, 'rubik_matrix': 0, 'color_palette': 0,
-            'go_board': 0, 'sliding_window': 0, 'markov_chain': 0, 'odd_even': 0, 'high_low': 0, 'elastic': 0,
+            'go_board': 0, 'sliding_window': 0, 'markov_chain': 0, 'hacker_cipher': 0, 
+            'odd_even': 0, 'high_low': 0, 'elastic': 0,
             'consec': 0, 'decade': 0, 'psych': 0, 'mod7': 0
         }
         total_generated = 0
