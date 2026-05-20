@@ -660,7 +660,7 @@ def main_app():
             # Re-initialize engine for the correct max_number to calculate confidence
             temp_max = 45 if game_choice == "Mega 6/45" else 55
             from models.nexus_engine import NexusEngine
-            temp_eng = NexusEngine(max_number=temp_max)
+            temp_eng = NexusEngine(temp_max, 6)
             ai_conf = temp_eng.calculate_confidence(real_data)
             
         if ai_conf >= 80:
@@ -715,7 +715,7 @@ def main_app():
         if real_data:
             temp_max = 45 if game_choice == "Mega 6/45" else 55
             from models.nexus_engine import NexusEngine
-            temp_eng = NexusEngine(max_number=temp_max)
+            temp_eng = NexusEngine(temp_max, 6)
             ai_preds = temp_eng.predict_micro_sector(real_data)
             
         col_ms1, col_ms2, col_ms3 = st.columns(3)
