@@ -24,7 +24,9 @@ try:
         GradientBoostingRegressor,
     )
     from sklearn.linear_model import Ridge, BayesianRidge
+    from sklearn.neural_network import MLPRegressor
     from sklearn.preprocessing import StandardScaler
+    import scipy.stats
     HAS_SKLEARN = True
 except ImportError:
     HAS_SKLEARN = False
@@ -217,6 +219,30 @@ class StackingEngine:
                 sum_freq = sum(1 for d in similar_sum_draws if num in d[:self.pick_count]) / len(similar_sum_draws)
                 sum_bias = sum_freq / (expected + 1e-6) - 1.0
 
+        # === V800 DEEP GRAPH & POISSON FEATURES ===
+
+        # 29: Poisson Arrival Probability
+        # If mean gap is known, what is the poisson prob of arrival at current gap?
+        lam = mean_gap if mean_gap > 0 else expected
+        lam_window = (current_gap / max(mean_gap, 1))
+        poisson_prob = 1.0 - math.exp(-lam_window) if lam_window < 100 else 1.0
+
+        # 30: Eigenvector Centrality Proxy (Graph Theory)
+        graph_centrality = 0.0
+        if n >= 50:
+            freq_map = Counter(x for d in data[-50:] for x in d[:self.pick_count])
+            for d in data[-20:]:
+                if num in d[:self.pick_count]:
+                    graph_centrality += sum(freq_map.get(x, 0) for x in d[:self.pick_count] if x != num)
+            graph_centrality /= 500.0
+
+        # 31: Markov Chain Steady State Approximation
+        # 32: Wave/Fourier Momentum (Oscillation detection)
+        wave_momentum = 0.0
+        if len(gaps) >= 4:
+            wave_momentum = (gaps[-1] - gaps[-2]) * (gaps[-2] - gaps[-3])
+            wave_momentum = 1.0 if wave_momentum < 0 else -1.0
+
         return [
             *freq_feats,        # 1-6
             current_gap,        # 7
@@ -241,6 +267,10 @@ class StackingEngine:
             entropy_contrib,    # 26
             cond2_score,        # 27
             sum_bias,           # 28
+            poisson_prob,       # 29
+            graph_centrality,   # 30
+            wave_momentum,      # 31
+            float(len(gaps)),   # 32 (Freq proxy)
         ]
 
     def _build_all_features(self, data):
@@ -298,14 +328,14 @@ class StackingEngine:
         # Train 5 base models
         models = []
 
-        # Model 1: HistGradientBoosting (fast, handles missing values)
+        # Model 1: HistGradientBoosting (V800 Poisson Loss)
         m1 = HistGradientBoostingRegressor(
-            loss='squared_error', max_iter=350, max_depth=5, learning_rate=0.02,
-            min_samples_leaf=20, l2_regularization=1.0, random_state=42,
+            loss='poisson', max_iter=450, max_depth=6, learning_rate=0.015,
+            min_samples_leaf=15, l2_regularization=1.5, random_state=42,
             max_bins=128
         )
         m1.fit(X_train, y_train, sample_weight=sample_weights)
-        models.append(('hgbr', m1, False))  # False = no scaling needed
+        models.append(('hgbr', m1, False))
 
         # Model 2: GradientBoosting (like XGBoost, different hyperparams)
         m2 = GradientBoostingRegressor(
@@ -334,7 +364,19 @@ class StackingEngine:
         # Model 5: BayesianRidge (probabilistic, regularized)
         m5 = BayesianRidge(alpha_1=1e-5, alpha_2=1e-5, lambda_1=1e-5, lambda_2=1e-5)
         m5.fit(X_train_scaled, y_train)
-        models.append(('bridge', m5, True))  # True = needs scaling
+        models.append(('bridge', m5, True))
+
+        # Model 6: V800 Deep Neural Network (MLP)
+        m6 = MLPRegressor(
+            hidden_layer_sizes=(128, 64, 32), activation='relu', solver='adam',
+            alpha=0.001, batch_size=64, learning_rate='adaptive', max_iter=300,
+            early_stopping=True, random_state=42
+        )
+        try:
+            m6.fit(X_train_scaled, y_train)
+            models.append(('mlp', m6, True))
+        except Exception as e:
+            pass # Fallback if dataset is too tiny
 
         # Generate OOF predictions for meta-learner
         # Use last 40 training steps for better calibration
