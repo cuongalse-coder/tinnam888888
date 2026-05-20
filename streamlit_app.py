@@ -641,8 +641,34 @@ def main_app():
         st.markdown("---")
         game_choice = st.radio("CHỌN CHẾ ĐỘ QUÉT:", ["Mega 6/45", "Power 6/55"])
         st.markdown("---")
-        st.markdown("### 🎯 V1000 Radar Pathfinding (Bao phủ Bàn Cờ)")
-        num_tickets = st.selectbox("Đội hình V1000 (Số vé xuất kích):", [5, 10, 20, 50, 100], index=2, help="Khuyến nghị mặc định 20 vé để Radar hoạt động hoàn hảo.")
+        st.markdown("### 🧠 V2000 CỐ VẤN TÀI CHÍNH (Kelly Criterion)")
+        
+        ai_conf = 0.0
+        if history_data:
+            ai_conf = engine.calculate_confidence(history_data)
+            
+        if ai_conf >= 80:
+            rec_tickets = 50
+            conf_color = "#00ff00"
+            msg = "🔥 XUNG LỰC HỘI TỤ ĐỈNH ĐIỂM! Đề xuất xuất kích 50 vé để tổng tiến công Jackpot."
+        elif ai_conf >= 60:
+            rec_tickets = 20
+            conf_color = "#ffaa00"
+            msg = "⚡ Tín hiệu rất rõ ràng. Đội hình 20 vé Radar tiêu chuẩn là lựa chọn tối ưu."
+        elif ai_conf >= 40:
+            rec_tickets = 10
+            conf_color = "#ffff00"
+            msg = "⚠️ Thị trường hơi nhiễu. Đề xuất lùi về phòng ngự với 10 vé."
+        else:
+            rec_tickets = 5
+            conf_color = "#ff0000"
+            msg = "🛑 CẢNH BÁO: Điểm đứt gãy cực đoan (Chaos). Đề xuất bảo toàn vốn, chỉ test 5 vé dò đường."
+            
+        st.markdown(f"<h3 style='text-align:center; color:{conf_color};'>Độ tự tin AI: {ai_conf:.1f}%</h3>", unsafe_allow_html=True)
+        st.info(msg)
+        
+        st.markdown(f"**Số vé AI chỉ định xuất kích:** `{rec_tickets} Vé` (Auto-Lock)")
+        num_tickets = rec_tickets
         pool_size = st.selectbox("Kích thước Hồ Tiềm Năng (Mở rộng):", [10, 12, 15, 18, 20, 25, 30, 33, 35], index=4)
         st.markdown("---")
         st.markdown("### 🏆 CHIẾN THUẬT AI (TỰ ĐỘNG)")

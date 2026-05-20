@@ -341,6 +341,33 @@ class WheelingOptimizer:
         history_sets = [set(d[:self.pick_count]) for d in history_data] if history_data else []
         radar_map = self._radar_scan_chessboard(history_data[-30:] if history_data else [])
         
+        # V2000 DYNAMIC FILTERS (REINFORCEMENT LEARNING BOUNDS)
+        if history_data and len(history_data) >= 5:
+            recent_5 = history_data[-5:]
+            recent_sums = [sum(d[:self.pick_count]) for d in recent_5]
+            avg_recent_sum = sum(recent_sums) / 5
+            
+            recent_evens = sum(1 for d in recent_5 for n in d[:self.pick_count] if n % 2 == 0)
+            
+            target_sum_mean = 122 if self.max_number == 45 else 150
+            
+            if constraints is None:
+                constraints = {}
+                
+            # Regression to the mean for Sums
+            if avg_recent_sum < target_sum_mean - 20:
+                constraints['sum_min'] = target_sum_mean
+                constraints['sum_max'] = target_sum_mean + 40
+            elif avg_recent_sum > target_sum_mean + 20:
+                constraints['sum_min'] = target_sum_mean - 40
+                constraints['sum_max'] = target_sum_mean
+                
+            # Regression for Odd/Even
+            if recent_evens > 20: # Quá nhiều chẵn (trung bình là 15)
+                constraints['odd_even'] = [4, 5] # Ép ra lẻ
+            elif recent_evens < 10:
+                constraints['odd_even'] = [1, 2] # Ép ra chẵn
+
         import itertools
         if len(pool) > 22:
             pool = pool[:22]
