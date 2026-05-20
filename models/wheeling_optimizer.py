@@ -378,7 +378,7 @@ class WheelingOptimizer:
     def generate_wheel(self, pool, num_tickets, constraints=None, sum_mod7=None, history_data=None, ai_top_core=None, hard_core_lock=0, micro_sector=None):
         pool = sorted(list(pool))
         if len(pool) <= self.pick_count:
-            return [{'numbers': pool, 'strategy': '🎯 Trọng tâm (Duy nhất)'}] * num_tickets, 100.0
+            return [{'numbers': pool, 'strategy': '🎯 Trọng tâm (Duy nhất)'}] * num_tickets, 100.0, {}, 1
             
         stats = {
             'sum_range': 0, 'sum_block': 0, 'col_bounds': 0, 'delta': 0,
