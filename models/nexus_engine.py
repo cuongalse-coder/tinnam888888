@@ -861,3 +861,43 @@ class NexusEngine:
             except ValueError:
                 continue
         return None
+
+    def predict_micro_sector(self, history_data):
+        """V2600 AI Rhythm Tuning"""
+        if not history_data or len(history_data) < 10:
+            return {'odd': 3, 'overlap': 1, 'delta': 38}
+            
+        recent_10 = history_data[-10:]
+        
+        # 1. Predict Odd/Even
+        odds = [sum(1 for x in d[:self.pick_count] if x % 2 != 0) for d in recent_10]
+        avg_odd = sum(odds) / 10
+        if avg_odd < 2.5: target_odd = 4 # Hồi quy về lẻ
+        elif avg_odd > 3.5: target_odd = 2 # Hồi quy về chẵn
+        else: target_odd = 3
+        
+        # 2. Predict Overlap (Rơi lại)
+        overlaps = []
+        for i in range(1, len(recent_10)):
+            prev = set(recent_10[i-1][:self.pick_count])
+            curr = set(recent_10[i][:self.pick_count])
+            overlaps.append(len(prev & curr))
+        
+        # Markov simple: nếu 2 kỳ gần nhất overlap 0, kỳ này khả năng cao nổ 1 hoặc 2
+        if overlaps[-1] == 0 and overlaps[-2] == 0:
+            target_overlap = 1
+        elif overlaps[-1] >= 2:
+            target_overlap = 0
+        else:
+            target_overlap = 1
+            
+        # 3. Predict Delta
+        deltas = [max(d[:self.pick_count]) - min(d[:self.pick_count]) for d in recent_10[-5:]]
+        avg_delta = int(sum(deltas) / len(deltas))
+        target_delta = min(44, max(15, avg_delta))
+        
+        return {
+            'odd': target_odd,
+            'overlap': target_overlap,
+            'delta': target_delta
+        }
