@@ -635,17 +635,33 @@ class RealWorldAIEngine:
 # ỨNG DỤNG CHÍNH
 # ==========================================
 def main_app():
+    # --- CÀO DỮ LIỆU THỰC TẾ ---
+    # Determine game choice first from session_state or default to Mega 6/45 for initial load
+    game_choice_default = "Mega 6/45"
+    with st.spinner("📡 Đang quét dữ liệu THẬT 100% từ máy chủ Vietlott/XSKT..."):
+        # We fetch default data first for confidence calculation
+        real_data_mega, detailed_mega = fetch_real_data("Mega 6/45")
+        real_data_power, detailed_power = fetch_real_data("Power 6/55")
+        
     with st.sidebar:
         st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/a/ae/Vietlott_logo.svg/1200px-Vietlott_logo.svg.png", width=150)
         st.markdown("### 🧬 V700.0 - QUANTUM SUPREME")
         st.markdown("---")
         game_choice = st.radio("CHỌN CHẾ ĐỘ QUÉT:", ["Mega 6/45", "Power 6/55"])
+        
+        real_data = real_data_mega if game_choice == "Mega 6/45" else real_data_power
+        detailed_data = detailed_mega if game_choice == "Mega 6/45" else detailed_power
+        
         st.markdown("---")
         st.markdown("### 🧠 V2000 CỐ VẤN TÀI CHÍNH (Kelly Criterion)")
         
         ai_conf = 0.0
-        if history_data:
-            ai_conf = engine.calculate_confidence(history_data)
+        if real_data:
+            # Re-initialize engine for the correct max_number to calculate confidence
+            temp_max = 45 if game_choice == "Mega 6/45" else 55
+            from models.nexus_engine import MegaExploitV15
+            temp_eng = MegaExploitV15(max_number=temp_max)
+            ai_conf = temp_eng.calculate_confidence(real_data)
             
         if ai_conf >= 80:
             rec_tickets = 50
@@ -677,7 +693,6 @@ def main_app():
             "🌊 Lưới Quét Diện Rộng (Bật Lọc Dây Thun - Dành cho vốn lớn)"
         ], index=0)
         
-        # Parse the strategy
         if "Bắn Tỉa" in strategy_mode:
             head_tail_pin = True
             middle_pair_pin = True
@@ -726,10 +741,6 @@ def main_app():
     max_number = 45 if game_choice == "Mega 6/45" else 55
     ball_class = "mega-ball" if game_choice == "Mega 6/45" else "power-ball"
     
-    # --- CÀO DỮ LIỆU THỰC TẾ ---
-    with st.spinner("📡 Đang quét dữ liệu THẬT 100% từ máy chủ Vietlott/XSKT..."):
-        real_data, detailed_data = fetch_real_data(game_choice)
-        
     if not real_data:
         st.error("Không thể kết nối đến máy chủ lấy dữ liệu thực tế. Vui lòng thử lại sau.")
         st.stop()
