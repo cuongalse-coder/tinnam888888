@@ -921,7 +921,7 @@ def main_app():
                 from models.wheeling_optimizer import WheelingOptimizer
                 wheel_opt = WheelingOptimizer(6, max_number)
                 try:
-                    tickets, coverage, filter_stats, total_generated = wheel_opt.generate_wheel(
+                    res_tuple = wheel_opt.generate_wheel(
                         st.session_state.v11_top_pool, 
                         num_tickets,
                         constraints=result_v11.get('constraints'),
@@ -933,7 +933,7 @@ def main_app():
                     )
                 except TypeError:
                     try:
-                        tickets, coverage, filter_stats, total_generated = wheel_opt.generate_wheel(
+                        res_tuple = wheel_opt.generate_wheel(
                             st.session_state.v11_top_pool, 
                             num_tickets,
                             constraints=result_v11.get('constraints'),
@@ -943,10 +943,18 @@ def main_app():
                             micro_sector=micro_sector
                         )
                     except TypeError:
-                        tickets, coverage, filter_stats, total_generated = wheel_opt.generate_wheel(
+                        res_tuple = wheel_opt.generate_wheel(
                             st.session_state.v11_top_pool, 
                             num_tickets,
                         )
+                
+                # Safely unpack the tuple which might have 2 or 4 elements
+                if len(res_tuple) == 4:
+                    tickets, coverage, filter_stats, total_generated = res_tuple
+                else:
+                    tickets, coverage = res_tuple[0], res_tuple[1]
+                    filter_stats = {}
+                    total_generated = 1
                 
                 st.session_state.filter_stats = filter_stats
                 st.session_state.total_generated = total_generated
@@ -1702,7 +1710,7 @@ def main_app():
                         # 2. Sinh dàn bao
                         wheel_opt = WheelingOptimizer(6, max_number)
                         try:
-                            tickets, _, _, _ = wheel_opt.generate_wheel(
+                            res_tuple = wheel_opt.generate_wheel(
                                 pool, 
                                 num_tickets,
                                 constraints=res.get('constraints'),
@@ -1710,10 +1718,13 @@ def main_app():
                                 history_data=historical_data_for_test
                             )
                         except TypeError:
-                            tickets, _, _, _ = wheel_opt.generate_wheel(
+                            res_tuple = wheel_opt.generate_wheel(
                                 pool, 
                                 num_tickets,
                             )
+                            
+                        # Safely unpack the tuple which might have 2 or 4 elements
+                        tickets = res_tuple[0]
                         
                         # 3. Đối chiếu kết quả các vé
                         draw_best_match = 0
