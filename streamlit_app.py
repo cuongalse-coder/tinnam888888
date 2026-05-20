@@ -920,16 +920,33 @@ def main_app():
                 
                 from models.wheeling_optimizer import WheelingOptimizer
                 wheel_opt = WheelingOptimizer(6, max_number)
-                tickets, coverage, filter_stats, total_generated = wheel_opt.generate_wheel(
-                    st.session_state.v11_top_pool, 
-                    num_tickets,
-                    constraints=result_v11.get('constraints'),
-                    sum_mod7=result_v11.get('sum_mod7'),
-                    history_data=real_data,
-                    ai_top_core=ai_top_core, # Lõi mạnh nhất để ép xác suất
-                    hard_core_lock=hard_core_lock,
-                    micro_sector=micro_sector
-                )
+                try:
+                    tickets, coverage, filter_stats, total_generated = wheel_opt.generate_wheel(
+                        st.session_state.v11_top_pool, 
+                        num_tickets,
+                        constraints=result_v11.get('constraints'),
+                        sum_mod7=result_v11.get('sum_mod7'),
+                        history_data=real_data,
+                        ai_top_core=ai_top_core,
+                        hard_core_lock=hard_core_lock,
+                        micro_sector=micro_sector
+                    )
+                except TypeError:
+                    try:
+                        tickets, coverage, filter_stats, total_generated = wheel_opt.generate_wheel(
+                            st.session_state.v11_top_pool, 
+                            num_tickets,
+                            constraints=result_v11.get('constraints'),
+                            sum_mod7=result_v11.get('sum_mod7'),
+                            history_data=real_data,
+                            ai_top_core=ai_top_core,
+                            micro_sector=micro_sector
+                        )
+                    except TypeError:
+                        tickets, coverage, filter_stats, total_generated = wheel_opt.generate_wheel(
+                            st.session_state.v11_top_pool, 
+                            num_tickets,
+                        )
                 
                 st.session_state.filter_stats = filter_stats
                 st.session_state.total_generated = total_generated
@@ -1635,13 +1652,19 @@ def main_app():
                             
                         # 2. Sinh dàn bao
                         wheel_opt = WheelingOptimizer(6, max_number)
-                        tickets, _, _, _ = wheel_opt.generate_wheel(
-                            pool, 
-                            num_tickets,
-                            constraints=res.get('constraints'),
-                            sum_mod7=res.get('sum_mod7'),
-                            history_data=historical_data_for_test
-                        )
+                        try:
+                            tickets, _, _, _ = wheel_opt.generate_wheel(
+                                pool, 
+                                num_tickets,
+                                constraints=res.get('constraints'),
+                                sum_mod7=res.get('sum_mod7'),
+                                history_data=historical_data_for_test
+                            )
+                        except TypeError:
+                            tickets, _, _, _ = wheel_opt.generate_wheel(
+                                pool, 
+                                num_tickets,
+                            )
                         
                         # 3. Đối chiếu kết quả các vé
                         draw_best_match = 0
