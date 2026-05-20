@@ -707,9 +707,17 @@ def main_app():
             st.info("💡 Lối chơi: Bao Lô 20 số, kích hoạt Bộ Lọc Hít Thở (Dây Thun) và Bộ Lọc Cạn Kiệt Nhóm để diệt hàng chục ngàn vé rác.")
             
         st.markdown("---")
-        st.markdown("<h3 style='color: #00ffcc;'>🎯 KHOANH VÙNG LƯỢNG TỬ (MICRO-SECTOR TARGETING)</h3>", unsafe_allow_html=True)
-        st.info("💡 Nếu bạn để 'Tự động (AI Quyết Định)', AI sẽ quét lưới toàn bộ không gian. Nếu bạn tự chốt Ô, Không gian sẽ tụt xuống chỉ còn vài trăm vé!")
+        st.markdown("<h3 style='color: #00ffcc;'>🎯 KHOANH VÙNG LƯỢNG TỬ (V2600 AI TIÊN TRI)</h3>", unsafe_allow_html=True)
+        st.info("💡 Nếu bạn để 'Tự động', AI V2600 sẽ tự tính xác suất Markov và Hồi quy để khóa cứng Không gian vé!")
         
+        # Tiên tri AI
+        ai_preds = {'odd': None, 'overlap': None, 'delta': None}
+        if real_data:
+            temp_max = 45 if game_choice == "Mega 6/45" else 55
+            from models.nexus_engine import MegaExploitV15
+            temp_eng = MegaExploitV15(max_number=temp_max)
+            ai_preds = temp_eng.predict_micro_sector(real_data)
+            
         col_ms1, col_ms2, col_ms3 = st.columns(3)
         with col_ms1:
             target_odd = st.selectbox("Tỷ lệ Chẵn/Lẻ", ["Tự động", "0 Lẻ", "1 Lẻ", "2 Lẻ", "3 Lẻ", "4 Lẻ", "5 Lẻ", "6 Lẻ"], index=0)
@@ -722,7 +730,25 @@ def main_app():
         with col_ms3:
             target_overlap = st.selectbox("Rơi lại kỳ trước", ["Tự động", "0 Số", "1 Số", "2 Số", "3 Số trở lên"], index=0)
             target_mod_y = st.selectbox("Tọa độ Dư Cuối (Dọc)", ["Tự động", "Dư 0", "Dư 1", "Dư 2", "Dư 3", "Dư 4", "Dư 5", "Dư 6", "Dư 7"], index=0)
-            st.markdown("<p style='font-size: 11px; color:#ff00ff; margin-top: 30px;'>🔥 BOM XUYÊN PHÁ: Ép Không gian xuống còn 20 vé!</p>", unsafe_allow_html=True)
+            
+        # V2600 AI OVERRIDE LOGIC
+        ai_msg = []
+        if target_odd == "Tự động" and ai_preds['odd'] is not None:
+            target_odd = f"{ai_preds['odd']} Lẻ"
+            ai_msg.append(f"Ép Chẵn/Lẻ: {target_odd}")
+            
+        if target_overlap == "Tự động" and ai_preds['overlap'] is not None:
+            target_overlap = f"{ai_preds['overlap']} Số"
+            ai_msg.append(f"Ép Rơi Lại: {target_overlap}")
+            
+        if target_delta == 0 and ai_preds['delta'] is not None:
+            target_delta = ai_preds['delta']
+            ai_msg.append(f"Ép Biên Độ Delta: {target_delta}")
+            
+        if ai_msg:
+            st.error("🔮 **V2600 AI TIÊN TRI ĐÃ KÍCH HOẠT:**")
+            st.markdown(f"**{', '.join(ai_msg)}**")
+            st.markdown("<p style='font-size: 11px; color:#ff00ff;'>🔥 Không gian sẽ sụp đổ, chỉ còn dưới 50 vé hợp lệ!</p>", unsafe_allow_html=True)
             
         st.markdown("---")
         st.markdown("**Trạng thái:** 🟢 Kết nối API Thực Tế")
