@@ -862,6 +862,118 @@ class NexusEngine:
                 continue
         return None
 
+    def calculate_confidence(self, history_data):
+        """Calculate AI confidence score (0-100%) based on signal consensus and data quality."""
+        if not history_data or len(history_data) < 30:
+            return 25.0  # Low confidence with insufficient data
+        
+        try:
+            n = len(history_data)
+            scores = []
+            
+            # 1. Signal Consensus Score (0-30 pts)
+            # Run key signals and check agreement
+            sig_sliding = self._sig_sliding_window(history_data)
+            sig_cond = self._sig_conditional_probability(history_data)
+            sig_gap = self._sig_gap_acceleration(history_data)
+            sig_hot_cold = self._sig_hot_cold_intersection(history_data)
+            sig_delta = self._sig_delta_momentum(history_data)
+            sig_knn = self._sig_knn_fractal_v3(history_data)
+            
+            # Get top 10 from each signal
+            all_signals = [sig_sliding, sig_cond, sig_gap, sig_hot_cold, sig_delta, sig_knn]
+            top_sets = []
+            for sig in all_signals:
+                top_nums = sorted(sig.items(), key=lambda x: -x[1])[:10]
+                top_sets.append(set(n for n, s in top_nums))
+            
+            # Count numbers appearing in 3+ signals
+            from collections import Counter
+            all_nums = Counter()
+            for ts in top_sets:
+                for num in ts:
+                    all_nums[num] += 1
+            
+            consensus_nums = sum(1 for n, c in all_nums.items() if c >= 3)
+            consensus_score = min(30, consensus_nums * 3)
+            scores.append(consensus_score)
+            
+            # 2. Momentum Clarity Score (0-25 pts) 
+            # Check if recent trends are clear vs chaotic
+            recent_5 = history_data[-5:]
+            recent_sets = [set(d[:self.pick_count]) for d in recent_5]
+            overlaps = []
+            for i in range(1, len(recent_sets)):
+                overlaps.append(len(recent_sets[i] & recent_sets[i-1]))
+            
+            avg_overlap = sum(overlaps) / len(overlaps) if overlaps else 0
+            # Moderate overlap (1-2) = good pattern, extreme (0 or 3+) = chaos
+            if 0.8 <= avg_overlap <= 2.2:
+                momentum_score = 25
+            elif 0.5 <= avg_overlap <= 2.8:
+                momentum_score = 18
+            else:
+                momentum_score = 8
+            scores.append(momentum_score)
+            
+            # 3. Data Freshness & Quantity Score (0-20 pts)
+            if n >= 500:
+                data_score = 20
+            elif n >= 200:
+                data_score = 17
+            elif n >= 100:
+                data_score = 13
+            elif n >= 60:
+                data_score = 10
+            else:
+                data_score = 5
+            scores.append(data_score)
+            
+            # 4. Gap Pattern Regularity Score (0-15 pts)
+            # Check if gaps follow a regular pattern (predictable)
+            gap_variances = []
+            sample_nums = list(range(1, min(self.max_number + 1, 16)))
+            for num in sample_nums:
+                appearances = [i for i, d in enumerate(history_data[-100:]) if num in d[:self.pick_count]]
+                if len(appearances) >= 3:
+                    gaps = [appearances[j+1] - appearances[j] for j in range(len(appearances)-1)]
+                    if gaps:
+                        mean_gap = sum(gaps) / len(gaps)
+                        variance = sum((g - mean_gap) ** 2 for g in gaps) / len(gaps)
+                        gap_variances.append(variance)
+            
+            if gap_variances:
+                avg_variance = sum(gap_variances) / len(gap_variances)
+                if avg_variance < 5:
+                    gap_score = 15  # Very regular
+                elif avg_variance < 15:
+                    gap_score = 12
+                elif avg_variance < 30:
+                    gap_score = 8
+                else:
+                    gap_score = 4  # Chaotic
+            else:
+                gap_score = 5
+            scores.append(gap_score)
+            
+            # 5. Pair Consistency Score (0-10 pts)
+            from itertools import combinations
+            pair_freq = Counter()
+            for d in history_data[-50:]:
+                for p in combinations(sorted(d[:self.pick_count]), 2):
+                    pair_freq[p] += 1
+            
+            strong_pairs = sum(1 for p, c in pair_freq.items() if c >= 3)
+            pair_score = min(10, strong_pairs)
+            scores.append(pair_score)
+            
+            total = sum(scores)
+            # Clamp to 15-95 range (never absolute 0 or 100)
+            return max(15.0, min(95.0, float(total)))
+            
+        except Exception:
+            return 35.0  # Safe fallback
+
     def predict_micro_sector(self, history_data):
         """V2600 AI Rhythm Tuning"""
         if not history_data or len(history_data) < 10:
