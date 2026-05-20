@@ -986,6 +986,7 @@ def main_app():
             final_6 = st.session_state.get('absolute_final_6', [])
             if final_6:
                 st.markdown("<div style='background: linear-gradient(135deg, rgba(255,0,85,0.15), rgba(0,255,204,0.1)); border: 2px solid #ff0055; border-radius: 12px; padding: 24px; margin-bottom: 20px; box-shadow: 0 0 30px rgba(255,0,85,0.4);'>", unsafe_allow_html=True)
+
                 st.markdown("<h2 style='text-align: center; color: #ff0055 !important; text-shadow: 0 0 20px #ff0055; font-size: 1.8em;'>🎯 6 SỐ TUYÊN NGÔN (TỪ V700 5-MODEL STACKING) 🎯</h2>", unsafe_allow_html=True)
                 st.markdown("<p style='text-align: center; color: #bbb;'><em>(5-Model Stacking: HistGBR + GBR + RF + ExtraTrees + BayesianRidge với 28 features/số. Walk-Forward validation — KHÔNG rò rỉ dữ liệu.)</em></p>", unsafe_allow_html=True)
                 f6_html = "".join([f"<div class='ball {ball_class}' style='width:65px;height:65px;font-size:24px; background: linear-gradient(145deg,#ff0055,#ff6600); border-color:#ff0055; box-shadow: 0 0 30px #ff0055;'>{n:02d}</div>" for n in final_6])
@@ -1000,6 +1001,10 @@ def main_app():
                 st.markdown("<div class='card' style='border-color: #f1c40f;'>", unsafe_allow_html=True)
                 st.markdown("<h3 style='text-align: center; color: #f1c40f !important;'>🛡️ HIỆU SUẤT CÁC BỘ LỌC (FILTER DASHBOARD) 🛡️</h3>", unsafe_allow_html=True)
                 st.markdown(f"<p style='text-align: center;'>AI vừa khởi tạo <b>{total_gen:,}</b> tổ hợp nháp để tìm ra {num_tickets} vé hoàn hảo nhất. Dưới đây là bảng phong thần các bộ lọc:</p>", unsafe_allow_html=True)
+                if 'survival_pool_size' in filter_stats:
+                    sp_size = filter_stats['survival_pool_size']
+                    sp_pct = (sp_size / total_gen) * 100 if total_gen > 0 else 0
+                    st.success(f"🧬 **V2700 DARWINIAN SURVIVAL:** Trận chiến sinh tồn kết thúc! Lưới siêu lọc đã thiêu rụi hàng chục ngàn vé, chỉ còn đúng **{sp_size:,} vé** hợp lệ mang tín hiệu sống sót ({sp_pct:.2f}% không gian gốc). AI đã áp dụng luật Darwin để phân cụm và trích xuất lõi bầy đàn mạnh nhất cho bạn!")
                 
                 # Render metrics
                 fc1, fc2, fc3, fc4 = st.columns(4)

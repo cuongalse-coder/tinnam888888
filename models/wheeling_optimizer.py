@@ -440,6 +440,23 @@ class WheelingOptimizer:
         if not valid_candidates:
             valid_candidates = list(all_cands[:100])
             
+        # V2700 Darwinian Survival Clustering
+        if stats is not None:
+            stats['survival_pool_size'] = len(valid_candidates)
+            
+        survival_densities = {}
+        # Áp dụng thuật toán sinh tồn nếu đàn còn dưới 5000 cá thể (Tránh O(N^2) quá lớn)
+        if 0 < len(valid_candidates) <= 5000:
+            for i, cand_a in enumerate(valid_candidates):
+                density = 0
+                set_a = set(cand_a)
+                # Tính lượng cá thể "cùng đàn" (chia sẻ ít nhất 4 gen giống nhau)
+                for j, cand_b in enumerate(valid_candidates):
+                    if i == j: continue
+                    if len(set_a & set(cand_b)) >= 4:
+                        density += 1
+                survival_densities[tuple(cand_a)] = density
+            
         scored_candidates = []
         for cand in valid_candidates:
             score, epi_count, dead_count = self._calculate_spatial_score(cand, radar_map, ai_top_core, symbiotic)
@@ -447,6 +464,16 @@ class WheelingOptimizer:
                 core_set = set(ai_top_core[:hard_core_lock])
                 if not core_set.issubset(set(cand)):
                     score -= 9999.0
+                    
+            # V2700: Cộng điểm sinh tồn (Survival Points)
+            cand_tuple = tuple(cand)
+            if cand_tuple in survival_densities:
+                d_score = survival_densities[cand_tuple]
+                if d_score == 0:
+                    score -= 50 # Cá thể mồ côi đột biến, trảm!
+                else:
+                    score += min(300, d_score * 3) # Nằm sâu trong lõi bầy đàn, cộng điểm cực lớn
+                    
             scored_candidates.append((score, epi_count, dead_count, cand))
             
         scored_candidates.sort(key=lambda x: x[0], reverse=True)
