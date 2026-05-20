@@ -561,34 +561,36 @@ class NexusEngine:
         if len(data) >= 1:
             prev_draw = data[-1][:self.pick_count]
             prev_draw_set = set(prev_draw)
+            go_cols = 10  # Dynamic grid: 10 columns
+            go_rows = (self.max_number + go_cols - 1) // go_cols
             for b in prev_draw:
-                r, c = (b-1) // 9, (b-1) % 9
-                if r > 0: go_board_liberties.add((r-1)*9 + c + 1)
-                if r < 4: go_board_liberties.add((r+1)*9 + c + 1)
-                if c > 0: go_board_liberties.add(r*9 + (c-1) + 1)
-                if c < 8: go_board_liberties.add(r*9 + (c+1) + 1)
-            for b in prev_draw:
-                if b in go_board_liberties:
-                    go_board_liberties.remove(b)
+                r, c = (b-1) // go_cols, (b-1) % go_cols
+                for dr, dc in [(-1,0),(1,0),(0,-1),(0,1)]:
+                    nr, nc = r + dr, c + dc
+                    if 0 <= nr < go_rows and 0 <= nc < go_cols:
+                        adj = nr * go_cols + nc + 1
+                        if 1 <= adj <= self.max_number:
+                            go_board_liberties.add(adj)
+            go_board_liberties -= prev_draw_set
                     
         missing_pool = set()
         hot_pool = set()
         if len(data) >= 10:
             window = data[-10:]
-            counts = [0] * 46
+            counts = [0] * (self.max_number + 1)
             for d in window:
                 for x in d[:self.pick_count]: counts[x] += 1
-            for n in range(1, 46):
+            for n in range(1, self.max_number + 1):
                 if counts[n] == 0: missing_pool.add(n)
                 elif counts[n] >= 2: hot_pool.add(n)
                 
         top_frequent = set()
         if len(data) >= 100:
             window = data[-100:]
-            freqs = [0] * 46
+            freqs = [0] * (self.max_number + 1)
             for d in window:
                 for x in d[:self.pick_count]: freqs[x] += 1
-            arr = [(n, freqs[n]) for n in range(1, 46)]
+            arr = [(n, freqs[n]) for n in range(1, self.max_number + 1)]
             arr.sort(key=lambda x: x[1], reverse=True)
             for i in range(22):
                 top_frequent.add(arr[i][0])
@@ -607,7 +609,7 @@ class NexusEngine:
                     markov_transitions[c][p_val].add(c_val)
                     
             for d in data:
-                word = "".join("A" if x<=9 else "B" if x<=19 else "C" if x<=29 else "D" if x<=39 else "E" for x in d[:self.pick_count])
+                word = "".join("A" if x<=9 else "B" if x<=19 else "C" if x<=29 else "D" if x<=39 else "E" if x<=49 else "F" for x in d[:self.pick_count])
                 alphabet_patterns.add(word)
             
         return {
@@ -782,7 +784,7 @@ class NexusEngine:
         # Alphabet Decade Cipher
         alphabet_patterns = c.get('alphabet_patterns')
         if alphabet_patterns is not None:
-            word = "".join("A" if x<=9 else "B" if x<=19 else "C" if x<=29 else "D" if x<=39 else "E" for x in combo)
+            word = "".join("A" if x<=9 else "B" if x<=19 else "C" if x<=29 else "D" if x<=39 else "E" if x<=49 else "F" for x in combo)
             if word not in alphabet_patterns:
                 return False
             

@@ -481,8 +481,8 @@ class RealWorldAIEngine:
             else: scores[num] = freq_score * 0.5 + overdue * 0.5
         return [n for n, _ in sorted(scores.items(), key=lambda x: -x[1])[:15]]
 
-    def optimize_ensemble(self):
-        """V750A: 9-Model Ensemble + Agreement Filter + Sector Diversity (BEST 6/6 config)"""
+    def _run_9model_ensemble(self, pool_size=20):
+        """V750A: Shared 9-Model Ensemble voting logic (used by both optimize_ensemble and backtest)."""
         from collections import Counter
         m1 = self.model_markov_chain()
         m2 = self.model_gap_overdue(top_n=15)
@@ -494,26 +494,29 @@ class RealWorldAIEngine:
         m8 = self.model_cond_prob()
         m9 = self.model_freq_gap_hybrid()
         
-        # V750A voting weights (backtest-optimized for max 6/6)
         votes = Counter()
-        for num in m5[:15]: votes[num] += 12   # KNN Mirror V3
-        for num in m6[:15]: votes[num] += 8    # Pair co-occurrence
-        for num in m8[:15]: votes[num] += 6    # Conditional Probability
-        for num in m9[:15]: votes[num] += 5    # Freq-Gap Hybrid (NEW)
-        for num in m4[:15]: votes[num] += 4    # Random Forest + KMeans
-        for num in m7[:15]: votes[num] += 4    # Delta Momentum
-        for num in m2[:15]: votes[num] += 3    # Overdue gap
-        for num in m3[:6]:  votes[num] += 2    # Neural momentum
-        for num in m1[:6]:  votes[num] += 1    # Markov chain
+        for num in m5[:15]: votes[num] += 12
+        for num in m6[:15]: votes[num] += 8
+        for num in m8[:15]: votes[num] += 6
+        for num in m9[:15]: votes[num] += 5
+        for num in m4[:15]: votes[num] += 4
+        for num in m7[:15]: votes[num] += 4
+        for num in m2[:15]: votes[num] += 3
+        for num in m3[:6]:  votes[num] += 2
+        for num in m1[:6]:  votes[num] += 1
         
-        # V750A: Agreement filter — bonus for numbers voted by ≥3 strong models
         strong_models = [set(m5[:12]), set(m6[:12]), set(m8[:12]), set(m7[:12])]
         for num in self.all_numbers:
             consensus = sum(1 for ml in strong_models if num in ml)
             if consensus >= 3:
                 votes[num] += consensus * 5
         
-        best = [num for num, count in votes.most_common(6)]
+        return [n for n, _ in votes.most_common(pool_size)]
+
+    def optimize_ensemble(self):
+        """V750A: 9-Model Ensemble + Agreement Filter + Sector Diversity (BEST 6/6 config)"""
+        ranked = self._run_9model_ensemble(pool_size=20)
+        best = ranked[:6]
         
         while len(best) < 6:
             candidates = self.model_gap_overdue(top_n=15)
@@ -965,6 +968,12 @@ def main_app():
                 fc19.metric("Lọc Cao/Thấp", f"{(filter_stats.get('high_low',0)/total_gen*100):.1f}%", f"-{filter_stats.get('high_low',0):,} vé")
                 fc20.metric("Lọc Thập Kỷ", f"{(filter_stats.get('decade',0)/total_gen*100):.1f}%", f"-{filter_stats.get('decade',0):,} vé")
                 
+                fc21, fc22, fc23, fc24 = st.columns(4)
+                fc21.metric("Lọc Liên Tiếp", f"{(filter_stats.get('consec',0)/total_gen*100):.1f}%", f"-{filter_stats.get('consec',0):,} vé")
+                fc22.metric("Lọc Tâm Lý Học", f"{(filter_stats.get('psych',0)/total_gen*100):.1f}%", f"-{filter_stats.get('psych',0):,} vé")
+                fc23.metric("Lọc Mod 7", f"{(filter_stats.get('mod7',0)/total_gen*100):.1f}%", f"-{filter_stats.get('mod7',0):,} vé")
+                fc24.metric("Lọc Micro-Sector", f"{(filter_stats.get('micro_sector',0)/total_gen*100):.1f}%", f"-{filter_stats.get('micro_sector',0):,} vé")
+                
                 st.markdown("</div>", unsafe_allow_html=True)
             
             # === BÀN CỜ LƯỢNG TỬ 8x8 (QUANTUM CHESSBOARD MATRIX) ===
@@ -985,25 +994,158 @@ def main_app():
                 last_y = get_modulo_coord(last_draw[3:])
                 last_sq = get_chess_notation(last_x, last_y)
                 
-                # Tính toán Transition Matrix 8x8 -> 8x8
+                # ========== TÍNH TOÀN BỘ DỮ LIỆU BÀN CỜ ==========
+                # Tính tần suất 64 ô + transition matrix + trajectory
+                cell_freq = {}
+                cell_last_seen = {}
+                cell_streak = {}  # Bao nhiêu kỳ chưa ra
+                trajectory = []
                 transition_map = {}
-                for i in range(1, len(real_data)):
-                    p_draw = real_data[i-1][:6]
-                    c_draw = real_data[i][:6]
-                    p_x = get_modulo_coord(p_draw[:3])
-                    p_y = get_modulo_coord(p_draw[3:])
-                    c_x = get_modulo_coord(c_draw[:3])
-                    c_y = get_modulo_coord(c_draw[3:])
+                
+                for i in range(len(real_data)):
+                    d = real_data[i][:6]
+                    cx = get_modulo_coord(d[:3])
+                    cy = get_modulo_coord(d[3:])
+                    sq = get_chess_notation(cx, cy)
                     
-                    p_sq = get_chess_notation(p_x, p_y)
-                    c_sq = get_chess_notation(c_x, c_y)
+                    cell_freq[sq] = cell_freq.get(sq, 0) + 1
+                    cell_last_seen[sq] = i
                     
-                    if p_sq not in transition_map:
-                        transition_map[p_sq] = {}
-                    transition_map[p_sq][c_sq] = transition_map[p_sq].get(c_sq, 0) + 1
+                    if i >= len(real_data) - 20:
+                        trajectory.append(sq)
                     
+                    if i > 0:
+                        p_d = real_data[i-1][:6]
+                        p_x = get_modulo_coord(p_d[:3])
+                        p_y = get_modulo_coord(p_d[3:])
+                        p_sq = get_chess_notation(p_x, p_y)
+                        if p_sq not in transition_map:
+                            transition_map[p_sq] = {}
+                        transition_map[p_sq][sq] = transition_map[p_sq].get(sq, 0) + 1
+                
+                current_idx = len(real_data)
+                for x in range(8):
+                    for y in range(8):
+                        sq = get_chess_notation(x, y)
+                        if sq in cell_last_seen:
+                            cell_streak[sq] = current_idx - cell_last_seen[sq]
+                        else:
+                            cell_streak[sq] = current_idx
+                
                 st.markdown(f"<h4 style='color:#fff;'>📍 Kỳ trước Jackpot nổ tại Tọa độ: <span style='color:#ff00ff; font-size:1.5em;'>{last_sq}</span> (Mod Ngang: {last_x} | Mod Dọc: {last_y})</h4>", unsafe_allow_html=True)
                 
+                # ========== HEATMAP BÀN CỜ 8x8 ==========
+                st.markdown("#### 🗺️ HEATMAP BÀN CỜ 8x8 (Tần suất lịch sử)")
+                
+                sort_mode = st.selectbox("🔀 Sắp xếp / Hiển thị theo:", [
+                    "Tần suất Jackpot (Nhiều → Ít)",
+                    "Kỳ ngủ đông (Lâu → Mới)",
+                    "Xác suất Markov (Từ ô hiện tại)"
+                ], key="chess_sort")
+                
+                max_freq = max(cell_freq.values()) if cell_freq else 1
+                max_streak = max(cell_streak.values()) if cell_streak else 1
+                
+                # Tính xác suất Markov từ ô hiện tại
+                markov_probs = {}
+                if last_sq in transition_map:
+                    total_transitions = sum(transition_map[last_sq].values())
+                    for sq_key, cnt in transition_map[last_sq].items():
+                        markov_probs[sq_key] = cnt / total_transitions
+                
+                # Render bảng 8x8 heatmap
+                heatmap_html = "<table style='width:100%; border-collapse: collapse; margin: 10px 0;'>"
+                heatmap_html += "<tr><th style='width:30px; color:#888;'></th>"
+                for col_idx in range(8):
+                    heatmap_html += f"<th style='text-align:center; color:#ff00ff; font-weight:bold; padding:5px;'>{chr(65+col_idx)}</th>"
+                heatmap_html += "</tr>"
+                
+                for row in range(8):
+                    heatmap_html += f"<tr><td style='text-align:center; color:#ff00ff; font-weight:bold; padding:5px;'>{row+1}</td>"
+                    for col in range(8):
+                        sq = get_chess_notation(col, row)
+                        freq = cell_freq.get(sq, 0)
+                        streak = cell_streak.get(sq, 0)
+                        mk_prob = markov_probs.get(sq, 0)
+                        
+                        # Chọn intensity và tooltip dựa trên sort mode
+                        if "Tần suất" in sort_mode:
+                            intensity = freq / max_freq if max_freq > 0 else 0
+                            tooltip_extra = f"Tần suất: {freq} kỳ"
+                        elif "ngủ đông" in sort_mode:
+                            intensity = streak / max_streak if max_streak > 0 else 0
+                            tooltip_extra = f"Ngủ đông: {streak} kỳ"
+                        else:
+                            intensity = mk_prob * 5  # Scale up for visibility
+                            tooltip_extra = f"Markov: {mk_prob*100:.1f}%"
+                        
+                        intensity = min(intensity, 1.0)
+                        
+                        # Màu gradient: đen → tím → hồng neon
+                        r_val = int(50 + intensity * 205)
+                        g_val = int(5 + intensity * 30)
+                        b_val = int(80 + intensity * 175)
+                        bg_color = f"rgb({r_val},{g_val},{b_val})"
+                        
+                        # Đánh dấu ô hiện tại và ô mục tiêu
+                        border = "2px solid #333"
+                        extra_style = ""
+                        if sq == last_sq:
+                            border = "3px solid #00ffcc"
+                            extra_style = "box-shadow: 0 0 15px #00ffcc;"
+                        elif mk_prob > 0 and mk_prob == max(markov_probs.values(), default=0):
+                            border = "3px solid #ff0055"
+                            extra_style = "box-shadow: 0 0 10px #ff0055;"
+                        
+                        font_size = "11px" if freq < 10 else "12px"
+                        heatmap_html += f"""<td style='text-align:center; background:{bg_color}; border:{border}; 
+                            padding:6px 2px; border-radius:4px; cursor:pointer; {extra_style}' 
+                            title='{sq}: {tooltip_extra} | Streak: {streak} kỳ'>
+                            <div style='font-size:13px; font-weight:bold; color:#fff;'>{sq}</div>
+                            <div style='font-size:{font_size}; color:#ccc;'>{freq}</div>
+                        </td>"""
+                    heatmap_html += "</tr>"
+                heatmap_html += "</table>"
+                
+                st.markdown(heatmap_html, unsafe_allow_html=True)
+                st.markdown("<p style='font-size:12px; color:#888; text-align:center;'>🟢 Viền xanh = Ô hiện tại | 🔴 Viền đỏ = Mục tiêu Markov #1 | Số trong ô = Tần suất lịch sử</p>", unsafe_allow_html=True)
+                
+                # ========== TRAJECTORY 20 KỲ GẦN NHẤT ==========
+                with st.expander("🛤️ ĐƯỜNG ĐI 20 KỲ GẦN NHẤT (Trajectory trên Bàn Cờ)", expanded=False):
+                    traj_html = "<div style='display:flex; flex-wrap:wrap; align-items:center; gap:5px; padding:10px;'>"
+                    for t_idx, t_sq in enumerate(trajectory):
+                        is_last = (t_idx == len(trajectory) - 1)
+                        bg = "linear-gradient(145deg, #ff0055, #ff00ff)" if is_last else "#333"
+                        border_t = "2px solid #ff0055" if is_last else "1px solid #666"
+                        traj_html += f"<div style='background:{bg}; border:{border_t}; padding:6px 10px; border-radius:8px; color:#fff; font-weight:bold; font-size:14px;'>{t_sq}</div>"
+                        if t_idx < len(trajectory) - 1:
+                            traj_html += "<span style='color:#ff00ff; font-size:16px;'>→</span>"
+                    traj_html += "</div>"
+                    st.markdown(traj_html, unsafe_allow_html=True)
+                    
+                    # Phân tích đường đi
+                    if len(trajectory) >= 2:
+                        revisit = len(trajectory) - len(set(trajectory))
+                        st.markdown(f"**Phân tích:** Trong 20 kỳ gần nhất, bàn cờ đi qua **{len(set(trajectory))}** ô khác nhau (có **{revisit}** lần quay lại ô cũ).")
+                
+                # ========== TOP 10 Ô NÓNG / LẠNH ==========
+                with st.expander("🏆 TOP 10 Ô NÓNG NHẤT & ❄️ TOP 10 Ô LẠNH NHẤT", expanded=False):
+                    sorted_by_freq = sorted(cell_freq.items(), key=lambda x: -x[1])
+                    sorted_by_streak = sorted(cell_streak.items(), key=lambda x: -x[1])
+                    
+                    col_hot, col_cold = st.columns(2)
+                    with col_hot:
+                        st.markdown("#### 🔥 Ô nóng nhất (Nhiều JP nhất)")
+                        for rank, (sq, freq) in enumerate(sorted_by_freq[:10]):
+                            streak_val = cell_streak.get(sq, 0)
+                            st.markdown(f"**#{rank+1}. {sq}** — {freq} lần nổ JP (ngủ đông: {streak_val} kỳ)")
+                    with col_cold:
+                        st.markdown("#### ❄️ Ô ngủ đông lâu nhất")
+                        for rank, (sq, streak_val) in enumerate(sorted_by_streak[:10]):
+                            freq_val = cell_freq.get(sq, 0)
+                            st.markdown(f"**#{rank+1}. {sq}** — Đã {streak_val} kỳ chưa ra (tổng: {freq_val} lần)")
+                
+                # ========== GỢI Ý MARKOV (3 Ô MỤC TIÊU) ==========
                 if last_sq in transition_map:
                     next_moves = sorted(transition_map[last_sq].items(), key=lambda item: item[1], reverse=True)
                     st.success("🤖 Dựa trên Chuỗi Markov, AI dò tìm thấy Tọa độ tiếp theo khả năng cao nhất rơi vào:")
@@ -1012,16 +1154,17 @@ def main_app():
                     
                     def render_target_sq(col, rank, sq_data):
                         sq_name, count = sq_data
-                        # Phân tích ngược lại từ tên Ô ra cấu trúc
                         x_idx = ord(sq_name[0]) - 65
                         y_idx = int(sq_name[1]) - 1
+                        total_from_sq = sum(transition_map[last_sq].values())
+                        prob_pct = count / total_from_sq * 100
                         
                         col.markdown(f"""
                         <div style='background: linear-gradient(145deg, #222, #111); border: 1px solid #ff00ff; padding: 15px; border-radius: 10px; text-align: center;'>
                             <h3 style='color: #ff00ff; margin:0;'>MỤC TIÊU {rank}</h3>
                             <h1 style='color: #fff; margin:10px 0; font-size: 3em; text-shadow: 0 0 15px #ff00ff;'>{sq_name}</h1>
                             <p style='color: #888; font-size: 0.9em;'>Dư Đầu: <b>{x_idx}</b><br>Dư Cuối: <b>{y_idx}</b></p>
-                            <span style='color: #00ffcc;'>Tần suất lịch sử: {count} lần</span>
+                            <span style='color: #00ffcc;'>Lịch sử: {count} lần ({prob_pct:.1f}%)</span>
                         </div>
                         """, unsafe_allow_html=True)
                     
@@ -1030,6 +1173,138 @@ def main_app():
                     if len(next_moves) > 2: render_target_sq(c_sq3, 3, next_moves[2])
                     
                     st.info("💡 BÍ KÍP ĐÁNH LƯỚI: Nhìn vào cấu trúc Trục Ngang (Đầu trận) và Trục Dọc (Cuối trận) của MỤC TIÊU 1 ở trên, nhập thủ công vào Bảng KHOANH VÙNG LƯỢNG TỬ ở phía trên cùng để ép AI bốc vé đúng vào Ô này!")
+                
+                # ========== BÀN CỜ CẤP 2: SUB-GRID VISUALIZATION ==========
+                st.markdown("---")
+                st.markdown("<h3 style='color: #ff00ff !important;'>🔬 BÀN CỜ CẤP 2 (ZOOM VÀO 1 Ô)</h3>", unsafe_allow_html=True)
+                st.markdown("*Khi bạn chọn 1 Ô ở Cấp 1, hệ thống sẽ \"zoom in\" bằng cách chẻ Ô đó theo 2 trục phụ:*")
+                st.markdown("- **Trục X Phụ**: Độ giãn cách (B6 - B1)")
+                st.markdown("- **Trục Y Phụ**: Tổng 2 bóng giữa (B3 + B4)")
+                
+                # Chọn ô để zoom (mặc định = MỤC TIÊU 1 từ Markov)
+                target_sq_options = [get_chess_notation(x, y) for x in range(8) for y in range(8)]
+                default_target = last_sq
+                if last_sq in transition_map:
+                    top_next = sorted(transition_map[last_sq].items(), key=lambda item: item[1], reverse=True)
+                    if top_next:
+                        default_target = top_next[0][0]
+                
+                default_idx = target_sq_options.index(default_target) if default_target in target_sq_options else 0
+                selected_cell = st.selectbox("Chọn Ô để Zoom:", target_sq_options, index=default_idx, key="subgrid_cell")
+                
+                sel_x = ord(selected_cell[0]) - 65
+                sel_y = int(selected_cell[1]) - 1
+                
+                # Thu thập dữ liệu lịch sử rơi vào ô này
+                subgrid_data = {}
+                subgrid_total = 0
+                for d in real_data:
+                    dx = get_modulo_coord(d[:3])
+                    dy = get_modulo_coord(d[3:])
+                    if dx == sel_x and dy == sel_y:
+                        subgrid_total += 1
+                        delta = d[5] - d[0]
+                        midsum = d[2] + d[3]
+                        key = (delta, midsum)
+                        subgrid_data[key] = subgrid_data.get(key, 0) + 1
+                
+                if subgrid_total > 0:
+                    st.success(f"📊 Ô **{selected_cell}** chứa **{subgrid_total}** JP lịch sử, phân bố vào **{len(subgrid_data)}** Ô Con (Sub-Squares).")
+                    
+                    # Tìm Top 5 ô con phổ biến nhất (= Auto-Suggest)
+                    sorted_subgrid = sorted(subgrid_data.items(), key=lambda x: -x[1])[:10]
+                    
+                    st.markdown("#### 🎯 AUTO-SUGGEST: Top 5 Ô Con khả năng cao nhất")
+                    sg_cols = st.columns(min(5, len(sorted_subgrid)))
+                    for idx, ((delta, midsum), count) in enumerate(sorted_subgrid[:5]):
+                        pct = count / subgrid_total * 100
+                        with sg_cols[idx]:
+                            st.markdown(f"""
+                            <div style='background: linear-gradient(145deg, #1a0030, #0d001a); border: 1px solid #ff00ff; 
+                                padding: 12px; border-radius: 10px; text-align: center; margin: 3px;'>
+                                <div style='color: #ff00ff; font-size: 11px; font-weight: bold;'>Ô Con #{idx+1}</div>
+                                <div style='color: #fff; font-size: 16px; margin: 5px 0;'>Δ={delta} | Σ={midsum}</div>
+                                <div style='color: #00ffcc; font-size: 13px;'>{count} lần ({pct:.0f}%)</div>
+                            </div>
+                            """, unsafe_allow_html=True)
+                    
+                    st.info(f"💡 **Cách dùng Auto-Suggest:** Nhập giá trị Δ (Giãn cách B6-B1) và Σ (Tổng B3+B4) của Ô Con #1 vào bảng **KHOANH VÙNG LƯỢNG TỬ** ở sidebar để ép AI bốc vé đúng vào micro-zone này!")
+                    
+                    # Hiển thị Sub-Grid heatmap nhỏ
+                    with st.expander("📊 Chi tiết phân bố Sub-Grid", expanded=False):
+                        import pandas as pd
+                        sg_rows = [{"Giãn cách (B6-B1)": d, "Tổng Giữa (B3+B4)": m, "Số lần JP": c, "Tỷ lệ (%)": f"{c/subgrid_total*100:.1f}"} 
+                                   for (d, m), c in sorted_subgrid]
+                        st.dataframe(pd.DataFrame(sg_rows), use_container_width=True, hide_index=True)
+                else:
+                    st.warning(f"Ô **{selected_cell}** chưa có Jackpot nào nổ trong lịch sử.")
+                
+            st.markdown("</div>", unsafe_allow_html=True)
+            
+            # ========== BACKTEST BÀN CỜ ==========
+            st.markdown("<div class='card' style='border-color: #f39c12;'>", unsafe_allow_html=True)
+            st.markdown("<h2 style='text-align: center; color: #f39c12 !important;'>🧪 BACKTEST BÀN CỜ (Kiểm tra hiệu quả ép Ô)</h2>", unsafe_allow_html=True)
+            st.markdown("<p style='text-align: center;'>Kiểm tra xem nếu bạn luôn ép vé vào Ô Markov #1, tỷ lệ đúng là bao nhiêu?</p>", unsafe_allow_html=True)
+            
+            if st.button("🚀 CHẠY BACKTEST BÀN CỜ", key="chess_bt_btn"):
+                if len(real_data) >= 50:
+                    chess_bt_prog = st.progress(0)
+                    test_range = range(30, len(real_data))
+                    correct_top1 = 0
+                    correct_top3 = 0
+                    total_tested = 0
+                    
+                    for step_idx, idx in enumerate(test_range):
+                        # Build transition map from data[:idx]
+                        t_map = {}
+                        for j in range(1, idx):
+                            pd_d = real_data[j-1][:6]
+                            cd_d = real_data[j][:6]
+                            p_sq_bt = get_chess_notation(get_modulo_coord(pd_d[:3]), get_modulo_coord(pd_d[3:]))
+                            c_sq_bt = get_chess_notation(get_modulo_coord(cd_d[:3]), get_modulo_coord(cd_d[3:]))
+                            if p_sq_bt not in t_map: t_map[p_sq_bt] = {}
+                            t_map[p_sq_bt][c_sq_bt] = t_map[p_sq_bt].get(c_sq_bt, 0) + 1
+                        
+                        # Predict from last known draw
+                        prev_d = real_data[idx-1][:6]
+                        prev_sq = get_chess_notation(get_modulo_coord(prev_d[:3]), get_modulo_coord(prev_d[3:]))
+                        
+                        actual_d = real_data[idx][:6]
+                        actual_sq = get_chess_notation(get_modulo_coord(actual_d[:3]), get_modulo_coord(actual_d[3:]))
+                        
+                        if prev_sq in t_map:
+                            predictions_bt = sorted(t_map[prev_sq].items(), key=lambda x: -x[1])
+                            pred_top1 = predictions_bt[0][0] if predictions_bt else ""
+                            pred_top3 = [p[0] for p in predictions_bt[:3]]
+                            
+                            if pred_top1 == actual_sq: correct_top1 += 1
+                            if actual_sq in pred_top3: correct_top3 += 1
+                            total_tested += 1
+                        
+                        if step_idx % 20 == 0:
+                            chess_bt_prog.progress(min((step_idx + 1) / len(test_range), 1.0))
+                    
+                    chess_bt_prog.progress(1.0)
+                    
+                    if total_tested > 0:
+                        rate1 = correct_top1 / total_tested * 100
+                        rate3 = correct_top3 / total_tested * 100
+                        
+                        cb1, cb2, cb3 = st.columns(3)
+                        cb1.metric("Tổng kỳ test", f"{total_tested}")
+                        cb2.metric("Trúng Top-1 Markov", f"{rate1:.1f}%", f"{correct_top1}/{total_tested}")
+                        cb3.metric("Trúng Top-3 Markov", f"{rate3:.1f}%", f"{correct_top3}/{total_tested}")
+                        
+                        expected_random = 1/64 * 100
+                        if rate1 > expected_random * 2:
+                            st.success(f"🔥 **XUẤT SẮC!** Tỷ lệ trúng Top-1 ({rate1:.1f}%) vượt xa ngẫu nhiên ({expected_random:.1f}%). Bàn Cờ Markov thực sự có sức mạnh!")
+                        elif rate1 > expected_random * 1.3:
+                            st.info(f"✅ Tỷ lệ trúng Top-1 ({rate1:.1f}%) cao hơn ngẫu nhiên ({expected_random:.1f}%). Bàn Cờ có hiệu quả.")
+                        else:
+                            st.warning(f"⚠️ Tỷ lệ trúng Top-1 ({rate1:.1f}%) gần với ngẫu nhiên ({expected_random:.1f}%). Nên kết hợp nhiều bộ lọc.")
+                else:
+                    st.error("Cần tối thiểu 50 kỳ dữ liệu để chạy backtest bàn cờ.")
+            
             st.markdown("</div>", unsafe_allow_html=True)
             
             # === PHÂN TÍCH CHUYÊN SÂU TỪ KỲ LIỀN KỀ ===
@@ -1384,38 +1659,7 @@ def main_app():
     
                             try:
                                 eng = RealWorldAIEngine(hist, max_number)
-    
-                                # --- V750A: 9-Model Ensemble + Agreement Filter ---
-                                from collections import Counter as _Counter
-                                m1 = eng.model_markov_chain()
-                                m2 = eng.model_gap_overdue(top_n=15)
-                                m3 = eng.model_momentum_neural()
-                                m4 = eng.model_advanced_ml()
-                                m5 = eng.model_knn_mirror()
-                                m6 = eng.model_pair_matrix()
-                                m7 = eng.model_delta_momentum()
-                                m8 = eng.model_cond_prob()
-                                m9 = eng.model_freq_gap_hybrid()
-    
-                                vote = _Counter()
-                                for num in m5[:15]: vote[num] += 12  # KNN Mirror V3
-                                for num in m6[:15]: vote[num] += 8   # Pair Matrix
-                                for num in m8[:15]: vote[num] += 6   # Conditional Probability
-                                for num in m9[:15]: vote[num] += 5   # Freq-Gap Hybrid
-                                for num in m4[:15]: vote[num] += 4   # ML (RF+KMeans)
-                                for num in m7[:15]: vote[num] += 4   # Delta Momentum
-                                for num in m2[:15]: vote[num] += 3   # Overdue Gap
-                                for num in m3[:6]:  vote[num] += 2   # Neural Momentum
-                                for num in m1[:6]:  vote[num] += 1   # Markov
-                                
-                                # V750A: Agreement filter
-                                strong = [set(m5[:12]), set(m6[:12]), set(m8[:12]), set(m7[:12])]
-                                for num in range(1, max_number + 1):
-                                    c = sum(1 for ml in strong if num in ml)
-                                    if c >= 3:
-                                        vote[num] += c * 5
-    
-                                ranked_pool = [n for n, _ in vote.most_common(20)]
+                                ranked_pool = eng._run_9model_ensemble(pool_size=20)
                                 # V19.0: JACKPOT LOCK EVALUATION
                                 # Pool-15 takes the top 15 numbers
                                 top6  = set(ranked_pool[:6])

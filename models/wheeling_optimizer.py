@@ -191,7 +191,7 @@ class WheelingOptimizer:
         # Alphabet Decade Cipher
         alphabet_patterns = constraints.get('alphabet_patterns')
         if alphabet_patterns is not None:
-            word = "".join("A" if x<=9 else "B" if x<=19 else "C" if x<=29 else "D" if x<=39 else "E" for x in combo)
+            word = "".join("A" if x<=9 else "B" if x<=19 else "C" if x<=29 else "D" if x<=39 else "E" if x<=49 else "F" for x in combo)
             if word not in alphabet_patterns:
                 if stats is not None: stats['alphabet_cipher'] += 1
                 return False
@@ -245,8 +245,10 @@ class WheelingOptimizer:
         micro_sector = constraints.get('micro_sector')
         if micro_sector:
             if 'odd' in micro_sector and odd != micro_sector['odd']:
+                if stats is not None: stats['micro_sector'] += 1
                 return False
             if 'high' in micro_sector and high != micro_sector['high']:
+                if stats is not None: stats['micro_sector'] += 1
                 return False
             if 'overlap' in micro_sector:
                 prev_draw_set_loc = constraints.get('prev_draw_set')
@@ -254,21 +256,33 @@ class WheelingOptimizer:
                     overlap_count = sum(1 for x in combo if x in prev_draw_set_loc)
                     ov_target = micro_sector['overlap']
                     if ov_target == 3:
-                        if overlap_count < 3: return False
+                        if overlap_count < 3:
+                            if stats is not None: stats['micro_sector'] += 1
+                            return False
                     elif overlap_count != ov_target:
+                        if stats is not None: stats['micro_sector'] += 1
                         return False
             if 'alphabet' in micro_sector and alphabet_patterns is not None:
-                word = "".join("A" if x<=9 else "B" if x<=19 else "C" if x<=29 else "D" if x<=39 else "E" for x in combo)
+                word = "".join("A" if x<=9 else "B" if x<=19 else "C" if x<=29 else "D" if x<=39 else "E" if x<=49 else "F" for x in combo)
                 if word != micro_sector['alphabet']:
+                    if stats is not None: stats['micro_sector'] += 1
                     return False
             if 'mod_x' in micro_sector:
-                if sum(combo[:3]) % 8 != micro_sector['mod_x']: return False
+                if sum(combo[:3]) % 8 != micro_sector['mod_x']:
+                    if stats is not None: stats['micro_sector'] += 1
+                    return False
             if 'mod_y' in micro_sector:
-                if sum(combo[3:]) % 8 != micro_sector['mod_y']: return False
+                if sum(combo[3:]) % 8 != micro_sector['mod_y']:
+                    if stats is not None: stats['micro_sector'] += 1
+                    return False
             if 'sub_delta' in micro_sector:
-                if (combo[5] - combo[0]) != micro_sector['sub_delta']: return False
+                if (combo[5] - combo[0]) != micro_sector['sub_delta']:
+                    if stats is not None: stats['micro_sector'] += 1
+                    return False
             if 'sub_midsum' in micro_sector:
-                if (combo[2] + combo[3]) != micro_sector['sub_midsum']: return False
+                if (combo[2] + combo[3]) != micro_sector['sub_midsum']:
+                    if stats is not None: stats['micro_sector'] += 1
+                    return False
         
         return True
 
@@ -288,7 +302,7 @@ class WheelingOptimizer:
             'digit_freq': 0, 'adj_digits': 0, 'wave_break': 0, 'rubik_matrix': 0, 'color_palette': 0,
             'go_board': 0, 'sliding_window': 0, 'markov_chain': 0, 'hacker_cipher': 0, 'freq_polarity': 0,
             'col_migration': 0, 'alphabet_cipher': 0, 'odd_even': 0, 'high_low': 0, 'elastic': 0,
-            'consec': 0, 'decade': 0, 'psych': 0, 'mod7': 0
+            'consec': 0, 'decade': 0, 'psych': 0, 'mod7': 0, 'micro_sector': 0
         }
         total_generated = 0
         all_triplets = set(combinations(pool, 3))
