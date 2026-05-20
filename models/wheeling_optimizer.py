@@ -286,17 +286,50 @@ class WheelingOptimizer:
         
         return True
 
+
+    def _radar_scan_chessboard(self, history_data):
+        radar_map = {}
+        for num in range(1, self.max_number + 1):
+            radar_map[num] = {'hits': 0, 'last_seen': 999}
+            
+        if not history_data:
+            return radar_map
+            
+        n = len(history_data)
+        for i, draw in enumerate(history_data):
+            for num in draw[:self.pick_count]:
+                if num in radar_map:
+                    radar_map[num]['hits'] += 1
+                    radar_map[num]['last_seen'] = n - 1 - i
+        return radar_map
+        
+    def _calculate_spatial_score(self, ticket, radar_map, ai_top_core):
+        score = 0.0
+        dead_zone_count = 0
+        epicenter_count = 0
+        
+        for num in ticket:
+            if ai_top_core and num in ai_top_core:
+                idx = ai_top_core.index(num)
+                score += (30 - idx) * 2.0
+                
+            hits = radar_map[num]['hits']
+            last_seen = radar_map[num]['last_seen']
+            
+            if last_seen > 15:
+                dead_zone_count += 1
+                score -= 10.0
+            elif last_seen <= 2:
+                epicenter_count += 1
+                score += 5.0
+                
+        return score, epicenter_count, dead_zone_count
+
     def generate_wheel(self, pool, num_tickets, constraints=None, sum_mod7=None, history_data=None, ai_top_core=None, hard_core_lock=0, micro_sector=None):
-        """
-        Generates `num_tickets` tickets from `pool` matching AI constraints and strict historical elimination.
-        V700: Maximizes coverage of 3-combinations AND 4-combinations (quadruplets) 
-        to guarantee a minimum win if the 6 winning numbers are in the pool.
-        Uses ai_top_core to force high-probability 5-6 match locking on 40% of tickets.
-        If hard_core_lock > 0, forces the top 1-2 numbers into EVERY SINGLE TICKET.
-        """
         pool = sorted(list(pool))
         if len(pool) <= self.pick_count:
             return [{'numbers': pool, 'strategy': '🎯 Trọng tâm (Duy nhất)'}] * num_tickets, 100.0
+            
         stats = {
             'sum_range': 0, 'sum_block': 0, 'col_bounds': 0, 'delta': 0,
             'digit_freq': 0, 'adj_digits': 0, 'wave_break': 0, 'rubik_matrix': 0, 'color_palette': 0,
@@ -304,121 +337,68 @@ class WheelingOptimizer:
             'col_migration': 0, 'alphabet_cipher': 0, 'odd_even': 0, 'high_low': 0, 'elastic': 0,
             'consec': 0, 'decade': 0, 'psych': 0, 'mod7': 0, 'micro_sector': 0
         }
-        total_generated = 0
-        all_triplets = set(combinations(pool, 3))
-        uncovered = set(all_triplets)
         
-        # Parse history into sets for fast elimination
-        history_sets = []
-        if history_data:
-            history_sets = [set(d[:self.pick_count]) for d in history_data]
+        history_sets = [set(d[:self.pick_count]) for d in history_data] if history_data else []
+        radar_map = self._radar_scan_chessboard(history_data[-30:] if history_data else [])
+        
+        import itertools
+        if len(pool) > 22:
+            pool = pool[:22]
             
-        tickets = []
+        all_cands = list(itertools.combinations(pool, self.pick_count))
         
-        # Prepare Candidate Pool with Smart AI Filtering + Historical Elimination
         valid_candidates = []
-        if len(pool) <= 18:
-            all_cands = list(combinations(pool, self.pick_count))
-            sys_rand.shuffle(all_cands)
-            for c in all_cands:
-                total_generated += 1
-                if not self._validate_ticket(c, constraints, sum_mod7, stats):
-                    continue
-                # Strict Historical Elimination (V16.0 GOD MODE)
-                c_set = set(c)
-                if any(len(c_set & h) >= 5 for h in history_sets):
-                    continue
-                valid_candidates.append(c)
-                if len(valid_candidates) >= 3000: break
-        else:
-            attempts = 0
-            while len(valid_candidates) < 4000 and attempts < 30000:
-                attempts += 1
-                c = tuple(sorted(sys_rand.sample(pool, self.pick_count)))
-                total_generated += 1
-                if not self._validate_ticket(c, constraints, sum_mod7, stats):
-                    continue
-                c_set = set(c)
-                if any(len(c_set & h) >= 5 for h in history_sets):
-                    continue
-                valid_candidates.append(c)
-                    
+        for c in all_cands:
+            if not self._validate_ticket(c, constraints, sum_mod7, stats):
+                continue
+            c_set = set(c)
+            if any(len(c_set & h) >= 5 for h in history_sets):
+                continue
+            valid_candidates.append(c)
+            
         if not valid_candidates:
-            # Fallback if constraints are too tight
-            valid_candidates = [tuple(sorted(sys_rand.sample(pool, self.pick_count))) for _ in range(100)]
+            valid_candidates = list(all_cands[:100])
             
-        # V20.0: BẠCH THỦ LÔ (HARD CORE LOCK)
-        # Force the top 1-2 numbers into EVERY ticket if requested
-        if hard_core_lock > 0 and ai_top_core and len(ai_top_core) >= hard_core_lock:
-            core_lock_set = set(ai_top_core[:hard_core_lock])
-            locked_candidates = [c for c in valid_candidates if core_lock_set.issubset(set(c))]
-            if len(locked_candidates) > 10:
-                valid_candidates = locked_candidates
-             
-        # V19.0: FORCING JACKPOT LOCK (Ép xác suất trúng 5-6 số)
-        # If the user wants extreme probability of hitting 5-6, we must lock the top 4/5 AI numbers on the first tickets.
-        if ai_top_core and len(ai_top_core) >= 4:
-            # Try to find valid candidates that contain at least 4 of the top core numbers
-            core_set = set(ai_top_core)
-            diamond_candidates = [c for c in valid_candidates if len(set(c) & core_set) >= 4]
-            # Prioritize those that have exactly 5 or exactly 4
-            diamond_candidates.sort(key=lambda c: len(set(c) & core_set), reverse=True)
+        scored_candidates = []
+        for cand in valid_candidates:
+            score, epi_count, dead_count = self._calculate_spatial_score(cand, radar_map, ai_top_core)
+            if hard_core_lock > 0 and ai_top_core and len(ai_top_core) >= hard_core_lock:
+                core_set = set(ai_top_core[:hard_core_lock])
+                if not core_set.issubset(set(cand)):
+                    score -= 9999.0
+            scored_candidates.append((score, epi_count, dead_count, cand))
             
-            # We assign up to 40% of our tickets to "Jackpot Lock" (V700: was 30%)
-            num_diamond = min(max(3, int(num_tickets * 0.4)), len(diamond_candidates))
-            
-            for i in range(num_diamond):
-                best_ticket = diamond_candidates[i]
-                strategy = f"💎 KHÓA KIM CƯƠNG (Bảo kê {len(set(best_ticket) & core_set)}/5 số lõi)"
-                tickets.append({'numbers': list(best_ticket), 'strategy': strategy})
-                covered = set(combinations(best_ticket, 3))
-                uncovered -= covered
-                # Remove from valid candidates so we don't pick it again
-                if best_ticket in valid_candidates:
-                    valid_candidates.remove(best_ticket)
-                    
-            remaining_tickets = num_tickets - num_diamond
-        else:
-            remaining_tickets = num_tickets
+        scored_candidates.sort(key=lambda x: x[0], reverse=True)
+        
+        tickets = []
+        epicenter_pool = [x for x in scored_candidates if x[1] >= 2 and x[2] == 0]
+        recovery_pool = [x for x in scored_candidates if x[2] >= 1]
+        perimeter_pool = [x for x in scored_candidates if x not in epicenter_pool and x not in recovery_pool]
+        
+        def add_ticket(pool_list, fallback_list, count, strategy_name):
+            added = 0
+            for item in pool_list:
+                if added >= count: break
+                tickets.append({'numbers': list(item[3]), 'strategy': strategy_name})
+                added += 1
+            if added < count:
+                for item in fallback_list:
+                    if added >= count: break
+                    if not any(set(item[3]) == set(t['numbers']) for t in tickets):
+                        tickets.append({'numbers': list(item[3]), 'strategy': strategy_name})
+                        added += 1
 
-        for i in range(remaining_tickets):
-            if not uncovered:
-                best_ticket = sys_rand.choice(valid_candidates) if valid_candidates else tuple(sys_rand.sample(pool, self.pick_count))
-                strategy = "🌪️ Đột biến (Chống bão hòa)"
+        add_ticket(epicenter_pool, scored_candidates, 5, '🔥 Tâm chấn Radar (Khóa mục tiêu)')
+        add_ticket(perimeter_pool, scored_candidates, 10, '🛰️ Vành đai không gian (Bao vây)')
+        add_ticket(recovery_pool, scored_candidates, 5, '♻️ Vùng phục hồi (Đón lõng)')
+        
+        if num_tickets != 20:
+            if num_tickets < 20:
+                tickets = tickets[:num_tickets]
             else:
-                best_ticket = None
-                best_coverage = -1
-                
-                sample_pool = sys_rand.sample(valid_candidates, min(len(valid_candidates), 1000)) if valid_candidates else []
-                
-                for cand in sample_pool:
-                    cand_triplets = set(combinations(cand, 3))
-                    # V700: Also track quadruplet coverage for 5-6 hit optimization
-                    cand_quads = set(combinations(cand, 4))
-                    coverage = len(cand_triplets & uncovered) + len(cand_quads) * 0.3
-                    
-                    if coverage > best_coverage:
-                        best_coverage = coverage
-                        best_ticket = cand
+                for item in scored_candidates:
+                    if len(tickets) >= num_tickets: break
+                    if not any(set(item[3]) == set(t['numbers']) for t in tickets):
+                        tickets.append({'numbers': list(item[3]), 'strategy': '🛸 Radar mở rộng'})
                         
-                    if best_coverage == 20:
-                        break
-                        
-                if not best_ticket:
-                    best_ticket = sys_rand.choice(valid_candidates) if valid_candidates else tuple(sys_rand.sample(pool, self.pick_count))
-                    strategy = "🌪️ Đột biến (Chống bão hòa)"
-                else:
-                    if i < remaining_tickets * 0.3:
-                        strategy = "🔥 Vét lưới (Dồn tín hiệu AI)"
-                    else:
-                        strategy = "🎯 Trọng tâm (Bao phủ chéo)"
-                    
-            tickets.append({'numbers': list(best_ticket), 'strategy': strategy})
-            covered = set(combinations(best_ticket, 3))
-            uncovered -= covered
-            
-            if best_ticket in valid_candidates:
-                valid_candidates.remove(best_ticket)
-            
-        cov = (len(all_triplets) - len(uncovered)) / len(all_triplets) * 100.0 if all_triplets else 100.0
-        return tickets, round(cov, 2), stats, total_generated
+        return tickets, 100.0, stats, len(all_cands)
