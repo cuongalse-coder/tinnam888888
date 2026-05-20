@@ -1477,28 +1477,77 @@ def main_app():
             st.markdown(f"<h2 style='text-align: center; color: #00ff00 !important;'>🎯 DÀN {len(all_preds)} VÉ BAO RÚT GỌN CHỐT SỐ 🎯</h2>", unsafe_allow_html=True)
             st.markdown(f"<p style='text-align: center; color: #888;'><em>(Ma trận tổ hợp bao phủ chéo giúp tiết kiệm tiền mà vẫn vét được lưới xác suất)</em></p>", unsafe_allow_html=True)
         
-        ticket_texts = []
-        for i, pred in enumerate(all_preds):
-            nums = pred['numbers']
-            ticket_str = " ".join([f"{n:02d}" for n in nums])
-            ticket_texts.append(ticket_str)
-            ticket_html = "".join([f"<div class='ball {ball_class}' style='width:40px;height:40px;font-size:16px;'>{n:02d}</div>" for n in nums])
-            st.markdown(f"**Vé #{i+1}:** <span style='color:#ff0055; font-style:italic;'>{pred.get('strategy', '')}</span>", unsafe_allow_html=True)
-            st.markdown(f"<div style='padding: 5px;'>{ticket_html}</div>", unsafe_allow_html=True)
-        
-        # Tiện ích Copy & Download
-        st.markdown("### 📋 SAO CHÉP & TẢI XUỐNG ĐỂ GHI VÉ")
-        st.info("💡 Bạn có thể copy dán trực tiếp vào SMS Vietlott, hoặc ghi ra giấy.")
-        full_text = "\\n".join(ticket_texts)
-        st.code(full_text, language='text')
-        
-        st.download_button(
-            label="💾 Tải danh sách vé (.txt)",
-            data=full_text,
-            file_name=f"vietlott_{game_choice.replace(' ', '_')}_dan_{len(all_preds)}_ve.txt",
-            mime="text/plain"
-        )
-        st.markdown("</div>", unsafe_allow_html=True)
+            # === BẢNG VÉ THEO CHIỀU DỌC (Dễ nhìn khi ghi vé) ===
+            if all_preds:
+                # Highlight vé tốt nhất
+                best_pred = all_preds[0]
+                best_nums = sorted(best_pred['numbers'])
+                best_html = "".join([f"<div class='ball {ball_class}' style='width:50px;height:50px;font-size:20px;font-weight:bold;'>{n:02d}</div>" for n in best_nums])
+                st.markdown(f"<h3 style='text-align:center; color:#ff0055;'>⭐ VÉ SỐ 1 — TỐT NHẤT ⭐</h3>", unsafe_allow_html=True)
+                st.markdown(f"<div style='display:flex;justify-content:center;gap:10px;padding:15px;'>{best_html}</div>", unsafe_allow_html=True)
+                st.markdown(f"<p style='text-align:center;color:#ffd700;font-size:18px;'><b>{' - '.join([f'{n:02d}' for n in best_nums])}</b></p>", unsafe_allow_html=True)
+                st.markdown("---")
+                
+                # === BẢNG DỌC: Mỗi cột = 1 vé, mỗi hàng = vị trí B1-B6 ===
+                st.markdown("<h3 style='text-align:center; color:#00ffcc;'>📋 BẢNG GHI VÉ (Nhìn theo cột dọc)</h3>", unsafe_allow_html=True)
+                st.markdown("<p style='text-align:center; color:#aaa;'>Mỗi <b>cột</b> là 1 vé. Ghi theo chiều dọc từ trên xuống.</p>", unsafe_allow_html=True)
+                
+                # Build vertical table HTML
+                n_tickets = len(all_preds)
+                
+                # Table header: Vé #1, Vé #2, ...
+                header_cells = "<th style='padding:8px;text-align:center;background:#1a1a2e;color:#ffd700;border:1px solid #333;font-size:14px;'>Vị trí</th>"
+                for i in range(n_tickets):
+                    color = '#ff0055' if i == 0 else '#00ff00'
+                    star = '⭐' if i == 0 else f'#{i+1}'
+                    header_cells += f"<th style='padding:8px;text-align:center;background:#1a1a2e;color:{color};border:1px solid #333;font-size:14px;min-width:55px;'>Vé {star}</th>"
+                
+                # Table body: B1-B6 rows
+                rows_html = ""
+                ball_labels = ['B1', 'B2', 'B3', 'B4', 'B5', 'B6']
+                for row_idx in range(6):
+                    row_cells = f"<td style='padding:8px;text-align:center;background:#111827;color:#00ffcc;border:1px solid #333;font-weight:bold;'>{ball_labels[row_idx]}</td>"
+                    for t_idx, pred in enumerate(all_preds):
+                        nums = sorted(pred['numbers'])
+                        num = nums[row_idx] if row_idx < len(nums) else '--'
+                        bg = '#2d1f3d' if t_idx == 0 else '#0d1117'
+                        row_cells += f"<td style='padding:10px;text-align:center;background:{bg};color:#fff;border:1px solid #333;font-size:18px;font-weight:bold;font-family:monospace;'>{num:02d}</td>"
+                    rows_html += f"<tr>{row_cells}</tr>"
+                
+                table_html = f"""
+                <div style='overflow-x:auto;margin:10px 0;'>
+                <table style='border-collapse:collapse;width:100%;'>
+                <thead><tr>{header_cells}</tr></thead>
+                <tbody>{rows_html}</tbody>
+                </table>
+                </div>
+                """
+                st.markdown(table_html, unsafe_allow_html=True)
+                
+                # === DANH SÁCH DÃY SỐ (Copy/Paste) ===
+                st.markdown("---")
+                st.markdown("### 📋 SAO CHÉP & TẢI XUỐNG ĐỂ GHI VÉ")
+                st.info("💡 Copy dán trực tiếp vào SMS Vietlott, hoặc ghi ra giấy theo từng dòng.")
+                
+                ticket_texts = []
+                for i, pred in enumerate(all_preds):
+                    nums = sorted(pred['numbers'])
+                    line = f"Vé {i+1:02d}: {' - '.join([f'{n:02d}' for n in nums])}"
+                    ticket_texts.append(line)
+                
+                full_text = "\n".join(ticket_texts)
+                st.code(full_text, language='text')
+                
+                st.download_button(
+                    label="💾 Tải danh sách vé (.txt)",
+                    data=full_text,
+                    file_name=f"vietlott_{game_choice.replace(' ', '_')}_dan_{len(all_preds)}_ve.txt",
+                    mime="text/plain"
+                )
+            else:
+                st.warning("Chưa có dữ liệu vé. Hãy bấm 'XUẤT KÍCH' ở tab 1 trước.")
+            
+            st.markdown("</div>", unsafe_allow_html=True)
             
     with tab3:
         st.markdown("### 📊 THEO DÕI ĐIỂM NỔ (OVERDUE GAP)")
