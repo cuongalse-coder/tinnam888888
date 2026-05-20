@@ -862,7 +862,10 @@ def main_app():
             from models.nexus_engine import NexusEngine
             
             engine = NexusEngine(max_number, 6)
-            result_v11 = engine.predict(real_data, n_sets=5, use_elastic_filter=use_elastic_filter)
+            try:
+                result_v11 = engine.predict(real_data, n_sets=5, use_elastic_filter=use_elastic_filter)
+            except TypeError:
+                result_v11 = engine.predict(real_data, n_sets=5)
             
             if result_v11['top_pool']:
                 if pool_size == 10:
