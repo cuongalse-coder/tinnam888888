@@ -1975,6 +1975,5 @@ def main_app():
                             st.error(f"📉 **AI ĐÁNH GIÁ: TRUNG BÌNH** — Pool 10 số bao phủ {rate_pool10_3:.1f}% kỳ. Lý do: Xổ số có độ ngẫu nhiên rất cao. Hãy dùng pool 15 số để tăng coverage.")
     
     
-if __name__ == "__main__":
-    if check_password():
-        main_app()
+if check_password():
+    main_app()
