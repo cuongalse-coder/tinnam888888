@@ -42,19 +42,29 @@ if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
 
 def check_password():
-    def password_entered():
-        if st.session_state["password"] == "1991":
-            st.session_state.logged_in = True
-            del st.session_state["password"]
-        else:
-            st.session_state.logged_in = False
-            st.error("❌ Mật khẩu không chính xác! Tự động khóa hệ thống.")
-
+    """Kiểm tra mật khẩu trước khi cho truy cập. Trả về True nếu đã đăng nhập."""
     if not st.session_state.logged_in:
-        st.markdown("<h1 style='text-align: center;'>🔒 HỆ THỐNG PHÂN TÍCH THỰC TẾ</h1>", unsafe_allow_html=True)
+        st.markdown("""
+        <div style='text-align: center; padding: 80px 20px;'>
+            <h1 style='color: #00ffcc; text-shadow: 0 0 20px #00ffcc;'>🔒 HỆ THỐNG PHÂN TÍCH THỰC TẾ</h1>
+            <h3 style='color: #666;'>TINNAM AI - V700.0 QUANTUM SUPREME</h3>
+            <p style='color: #888; margin-top: 30px;'>Vui lòng nhập mật khẩu để truy cập hệ thống</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
         col1, col2, col3 = st.columns([1,2,1])
         with col2:
-            st.text_input("Mật khẩu truy cập:", type="password", on_change=password_entered, key="password")
+            password_input = st.text_input("🔑 Mật khẩu truy cập:", type="password", key="password_field", placeholder="Nhập mật khẩu...")
+            login_btn = st.button("🚀 ĐĂNG NHẬP", use_container_width=True)
+            
+            if login_btn or password_input:
+                if password_input == "1991":
+                    st.session_state.logged_in = True
+                    st.rerun()
+                elif password_input:
+                    st.error("❌ Mật khẩu không chính xác! Tự động khóa hệ thống.")
+        
+        st.stop()  # QUAN TRỌNG: Dừng hoàn toàn app, không render gì thêm
         return False
     return True
 
