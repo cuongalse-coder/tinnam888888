@@ -1,4 +1,4 @@
-﻿"""
+"""
 Data Manager - SQLite database & CSV management for TinNam data.
 Handles storage, retrieval, validation and deduplication.
 """
@@ -7,7 +7,7 @@ import csv
 import os
 from datetime import datetime
 
-DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'tinnam.db')
+DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'tinnam_data.db')
 CSV_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data')
 
 
@@ -150,6 +150,15 @@ def get_count(lottery_type):
     return row['cnt']
 
 
+def get_first_date(lottery_type):
+    """Get the earliest draw date for a lottery type."""
+    conn = get_db()
+    table = 'mega645' if lottery_type == 'mega' else 'power655'
+    row = conn.execute(f'SELECT MIN(draw_date) as min_date FROM {table}').fetchone()
+    conn.close()
+    return row['min_date'] if row else None
+
+
 def export_csv(lottery_type):
     """Export data to CSV file."""
     if lottery_type == 'mega':
@@ -181,5 +190,102 @@ def get_recent(lottery_type, n=20):
     return [dict(r) for r in rows]
 
 
+def init_predictions_table():
+    """Initialize predictions tracking table."""
+    conn = get_db()
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS predictions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        lottery_type TEXT NOT NULL,
+        method TEXT NOT NULL,
+        n1 INTEGER NOT NULL,
+        n2 INTEGER NOT NULL,
+        n3 INTEGER NOT NULL,
+        n4 INTEGER NOT NULL,
+        n5 INTEGER NOT NULL,
+        n6 INTEGER NOT NULL,
+        target_date TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        matches INTEGER DEFAULT -1,
+        actual_n1 INTEGER,
+        actual_n2 INTEGER,
+        actual_n3 INTEGER,
+        actual_n4 INTEGER,
+        actual_n5 INTEGER,
+        actual_n6 INTEGER
+    )''')
+    conn.commit()
+    conn.close()
+
+
+def save_prediction(lottery_type, method, numbers, target_date=None):
+    """Save a prediction to tracking table."""
+    if len(numbers) < 6:
+        return
+    nums = sorted(numbers[:6])
+    conn = get_db()
+    c = conn.cursor()
+    c.execute('''INSERT INTO predictions
+                (lottery_type, method, n1, n2, n3, n4, n5, n6, target_date)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+             (lottery_type, method, nums[0], nums[1], nums[2],
+              nums[3], nums[4], nums[5], target_date))
+    conn.commit()
+    conn.close()
+
+
+def update_prediction_results(lottery_type):
+    """Match predictions against actual results. Call after new data arrives."""
+    conn = get_db()
+    c = conn.cursor()
+    table = 'mega645' if lottery_type == 'mega' else 'power655'
+    
+    # Get unmatched predictions
+    preds = c.execute(
+        'SELECT id, n1, n2, n3, n4, n5, n6, target_date FROM predictions '
+        'WHERE lottery_type = ? AND matches = -1 AND target_date IS NOT NULL',
+        (lottery_type,)
+    ).fetchall()
+    
+    for p in preds:
+        pid = p[0]
+        pred_set = set(p[1:7])
+        target = p[7]
+        
+        # Find actual result for this target date
+        actual = c.execute(
+            f'SELECT n1, n2, n3, n4, n5, n6 FROM {table} WHERE draw_date = ?',
+            (target,)
+        ).fetchone()
+        
+        if actual:
+            actual_set = set(actual)
+            match_count = len(pred_set & actual_set)
+            c.execute(
+                'UPDATE predictions SET matches = ?, '
+                'actual_n1 = ?, actual_n2 = ?, actual_n3 = ?, '
+                'actual_n4 = ?, actual_n5 = ?, actual_n6 = ? '
+                'WHERE id = ?',
+                (match_count, actual[0], actual[1], actual[2],
+                 actual[3], actual[4], actual[5], pid)
+            )
+    
+    conn.commit()
+    conn.close()
+
+
+def get_predictions_history(lottery_type, limit=50):
+    """Get prediction history with match results."""
+    conn = get_db()
+    rows = conn.execute(
+        'SELECT * FROM predictions WHERE lottery_type = ? '
+        'ORDER BY created_at DESC LIMIT ?',
+        (lottery_type, limit)
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
 # Auto-init on import
 init_db()
+init_predictions_table()

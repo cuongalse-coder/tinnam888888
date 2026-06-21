@@ -1,1989 +1,1407 @@
+"""
+TinNam AI V2.0 — Golden Set Consensus Engine
+Premium dark-themed UI with 30+ signal fusion + RNG vulnerability detection.
+Deploy: streamlit run streamlit_app.py
+"""
 import streamlit as st
-import pandas as pd
-import numpy as np
-from collections import Counter, defaultdict
-import random
+import sys
+import os
 import time
-from datetime import datetime
-import requests
-import re
+from collections import Counter
 
-# ==========================================
-# CẤU HÌNH TRANG & GIAO DIỆN
-# ==========================================
-st.set_page_config(
-    page_title="TINNAM AI - V700.0 QUANTUM SUPREME",
-    page_icon="🧬",
-    layout="wide",
-    initial_sidebar_state="expanded"
+# Setup path
+PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, PROJECT_ROOT)
+
+from scraper.data_manager import (
+    init_db, get_mega645_all, get_power655_all,
+    get_mega645_numbers, get_power655_numbers,
+    get_count, get_latest_date, get_first_date, get_recent,
+    save_prediction, get_predictions_history, update_prediction_results
 )
 
-st.markdown("""
-    <style>
-    .main { background-color: #050505; color: #00ffcc; font-family: 'Courier New', Courier, monospace; }
-    .ball {
-        display: inline-flex; align-items: center; justify-content: center;
-        width: 50px; height: 50px; border-radius: 50%; color: white;
-        font-weight: bold; font-size: 20px; margin: 5px;
-        box-shadow: 0 0 10px rgba(0,255,204,0.5); border: 2px solid #00ffcc;
-        background: #111;
-    }
-    .mega-ball { box-shadow: 0 0 15px #ff0055; border-color: #ff0055; }
-    .power-ball { box-shadow: 0 0 15px #ff4500; border-color: #ff4500; }
-    .special-ball { background: linear-gradient(145deg, #00ffcc, #006655); color: #000; box-shadow: 0 0 20px #00ffcc; border-color: #fff; }
-    .stButton>button { width: 100%; background-color: transparent; color: #00ffcc; font-weight: bold; border: 2px solid #00ffcc; border-radius: 5px; transition: 0.3s; text-shadow: 0 0 5px #00ffcc; box-shadow: inset 0 0 10px #00ffcc; }
-    .stButton>button:hover { background-color: #00ffcc; color: #000000; box-shadow: 0 0 25px #00ffcc; }
-    h1, h2, h3 { color: #00ffcc !important; text-shadow: 0 0 10px #00ffcc; }
-    .card { background-color: rgba(10, 15, 20, 0.9); padding: 20px; border-radius: 10px; border: 1px solid #00ffcc; margin-bottom: 20px; box-shadow: 0 0 15px rgba(0,255,204,0.2); }
-    </style>
-""", unsafe_allow_html=True)
+# ============================================
+# PAGE CONFIG
+# ============================================
+st.set_page_config(
+    page_title="TinNam AI",
+    page_icon="🔍",
+    layout="wide",
+    initial_sidebar_state="collapsed",
+)
 
-if 'logged_in' not in st.session_state:
-    st.session_state.logged_in = False
-
+# ============================================
+# PASSWORD PROTECTION
+# ============================================
 def check_password():
-    """Kiểm tra mật khẩu trước khi cho truy cập. Trả về True nếu đã đăng nhập."""
-    if not st.session_state.logged_in:
+    """Simple password gate."""
+    if "authenticated" not in st.session_state:
+        st.session_state.authenticated = False
+
+    if st.session_state.authenticated:
+        return True
+
+    # Centered login form
+    st.markdown("""
+    <style>
+        .login-container {
+            max-width: 400px;
+            margin: 15vh auto;
+            padding: 40px;
+            background: rgba(17, 24, 39, 0.95);
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+            text-align: center;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.markdown('<div style="text-align:center;font-size:2rem;margin:20vh 0 10px;">🔍</div>', unsafe_allow_html=True)
+        st.markdown('<div style="text-align:center;font-size:1.2rem;font-weight:700;color:#f1f5f9;margin-bottom:20px;">TinNam AI</div>', unsafe_allow_html=True)
+        pwd = st.text_input("Password", type="password", key="login_pw")
+        if st.button("Đăng nhập", use_container_width=True): 
+            if pwd == "1991":
+                st.session_state.authenticated = True
+                st.rerun()
+            else:
+                st.error("❌ Sai mật khẩu")
+    return False
+
+
+# ============================================
+# CUSTOM CSS (Premium Dark Theme)
+# ============================================
+CUSTOM_CSS = """
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&family=JetBrains+Mono:wght@400;700;800&display=swap');
+
+    .stApp {
+        background: linear-gradient(135deg, #0a0a1a 0%, #0f172a 50%, #1a0a2e 100%);
+        font-family: 'Inter', sans-serif;
+    }
+    .stApp::before {
+        content: '';
+        position: fixed;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background:
+            radial-gradient(ellipse at 20% 50%, rgba(99, 102, 241, 0.08) 0%, transparent 50%),
+            radial-gradient(ellipse at 80% 20%, rgba(139, 92, 246, 0.06) 0%, transparent 50%),
+            radial-gradient(ellipse at 50% 80%, rgba(236, 72, 153, 0.04) 0%, transparent 50%);
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    .block-container { padding-top: 1rem; max-width: 1400px; }
+
+    .main-title {
+        font-size: 2.8rem; font-weight: 900;
+        background: linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        text-align: center; letter-spacing: -1px; margin-bottom: 4px;
+    }
+    .subtitle { text-align: center; color: #94a3b8; font-size: 0.95rem; margin-bottom: 16px; }
+    .stat-row { display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; margin: 16px 0 24px; }
+    .stat-badge {
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 8px 18px; background: rgba(255,255,255,0.05);
+        backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 50px; font-size: 0.85rem; color: #94a3b8;
+    }
+    .stat-badge .val { color: #f59e0b; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+
+    .glass-card {
+        background: rgba(17, 24, 39, 0.8); backdrop-filter: blur(16px);
+        border: 1px solid rgba(255,255,255,0.1); border-radius: 16px;
+        padding: 24px; margin-bottom: 20px;
+        box-shadow: 0 4px 24px rgba(0,0,0,0.3); transition: all 0.3s ease;
+    }
+    .glass-card:hover { border-color: rgba(99,102,241,0.2); box-shadow: 0 0 30px rgba(99,102,241,0.15); }
+    .card-title-row {
+        display: flex; align-items: center; gap: 10px;
+        font-size: 1.2rem; font-weight: 700; margin-bottom: 16px;
+        padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.1); color: #f1f5f9;
+    }
+
+    .data-ball {
+        width: 58px; height: 58px; border-radius: 50%;
+        display: inline-flex; align-items: center; justify-content: center;
+        font-weight: 800; font-size: 1.3rem; font-family: 'JetBrains Mono', monospace;
+        color: white; background: linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899);
+        box-shadow: 0 4px 12px rgba(99,102,241,0.4);
+        animation: ballPop 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    }
+    .data-ball.master {
+        width: 68px; height: 68px; font-size: 1.6rem;
+        background: linear-gradient(135deg, #f43f5e, #7c3aed);
+        box-shadow: 0 6px 20px rgba(244,63,94,0.4);
+    }
+    .data-ball.small { width: 40px; height: 40px; font-size: 0.9rem; }
+    .data-ball.bonus {
+        background: linear-gradient(135deg, #f59e0b, #ef4444);
+        box-shadow: 0 4px 12px rgba(245,158,11,0.4);
+    }
+    @keyframes ballPop {
+        0% { transform: scale(0); opacity: 0; }
+        50% { transform: scale(1.2); }
+        100% { transform: scale(1); opacity: 1; }
+    }
+
+    .ball-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin: 16px 0; }
+
+    .result-card {
+        background: linear-gradient(135deg, rgba(34,197,94,0.04), rgba(244,63,94,0.04));
+        border: 1px solid rgba(34,197,94,0.3); border-radius: 16px;
+        padding: 28px; margin: 20px 0; text-align: center;
+        box-shadow: 0 0 50px rgba(34,197,94,0.15);
+    }
+    .metric-row { display: flex; justify-content: center; gap: 28px; flex-wrap: wrap; margin-top: 16px; }
+    .metric-item { text-align: center; }
+    .metric-value { font-size: 1.8rem; font-weight: 900; font-family: 'JetBrains Mono', monospace; }
+    .metric-label { font-size: 0.75rem; color: #64748b; margin-top: 2px; }
+
+    .strat-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+    .strat-table th {
+        background: rgba(99,102,241,0.1); padding: 12px 14px;
+        text-align: left; font-weight: 700; color: #06b6d4;
+        border-bottom: 2px solid rgba(255,255,255,0.1);
+    }
+    .strat-table td { padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.06); color: #e2e8f0; }
+    .strat-table tr:hover td { background: rgba(99,102,241,0.05); }
+    .good { color: #22c55e; font-weight: 700; }
+    .bad { color: #ef4444; font-weight: 700; }
+
+    .stTabs [data-baseweb="tab-list"] { gap: 12px; justify-content: center; background-color: transparent; }
+    .stTabs [data-baseweb="tab"] {
+        padding: 14px 36px; background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.1); border-radius: 50px;
+        color: #94a3b8; font-weight: 600;
+    }
+    .stTabs [aria-selected="true"] {
+        background: linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899) !important;
+        color: white !important; border-color: transparent !important;
+        box-shadow: 0 4px 20px rgba(99,102,241,0.4);
+    }
+    div[data-testid="stExpander"] {
+        background: rgba(17,24,39,0.6); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px;
+    }
+    .stButton > button {
+        border-radius: 50px; font-weight: 600; font-family: 'Inter', sans-serif;
+        border: none; transition: all 0.3s ease;
+    }
+    .stButton > button:hover { transform: translateY(-2px); }
+    div[data-testid="stVerticalBlock"] > div:has(> div > .stButton > button[kind="primary"]) .stButton > button {
+        background: linear-gradient(135deg, #f43f5e, #7c3aed) !important;
+        color: white !important; font-size: 1.2rem !important;
+        padding: 16px 40px !important; box-shadow: 0 6px 25px rgba(244,63,94,0.4) !important;
+    }
+
+    .footer-text { text-align: center; color: #64748b; font-size: 0.8rem; padding: 30px 0 16px; }
+    .footer-text .warn { color: #ec4899; font-size: 0.75rem; margin-top: 6px; }
+
+    /* === GOLDEN SET STYLES === */
+    .golden-card {
+        background: linear-gradient(135deg, rgba(245,158,11,0.08), rgba(234,179,8,0.04));
+        border: 2px solid rgba(245,158,11,0.5); border-radius: 20px;
+        padding: 32px; margin: 20px 0; text-align: center;
+        box-shadow: 0 0 60px rgba(245,158,11,0.2), inset 0 0 60px rgba(245,158,11,0.05);
+        position: relative; overflow: hidden;
+    }
+    .golden-card::before {
+        content: ''; position: absolute; top: -50%; left: -50%;
+        width: 200%; height: 200%;
+        background: conic-gradient(transparent, rgba(245,158,11,0.1), transparent, transparent);
+        animation: goldenSpin 8s linear infinite;
+    }
+    @keyframes goldenSpin { 100% { transform: rotate(360deg); } }
+    .golden-ball {
+        width: 72px; height: 72px; border-radius: 50%;
+        display: inline-flex; align-items: center; justify-content: center;
+        font-weight: 900; font-size: 1.8rem; font-family: 'JetBrains Mono', monospace;
+        color: #0a0a1a;
+        background: linear-gradient(135deg, #f59e0b, #eab308, #fbbf24);
+        box-shadow: 0 6px 24px rgba(245,158,11,0.5), 0 0 40px rgba(245,158,11,0.2);
+        animation: goldenPop 0.6s cubic-bezier(0.68,-0.55,0.265,1.55);
+        margin: 4px;
+    }
+    @keyframes goldenPop {
+        0% { transform: scale(0) rotate(-180deg); opacity: 0; }
+        60% { transform: scale(1.15) rotate(10deg); }
+        100% { transform: scale(1) rotate(0deg); opacity: 1; }
+    }
+    .confidence-gauge {
+        width: 120px; height: 120px; border-radius: 50%;
+        display: inline-flex; align-items: center; justify-content: center; flex-direction: column;
+        margin: 16px auto;
+        border: 4px solid rgba(245,158,11,0.3);
+        background: rgba(0,0,0,0.3);
+    }
+    .confidence-value { font-size: 2rem; font-weight: 900; font-family: 'JetBrains Mono', monospace; }
+    .confidence-label { font-size: 0.7rem; color: #94a3b8; }
+
+    .heat-cell {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 44px; height: 44px; border-radius: 8px; margin: 2px;
+        font-weight: 700; font-size: 0.85rem; font-family: 'JetBrains Mono', monospace;
+        transition: all 0.3s ease; cursor: default;
+    }
+    .heat-cell:hover { transform: scale(1.15); z-index: 10; }
+</style>
+"""
+
+
+# ============================================
+# HELPER FUNCTIONS
+# ============================================
+def render_balls(numbers, css_class="data-ball"):
+    return " ".join(f'<span class="{css_class}">{str(n).zfill(2)}</span>' for n in numbers)
+
+
+def render_scan_results(scan_data):
+    """Render vulnerability scan results."""
+    summary = scan_data['summary']
+    tests = scan_data['tests']
+
+    verdict_color = '#ef4444' if summary['verdict'] == 'VULNERABLE' else '#f59e0b' if summary['verdict'] == 'SUSPICIOUS' else '#22c55e'
+    verdict_icon = '🚨' if summary['verdict'] == 'VULNERABLE' else '⚠️' if summary['verdict'] == 'SUSPICIOUS' else '🛡️'
+
+    # Verdict header
+    st.markdown(f"""
+    <div class="result-card" style="border-color:{verdict_color};box-shadow:0 0 50px {verdict_color}44;">
+        <div style="font-size:2.5rem;">{verdict_icon}</div>
+        <div style="font-size:1.8rem;font-weight:900;color:{verdict_color};margin:8px 0;">{summary['verdict']}</div>
+        <div class="metric-row">
+            <div class="metric-item">
+                <div class="metric-value" style="color:#22c55e;">{summary['passed']}</div>
+                <div class="metric-label">PASS</div>
+            </div>
+            <div class="metric-item">
+                <div class="metric-value" style="color:#f59e0b;">{summary['warned']}</div>
+                <div class="metric-label">WARN</div>
+            </div>
+            <div class="metric-item">
+                <div class="metric-value" style="color:#ef4444;">{summary['failed']}</div>
+                <div class="metric-label">FAIL</div>
+            </div>
+            <div class="metric-item">
+                <div class="metric-value" style="color:#6366f1;">{summary['total_draws']}</div>
+                <div class="metric-label">Draws</div>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Test results table
+    rows_html = ""
+    for test_id, test in tests.items():
+        s = test['status']
+        s_color = '#22c55e' if s == 'PASS' else '#f59e0b' if s == 'WARN' else '#ef4444' if s == 'FAIL' else '#64748b'
+        s_icon = '✅' if s == 'PASS' else '⚠️' if s == 'WARN' else '❌' if s == 'FAIL' else '⏭️'
+        p_val = f"{test.get('p_value', 'N/A')}" if test.get('p_value') is not None else 'N/A'
+        n_biases = len(test.get('biases', []))
+        bias_html = f'<span style="color:#ef4444;font-weight:700;">{n_biases}</span>' if n_biases > 0 else '<span style="color:#64748b;">0</span>'
+        rows_html += f"""<tr>
+            <td style="padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.06);color:#e2e8f0;font-weight:600;">{s_icon} {test['name']}</td>
+            <td style="padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.06);text-align:center;">
+                <span style="color:{s_color};font-weight:800;font-family:JetBrains Mono,monospace;">{s}</span>
+            </td>
+            <td style="padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.06);text-align:center;font-family:JetBrains Mono,monospace;color:#94a3b8;">{p_val}</td>
+            <td style="padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.06);text-align:center;">{bias_html}</td>
+        </tr>"""
+
+    th = 'style="background:rgba(99,102,241,0.1);padding:12px 14px;color:#06b6d4;font-weight:700;border-bottom:2px solid rgba(255,255,255,0.1);text-align:center;"'
+    th_l = 'style="background:rgba(99,102,241,0.1);padding:12px 14px;color:#06b6d4;font-weight:700;border-bottom:2px solid rgba(255,255,255,0.1);"'
+    st.markdown(f"""
+    <div class="glass-card">
+        <div class="card-title-row">🧪 12 Vulnerability Tests</div>
+        <div style="overflow-x:auto;border-radius:10px;">
+            <table style="width:100%;border-collapse:collapse;">
+                <thead><tr>
+                    <th {th_l}>Test</th><th {th}>Status</th><th {th}>p-value</th><th {th}>Biases</th>
+                </tr></thead>
+                <tbody>{rows_html}</tbody>
+            </table>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Exploitable biases
+    biases = summary['exploitable_biases']
+    if biases:
+        bias_html = ""
+        for b in biases:
+            strength = b.get('strength', 0)
+            s_color = '#ef4444' if strength > 5 else '#f59e0b' if strength > 3 else '#64748b'
+            nums = b.get('numbers', [])
+            nums_str = ', '.join(str(n) for n in nums[:15]) if nums else ''
+            pairs = b.get('pairs', [])
+            if pairs:
+                nums_str = ', '.join(f"({p[0][0]},{p[0][1]})" for p in pairs[:8])
+            triplets = b.get('triplets', [])
+            if triplets:
+                nums_str = ', '.join(f"({t[0][0]},{t[0][1]},{t[0][2]})" for t in triplets[:5])
+            details = b.get('details', [])
+            if details and not nums_str:
+                if isinstance(details[0], dict) and 'number' in details[0]:
+                    nums_str = ', '.join(str(d['number']) for d in details[:10])
+
+            bias_html += f"""
+            <div style="padding:12px 16px;background:rgba(255,255,255,0.02);border-radius:10px;margin-bottom:8px;border-left:3px solid {s_color};">
+                <div style="font-weight:700;color:#e2e8f0;font-size:0.9rem;">{b['type']}</div>
+                <div style="color:#94a3b8;font-size:0.8rem;margin:4px 0;">{b['description']}</div>
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <span style="font-family:JetBrains Mono,monospace;font-size:0.75rem;color:#64748b;">{nums_str}</span>
+                    <span style="font-weight:800;color:{s_color};font-family:JetBrains Mono,monospace;">z={strength:.1f}</span>
+                </div>
+            </div>"""
+
+        st.markdown(f"""
+        <div class="glass-card" style="border-color:#ef4444;">
+            <div class="card-title-row">🎯 {len(biases)} Exploitable Biases Detected</div>
+            {bias_html}
+        </div>
+        """, unsafe_allow_html=True)
+    else:
         st.markdown("""
-        <div style='text-align: center; padding: 80px 20px;'>
-            <h1 style='color: #00ffcc; text-shadow: 0 0 20px #00ffcc;'>🔒 HỆ THỐNG PHÂN TÍCH THỰC TẾ</h1>
-            <h3 style='color: #666;'>TINNAM AI - V700.0 QUANTUM SUPREME</h3>
-            <p style='color: #888; margin-top: 30px;'>Vui lòng nhập mật khẩu để truy cập hệ thống</p>
+        <div class="glass-card" style="border-color:#22c55e;">
+            <div class="card-title-row">🛡️ No Exploitable Biases</div>
+            <div style="text-align:center;color:#94a3b8;padding:20px;">RNG appears fair. No statistical vulnerabilities detected.</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+
+def render_deep_forensic_results(result):
+    """Render deep forensic analysis results."""
+    primary = result.get('primary', [])
+    portfolio = result.get('portfolio', [])
+    weights = result.get('weights', {})
+    reports = result.get('reports', {})
+    top_30 = result.get('top_30', [])
+
+    # Primary prediction
+    if primary:
+        balls_html = render_balls(primary, 'data-ball master')
+        st.markdown(f"""
+        <div class="result-card" style="border-color:#22c55e;box-shadow:0 0 60px rgba(34,197,94,0.25);">
+            <div style="font-size:0.9rem;color:#94a3b8;margin-bottom:8px;">Deep Forensic Prediction</div>
+            <div style="font-size:1.1rem;font-weight:700;color:#22c55e;margin-bottom:12px;">🧬 15-Signal V2 Analysis + Walk-Forward Calibrated</div>
+            <div class="ball-row">{balls_html}</div>
+            <div class="metric-row">
+                <div class="metric-item">
+                    <div class="metric-value" style="color:#6366f1;">{result.get('n_signals', 0)}</div>
+                    <div class="metric-label">Signals</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-value" style="color:#f59e0b;">{len(portfolio)}</div>
+                    <div class="metric-label">Portfolio Sets</div>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # Signal weights
+    if weights:
+        weight_html = ''
+        sorted_w = sorted(weights.items(), key=lambda x: -x[1])
+        for name, w in sorted_w:
+            bar_pct = min(w / max(v for _, v in sorted_w) * 100, 100)
+            color = '#22c55e' if w > 1.5 else '#f59e0b' if w > 1.0 else '#64748b'
+            weight_html += f'<div style="display:flex;align-items:center;gap:8px;margin:4px 0;"><span style="min-width:120px;font-size:0.8rem;color:#94a3b8;">{name}</span><div style="flex:1;height:16px;background:rgba(255,255,255,0.05);border-radius:4px;overflow:hidden;"><div style="height:100%;width:{bar_pct}%;background:{color};border-radius:4px;"></div></div><span style="min-width:40px;text-align:right;font-family:JetBrains Mono,monospace;font-size:0.75rem;color:{color};font-weight:700;">{w:.2f}</span></div>'
+        st.markdown(f'<div class="glass-card"><div class="card-title-row">📊 Signal Weights (Calibrated)</div>{weight_html}</div>', unsafe_allow_html=True)
+
+    # Key findings
+    findings_html = ''
+    # Overdue numbers
+    gap_report = reports.get('gap_timing', {})
+    overdue = gap_report.get('overdue_numbers', [])[:8]
+    if overdue:
+        overdue_items = ''.join(f'<div style="text-align:center;margin:6px;"><span class="data-ball" style="background:linear-gradient(135deg,#ef4444,#f59e0b);">{str(o["number"]).zfill(2)}</span><div style="font-size:0.65rem;color:#ef4444;margin-top:4px;font-weight:700;">{o["current_gap"]} draws</div><div style="font-size:0.6rem;color:#64748b;">z={o["z_overdue"]}</div></div>' for o in overdue)
+        findings_html += f'<div class="glass-card" style="border-color:#ef4444;"><div class="card-title-row">⏰ Overdue Numbers (Gap Analysis)</div><div style="display:flex;flex-wrap:wrap;justify-content:center;">{overdue_items}</div></div>'
+
+    # Momentum
+    mom_report = reports.get('momentum', {})
+    rising = mom_report.get('rising', [])[:5]
+    if rising:
+        rising_items = ''.join(f'<span class="data-ball" style="background:linear-gradient(135deg,#22c55e,#10b981);margin:4px;">{str(r["number"]).zfill(2)}</span>' for r in rising)
+        findings_html += f'<div class="glass-card" style="border-color:#22c55e;"><div class="card-title-row">📈 Rising Momentum</div><div style="display:flex;flex-wrap:wrap;justify-content:center;">{rising_items}</div></div>'
+
+    # KNN matches
+    knn_report = reports.get('knn', {})
+    knn_matches = knn_report.get('best_matches', [])[:3]
+    if knn_matches:
+        knn_html = ''
+        for m in knn_matches:
+            next_balls = ''.join(f'<span style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;background:rgba(99,102,241,0.2);border:1px solid rgba(99,102,241,0.4);color:#e2e8f0;font-weight:600;font-size:0.75rem;font-family:JetBrains Mono,monospace;margin:2px;">{str(n).zfill(2)}</span>' for n in m['next'])
+            knn_html += f'<div style="padding:8px;margin:4px 0;background:rgba(0,0,0,0.2);border-radius:8px;"><span style="color:#f59e0b;font-size:0.75rem;">Draw #{m["draw_idx"]} ({m["similarity"]}/6 match):</span> {next_balls}</div>'
+        findings_html += f'<div class="glass-card"><div class="card-title-row">🔎 KNN History Match (next draws after similar)</div>{knn_html}</div>'
+
+    if findings_html:
+        st.markdown(findings_html, unsafe_allow_html=True)
+
+    # Portfolio
+    if portfolio:
+        port_html = '<div class="glass-card" style="border-color:#f59e0b;">'
+        port_html += f'<div class="card-title-row">🎯 Deep Forensic Portfolio ({len(portfolio)} sets)</div>'
+        bt = result.get('backtest_summary', {})
+        bt_avg = bt.get('avg', '?')
+        bt_max = bt.get('max', '?')
+        bt_imp = bt.get('improvement', '?')
+        bt_text = f"Backtest: avg {bt_avg}/6, max {bt_max}/6 | {'+' if isinstance(bt_imp, (int,float)) and bt_imp > 0 else ''}{bt_imp}% vs random" if bt else "Backtest: computing..."
+        port_html += f'<div style="font-size:0.65rem;color:#94a3b8;text-align:center;margin-bottom:8px;">{bt_text}</div>'
+        for idx, combo in enumerate(portfolio):
+            badge = '⭐' if idx == 0 else f'#{idx+1}'
+            balls = ''.join(f'<span style="display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;font-weight:700;font-size:0.9rem;font-family:JetBrains Mono,monospace;margin:2px;">{str(n).zfill(2)}</span>' for n in combo)
+            score = sum(result.get('scores', {}).get(n, 0) for n in combo)
+            port_html += f'<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;margin:4px 0;background:rgba(0,0,0,0.2);border-radius:10px;"><span style="font-size:0.85rem;min-width:32px;color:#f59e0b;font-weight:700;">{badge}</span><div style="display:flex;gap:3px;flex-wrap:wrap;">{balls}</div><span style="margin-left:auto;font-family:JetBrains Mono,monospace;font-size:0.75rem;color:#64748b;">{score:.1f}</span></div>'
+        port_html += '</div>'
+        st.markdown(port_html, unsafe_allow_html=True)
+
+
+def render_exploit_results(exploit_data):
+    """Render exploit-generated predictions."""
+    if exploit_data['strategy'] == 'NO_EXPLOIT':
+        st.markdown("""
+        <div class="glass-card" style="border-color:#64748b;">
+            <div class="card-title-row">⚠️ No Exploits Available</div>
+            <div style="text-align:center;color:#94a3b8;padding:20px;">No biases found to exploit. RNG appears fair.</div>
+        </div>
+        """, unsafe_allow_html=True)
+        return
+
+    predictions = exploit_data['predictions']
+    confidence = exploit_data['confidence']
+    strategy = exploit_data['strategy']
+    biases_used = exploit_data['biases_used']
+
+    conf_color = '#22c55e' if confidence > 50 else '#f59e0b' if confidence > 20 else '#ef4444'
+
+    # Primary prediction
+    if predictions:
+        primary = predictions[0]
+        balls_html = render_balls(primary['numbers'], "data-ball master")
+
+        st.markdown(f"""
+        <div class="result-card" style="border-color:{conf_color};">
+            <div style="font-size:0.9rem;color:#94a3b8;margin-bottom:8px;">Exploit-Based Prediction</div>
+            <div style="font-size:1.1rem;font-weight:700;color:{conf_color};margin-bottom:12px;">⚡ {strategy}</div>
+            <div class="ball-row">{balls_html}</div>
+            <div class="metric-row">
+                <div class="metric-item">
+                    <div class="metric-value" style="color:{conf_color};">{confidence}%</div>
+                    <div class="metric-label">Bias Confidence</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-value" style="color:#6366f1;">{biases_used}</div>
+                    <div class="metric-label">Biases Used</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-value" style="color:#f59e0b;">{len(predictions)}</div>
+                    <div class="metric-label">Total Sets</div>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # Portfolio
+    if len(predictions) > 1:
+        portfolio_html = '<div class="glass-card" style="border-color:#f59e0b;">'
+        portfolio_html += f'<div class="card-title-row">🎯 Portfolio {len(predictions)} Sets (Bias-Based)</div>'
+        portfolio_html += '<div style="font-size:0.65rem;color:#94a3b8;text-align:center;margin-bottom:8px;">Each set differs by >=3 numbers | Based on real detected biases only</div>'
+        for idx, pred in enumerate(predictions):
+            badge = '⭐' if idx == 0 else f'#{idx+1}'
+            balls = ''.join(f'<span style="display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;font-weight:700;font-size:0.9rem;font-family:JetBrains Mono,monospace;margin:2px;">{str(n).zfill(2)}</span>' for n in pred['numbers'])
+            portfolio_html += f'<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;margin:4px 0;background:rgba(0,0,0,0.2);border-radius:10px;"><span style="font-size:0.85rem;min-width:32px;color:#f59e0b;font-weight:700;">{badge}</span><div style="display:flex;gap:3px;flex-wrap:wrap;">{balls}</div><span style="margin-left:auto;font-family:JetBrains Mono,monospace;font-size:0.75rem;color:#64748b;">{pred["score"]:.1f}</span></div>'
+        portfolio_html += '</div>'
+        st.markdown(portfolio_html, unsafe_allow_html=True)
+
+
+def render_dan_result(dan_data, ver):
+    """Render dan prediction result."""
+    cands = dan_data.get("candidates", [])
+    combos = dan_data.get("combos", [])
+    total = dan_data.get("total", 0)
+
+    ver_label = "V1 - DAY DU" if ver == "v1" else "V2 - TOI UU"
+    ver_icon = "📊" if ver == "v1" else "⚡"
+    ver_color = "#6366f1" if ver == "v1" else "#22c55e"
+    ver_desc = "Block + Direction + S/L" if ver == "v1" else "Block + Direction + S/L + Gap + Sum"
+
+    cols_html = ""
+    for p, nums in enumerate(cands):
+        balls = ""
+        for n in nums:
+            balls += f'<span style="display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,{ver_color},#8b5cf6);color:white;font-weight:700;font-size:0.9rem;font-family:JetBrains Mono,monospace;margin:3px;">{str(n).zfill(2)}</span>'
+        cols_html += f'<div style="margin-bottom:12px;"><div style="font-size:0.85rem;font-weight:700;color:#94a3b8;margin-bottom:6px;">Col {p+1} ({len(nums)} nums)</div><div style="display:flex;flex-wrap:wrap;gap:2px;">{balls}</div></div>'
+
+    cost = total * 10000
+    cost_str = f"{cost/1_000_000_000:.1f}B" if cost >= 1_000_000_000 else f"{cost/1_000_000:.0f}M" if cost >= 1_000_000 else f"{cost/1000:.0f}K"
+
+    sample_html = ""
+    for i in range(min(10, len(combos))):
+        c = combos[i]
+        row_balls = " ".join(f'<span style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:rgba(99,102,241,0.2);border:1px solid rgba(99,102,241,0.4);color:#e2e8f0;font-weight:600;font-size:0.75rem;font-family:JetBrains Mono,monospace;">{str(n).zfill(2)}</span>' for n in c)
+        sample_html += f'<div style="margin:4px 0;padding:6px 10px;background:rgba(0,0,0,0.2);border-radius:8px;display:flex;align-items:center;gap:6px;"><span style="color:#64748b;font-size:0.7rem;min-width:24px;">#{i+1}</span>{row_balls}</div>'
+
+    st.markdown(f"""
+    <div class="glass-card" style="border-color:{ver_color};box-shadow:0 0 40px {ver_color}22;">
+        <div class="card-title-row">{ver_icon} DAN {ver_label}</div>
+        <div style="display:flex;justify-content:center;gap:24px;margin-bottom:16px;flex-wrap:wrap;">
+            <div style="text-align:center;padding:12px 20px;background:rgba(255,255,255,0.03);border-radius:12px;">
+                <div style="font-size:1.8rem;font-weight:900;color:{ver_color};font-family:JetBrains Mono,monospace;">{total:,}</div>
+                <div style="font-size:0.75rem;color:#64748b;">Total combos</div>
+            </div>
+            <div style="text-align:center;padding:12px 20px;background:rgba(255,255,255,0.03);border-radius:12px;">
+                <div style="font-size:1.8rem;font-weight:900;color:#f59e0b;font-family:JetBrains Mono,monospace;">{cost_str}</div>
+                <div style="font-size:0.75rem;color:#64748b;">Cost (10K/ticket)</div>
+            </div>
+        </div>
+        <div style="font-size:0.8rem;color:#64748b;text-align:center;margin-bottom:16px;">Filters: {ver_desc}</div>
+        {cols_html}
+    </div>
+    """, unsafe_allow_html=True)
+
+    if sample_html:
+        st.markdown(f"""
+        <div class="glass-card">
+            <div class="card-title-row">🎫 Sample ({min(10, len(combos))}/{total:,})</div>
+            {sample_html}
+        </div>
+        """, unsafe_allow_html=True)
+
+
+def render_history_table(rows, lottery_type):
+    """Render history table as HTML."""
+    is_power = lottery_type == "power"
+    body = ""
+    for idx, row in enumerate(rows):
+        numbers = [row['n1'], row['n2'], row['n3'], row['n4'], row['n5'], row['n6']]
+        balls = ""
+        for n in numbers:
+            balls += f'<span style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;font-weight:700;font-size:0.85rem;font-family:JetBrains Mono,monospace;margin:2px;">{str(n).zfill(2)}</span>'
+        bonus_html = ""
+        if is_power:
+            bn = row.get('bonus', 0)
+            bonus_html = f'<td style="padding:8px;"><span style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#f59e0b,#ef4444);color:white;font-weight:700;font-size:0.85rem;font-family:JetBrains Mono,monospace;">{str(bn).zfill(2)}</span></td>'
+        jackpot = row.get('jackpot', '-')
+        if jackpot and len(str(jackpot)) > 15:
+            jackpot = str(jackpot).split('~')[-1].strip() if '~' in str(jackpot) else str(jackpot)[-15:]
+        body += f'''<tr>
+            <td style="color:#64748b;padding:8px;text-align:center;">{idx + 1}</td>
+            <td style="color:#94a3b8;padding:8px;font-family:JetBrains Mono,monospace;font-size:0.85rem;white-space:nowrap;">{row.get('draw_date', '')}</td>
+            <td style="padding:8px;"><div style="display:flex;gap:4px;flex-wrap:wrap;">{balls}</div></td>
+            {bonus_html}
+            <td style="color:#f59e0b;font-weight:600;padding:8px;font-family:JetBrains Mono,monospace;font-size:0.85rem;">{jackpot}</td>
+        </tr>'''
+
+    header = '<th style="background:rgba(99,102,241,0.1);padding:12px;color:#06b6d4;font-weight:700;border-bottom:2px solid rgba(255,255,255,0.1);">#</th>'
+    header += '<th style="background:rgba(99,102,241,0.1);padding:12px;color:#06b6d4;font-weight:700;border-bottom:2px solid rgba(255,255,255,0.1);">Date</th>'
+    header += '<th style="background:rgba(99,102,241,0.1);padding:12px;color:#06b6d4;font-weight:700;border-bottom:2px solid rgba(255,255,255,0.1);">Result</th>'
+    if is_power:
+        header += '<th style="background:rgba(99,102,241,0.1);padding:12px;color:#06b6d4;font-weight:700;border-bottom:2px solid rgba(255,255,255,0.1);">Bonus</th>'
+    header += '<th style="background:rgba(99,102,241,0.1);padding:12px;color:#06b6d4;font-weight:700;border-bottom:2px solid rgba(255,255,255,0.1);">Jackpot</th>'
+
+    html_content = f"""
+    <div class="glass-card">
+        <div class="card-title-row">📋 History {'Bo B (6/55)' if is_power else 'Bo A (6/45)'}</div>
+        <div style="overflow-x:auto;border-radius:10px;">
+            <table style="width:100%;border-collapse:collapse;">
+                <thead><tr>{header}</tr></thead>
+                <tbody>{body}</tbody>
+            </table>
+        </div>
+    </div>
+    """
+    try:
+        st.html(html_content)
+    except AttributeError:
+        st.markdown(html_content, unsafe_allow_html=True)
+
+
+# ============================================
+# GOLDEN SET RENDERER
+# ============================================
+def render_golden_set_results(result, lottery_type):
+    """Render the Golden Set consensus prediction with full visualization."""
+    golden = result['golden_set']
+    portfolio = result['golden_portfolio']
+    heat_map = result['heat_map']
+    confidence = result['confidence']
+    bt = result['backtest_summary']
+    weights = result['signal_weights']
+    engine_results = result['engine_results']
+    max_num = 45 if lottery_type == 'mega' else 55
+
+    # Confidence color
+    conf_color = '#22c55e' if confidence > 60 else '#f59e0b' if confidence > 35 else '#ef4444'
+
+    # === GOLDEN SET (HERO SECTION) ===
+    balls_html = ' '.join(
+        f'<span class="golden-ball" style="animation-delay:{i*0.1}s;">{str(n).zfill(2)}</span>'
+        for i, n in enumerate(golden)
+    )
+    st.markdown(f"""
+    <div class="golden-card">
+        <div style="position:relative;z-index:1;">
+            <div style="font-size:2.2rem;margin-bottom:4px;">🏆</div>
+            <div style="font-size:1.6rem;font-weight:900;
+                        background:linear-gradient(135deg,#f59e0b,#eab308,#fbbf24);
+                        -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+                        margin-bottom:8px;">GOLDEN SET — AI CONSENSUS</div>
+            <div style="font-size:0.85rem;color:#94a3b8;margin-bottom:16px;">
+                {result['n_signals']} signals fused | Walk-forward calibrated | Pool size: {result['super_pool_size']}
+            </div>
+            <div class="ball-row">{balls_html}</div>
+            <div class="confidence-gauge" style="border-color:{conf_color};">
+                <div class="confidence-value" style="color:{conf_color};">{confidence:.0f}%</div>
+                <div class="confidence-label">Confidence</div>
+            </div>
+            <div class="metric-row">
+                <div class="metric-item">
+                    <div class="metric-value" style="color:#6366f1;">{result['n_signals']}</div>
+                    <div class="metric-label">Signals</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-value" style="color:#f59e0b;">{result['total_sets']}</div>
+                    <div class="metric-label">Portfolio</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-value" style="color:#22c55e;">{bt.get('avg',0):.2f}/6</div>
+                    <div class="metric-label">BT Avg</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-value" style="color:#ec4899;">{bt.get('max',0)}/6</div>
+                    <div class="metric-label">BT Best</div>
+                </div>
+            </div>
+            <div style="font-size:0.7rem;color:#64748b;margin-top:8px;">⏱️ Computed in {result['elapsed']}s</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # === BACKTEST SUMMARY ===
+    if bt.get('tests', 0) > 0:
+        imp_color = '#22c55e' if bt.get('improvement', 0) > 0 else '#ef4444'
+        dist_html = ''
+        for k in range(7):
+            c = bt.get('distribution', {}).get(str(k), 0)
+            pct = c / max(bt['tests'], 1) * 100
+            bar_color = '#ef4444' if k <= 1 else '#f59e0b' if k == 2 else '#22c55e' if k <= 4 else '#6366f1'
+            dist_html += f'<div style="display:flex;align-items:center;gap:8px;margin:3px 0;">'
+            dist_html += f'<span style="min-width:32px;font-weight:700;color:{bar_color};font-family:JetBrains Mono,monospace;">{k}/6</span>'
+            dist_html += f'<div style="flex:1;height:16px;background:rgba(255,255,255,0.05);border-radius:4px;overflow:hidden;">'
+            dist_html += f'<div style="height:100%;width:{pct}%;background:{bar_color};border-radius:4px;"></div></div>'
+            dist_html += f'<span style="min-width:50px;text-align:right;font-size:0.75rem;color:#94a3b8;font-family:JetBrains Mono,monospace;">{c} ({pct:.0f}%)</span></div>'
+
+        st.markdown(f"""
+        <div class="glass-card">
+            <div class="card-title-row">📊 Walk-Forward Backtest ({bt['tests']} tests)</div>
+            <div style="display:flex;justify-content:center;gap:24px;margin-bottom:16px;flex-wrap:wrap;">
+                <div style="text-align:center;padding:8px 16px;background:rgba(255,255,255,0.03);border-radius:10px;">
+                    <div style="font-size:1.4rem;font-weight:900;color:#22c55e;font-family:JetBrains Mono,monospace;">{bt['avg']:.3f}/6</div>
+                    <div style="font-size:0.7rem;color:#64748b;">Consensus Avg</div>
+                </div>
+                <div style="text-align:center;padding:8px 16px;background:rgba(255,255,255,0.03);border-radius:10px;">
+                    <div style="font-size:1.4rem;font-weight:900;color:#64748b;font-family:JetBrains Mono,monospace;">{bt.get('random_avg',0):.3f}/6</div>
+                    <div style="font-size:0.7rem;color:#64748b;">Random Avg</div>
+                </div>
+                <div style="text-align:center;padding:8px 16px;background:rgba(255,255,255,0.03);border-radius:10px;">
+                    <div style="font-size:1.4rem;font-weight:900;color:{imp_color};font-family:JetBrains Mono,monospace;">{'+'if bt.get('improvement',0)>0 else ''}{bt.get('improvement',0):.1f}%</div>
+                    <div style="font-size:0.7rem;color:#64748b;">vs Random</div>
+                </div>
+            </div>
+            {dist_html}
+        </div>
+        """, unsafe_allow_html=True)
+
+    # === HEAT MAP ===
+    cells_html = ''
+    for num in range(1, max_num + 1):
+        score = heat_map.get(num, 0)
+        # Color: green for high, gray for low, red for negative
+        if score >= 70:
+            bg = f'rgba(34,197,94,{score/100*0.8 + 0.2})'
+            color = '#fff'
+        elif score >= 40:
+            bg = f'rgba(245,158,11,{score/100*0.6 + 0.2})'
+            color = '#fff'
+        elif score >= 20:
+            bg = f'rgba(99,102,241,{score/100*0.5 + 0.1})'
+            color = '#e2e8f0'
+        else:
+            bg = 'rgba(255,255,255,0.05)'
+            color = '#64748b'
+        is_golden = ' border:2px solid #f59e0b;' if num in golden else ''
+        cells_html += f'<span class="heat-cell" style="background:{bg};color:{color};{is_golden}" title="Score: {score}">{str(num).zfill(2)}</span>'
+
+    st.markdown(f"""
+    <div class="glass-card">
+        <div class="card-title-row">🔥 Consensus Heat Map ({max_num} numbers)</div>
+        <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:0;">{cells_html}</div>
+        <div style="display:flex;justify-content:center;gap:16px;margin-top:12px;font-size:0.7rem;color:#64748b;">
+            <span>🟢 Hot (70+)</span><span>🟡 Warm (40-69)</span><span>🔵 Medium (20-39)</span><span>⚫ Cold (0-19)</span>
+            <span>🔶 = Golden Set</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # === SIGNAL WEIGHTS ===
+    if weights:
+        weight_html = ''
+        sorted_w = sorted(weights.items(), key=lambda x: -x[1])
+        max_w = max(v for _, v in sorted_w) if sorted_w else 1
+        for name, w in sorted_w[:15]:
+            bar_pct = min(w / max(max_w, 0.01) * 100, 100)
+            color = '#22c55e' if w > 1.5 else '#f59e0b' if w > 1.0 else '#6366f1' if w > 0.5 else '#64748b'
+            weight_html += f'<div style="display:flex;align-items:center;gap:8px;margin:3px 0;">'
+            weight_html += f'<span style="min-width:130px;font-size:0.72rem;color:#94a3b8;">{name}</span>'
+            weight_html += f'<div style="flex:1;height:14px;background:rgba(255,255,255,0.05);border-radius:4px;overflow:hidden;">'
+            weight_html += f'<div style="height:100%;width:{bar_pct}%;background:{color};border-radius:4px;"></div></div>'
+            weight_html += f'<span style="min-width:40px;text-align:right;font-family:JetBrains Mono,monospace;font-size:0.7rem;color:{color};font-weight:700;">{w:.3f}</span></div>'
+        st.markdown(f'<div class="glass-card"><div class="card-title-row">⚖️ Signal Weights (Top 15 / {result["n_signals"]} total)</div>{weight_html}</div>', unsafe_allow_html=True)
+
+    # === ENGINE COMPARISON ===
+    if engine_results:
+        eng_html = ''
+        for eng_name, eng_data in engine_results.items():
+            primary = eng_data.get('primary', [])
+            if primary:
+                overlap = len(set(primary) & set(golden))
+                balls = ' '.join(f'<span class="data-ball small" style="{"border:2px solid #f59e0b;" if n in golden else ""}">{str(n).zfill(2)}</span>' for n in primary)
+                eng_html += f'<div style="margin:8px 0;padding:12px;background:rgba(0,0,0,0.2);border-radius:10px;">'
+                eng_html += f'<div style="font-size:0.85rem;font-weight:700;color:#94a3b8;margin-bottom:6px;">{eng_name.replace("_"," ").title()} <span style="color:#f59e0b;">({overlap}/6 overlap with Golden)</span></div>'
+                eng_html += f'<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;">{balls}</div></div>'
+        if eng_html:
+            st.markdown(f'<div class="glass-card"><div class="card-title-row">🔄 Engine Comparison</div>{eng_html}</div>', unsafe_allow_html=True)
+
+    # === GOLDEN PORTFOLIO ===
+    if portfolio:
+        port_html = f'<div class="glass-card" style="border-color:rgba(245,158,11,0.4);">'
+        port_html += f'<div class="card-title-row">🎯 Golden Portfolio (Top {min(len(portfolio), 50)} / {result["total_sets"]} total)</div>'
+        cstr = result.get('constraints', {})
+        port_html += f'<div style="font-size:0.65rem;color:#94a3b8;text-align:center;margin-bottom:8px;">'
+        port_html += f'Sum: {cstr.get("sum_lo",0)}-{cstr.get("sum_hi",999)} | '
+        port_html += f'Odd: {cstr.get("odd_lo",0)}-{cstr.get("odd_hi",6)} | '
+        port_html += f'Range: {cstr.get("range_lo",0)}-{cstr.get("range_hi",99)}</div>'
+        for idx, p in enumerate(portfolio[:50]):
+            badge = '🥇' if idx == 0 else '🥈' if idx == 1 else '🥉' if idx == 2 else f'#{idx+1}'
+            balls = ''.join(
+                f'<span style="display:inline-flex;align-items:center;justify-content:center;'
+                f'width:36px;height:36px;border-radius:50%;'
+                f'background:linear-gradient(135deg,{"#f59e0b,#eab308" if idx==0 else "#6366f1,#8b5cf6"});'
+                f'color:{"#0a0a1a" if idx==0 else "white"};font-weight:700;font-size:0.85rem;'
+                f'font-family:JetBrains Mono,monospace;margin:1px;">{str(n).zfill(2)}</span>'
+                for n in p['numbers']
+            )
+            port_html += f'<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;margin:3px 0;background:rgba(0,0,0,0.2);border-radius:8px;">'
+            port_html += f'<span style="font-size:0.8rem;min-width:32px;color:#f59e0b;font-weight:700;">{badge}</span>'
+            port_html += f'<div style="display:flex;gap:2px;flex-wrap:wrap;">{balls}</div>'
+            port_html += f'<span style="margin-left:auto;font-family:JetBrains Mono,monospace;font-size:0.7rem;color:#64748b;">{p["score"]}</span></div>'
+        port_html += '</div>'
+        st.markdown(port_html, unsafe_allow_html=True)
+
+
+def _estimate_next_draw_date(lottery_type):
+    """Estimate the next draw date based on lottery schedule.
+    Mega 6/45: Monday(0), Wednesday(2), Friday(4) at 18:00
+    Power 6/55: Tuesday(1), Thursday(3), Saturday(5) at 18:00
+    """
+    from datetime import datetime, timedelta
+    now = datetime.now()
+    if lottery_type == 'mega':
+        draw_days = [0, 2, 4]  # Mon, Wed, Fri
+    else:
+        draw_days = [1, 3, 5]  # Tue, Thu, Sat
+    
+    current_weekday = now.weekday()
+    current_hour = now.hour
+    
+    for offset in range(7):
+        candidate = now + timedelta(days=offset)
+        cand_weekday = candidate.weekday()
+        if cand_weekday in draw_days:
+            # If today is a draw day but past 18:00, skip to next
+            if offset == 0 and current_hour >= 18:
+                continue
+            return candidate.strftime('%Y-%m-%d')
+    
+    # Fallback: next day
+    return (now + timedelta(days=1)).strftime('%Y-%m-%d')
+
+
+# ============================================
+# LOTTERY TAB
+# ============================================
+def render_lottery_tab(lottery_type):
+    """Render a full data analysis tab."""
+    max_num = 45 if lottery_type == "mega" else 55
+    pick = 6
+
+    # ---- GOLDEN SET (PRIMARY ACTION — TOP) ----
+    if st.button("🏆 GOLDEN SET — AI CONSENSUS (30+ Signals)", key=f"golden_{lottery_type}", type="primary", use_container_width=True):
+        with st.spinner("🏆 Fusing 30+ signals + walk-forward calibration... (~45 sec)"):
+            try:
+                from models.consensus_engine import ConsensusEngine
+                if lottery_type == "mega":
+                    data = get_mega645_numbers()
+                    all_rows = get_mega645_all()
+                else:
+                    data = get_power655_numbers()
+                    data = [d[:6] for d in data]
+                    all_rows = get_power655_all()
+                dates = [r['draw_date'] for r in all_rows]
+                engine = ConsensusEngine(max_num, pick)
+                result = engine.predict(data, dates, n_portfolio=50)
+                st.session_state[f"golden_result_{lottery_type}"] = result
+                # Save prediction for tracking
+                if result.get('golden_set'):
+                    next_date = _estimate_next_draw_date(lottery_type)
+                    save_prediction(lottery_type, 'Golden Set', result['golden_set'], next_date)
+            except Exception as e:
+                st.error(f"❌ Error: {e}")
+                import traceback
+                st.code(traceback.format_exc())
+
+    if f"golden_result_{lottery_type}" in st.session_state:
+        render_golden_set_results(st.session_state[f"golden_result_{lottery_type}"], lottery_type)
+
+    st.markdown("<hr style='border-color:rgba(255,255,255,0.05);margin:24px 0;'>", unsafe_allow_html=True)
+
+    # ---- DEEP FORENSIC ----
+    st.markdown("<div style='text-align:center;'>", unsafe_allow_html=True)
+    if st.button("🧬 DEEP FORENSIC V2 (15 Signals) → PREDICT", key=f"deep_{lottery_type}", type="primary", use_container_width=True):
+        with st.spinner("🧬 Running 15-signal deep forensic V2 + walk-forward calibration... (~40 sec)"):
+            try:
+                from models.deep_forensic import DeepForensic
+                if lottery_type == "mega":
+                    data = get_mega645_numbers()
+                    all_rows = get_mega645_all()
+                else:
+                    data = get_power655_numbers()
+                    data = [d[:6] for d in data]
+                    all_rows = get_power655_all()
+                dates = [r['draw_date'] for r in all_rows]
+                engine = DeepForensic(max_num, pick)
+                result = engine.analyze(data, dates)
+                st.session_state[f"deep_result_{lottery_type}"] = result
+                # Save prediction for tracking
+                if result.get('primary'):
+                    next_date = _estimate_next_draw_date(lottery_type)
+                    save_prediction(lottery_type, 'Deep Forensic', result['primary'], next_date)
+            except Exception as e:
+                st.error(f"❌ Error: {e}")
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    if f"deep_result_{lottery_type}" in st.session_state:
+        render_deep_forensic_results(st.session_state[f"deep_result_{lottery_type}"])
+
+    # ---- RULE ENGINE (Validated Statistical Rules) ----
+    if st.button("📐 RULE ENGINE — 69 Validated Patterns (+27%)", key=f"rule_{lottery_type}", type="primary", use_container_width=True):
+        with st.spinner("📐 Applying 69 validated rules (transition, periodicity, triplet, momentum)..."):
+            try:
+                from models.rule_engine import RuleEngine
+                if lottery_type == "mega":
+                    data = get_mega645_numbers()
+                else:
+                    data = get_power655_numbers()
+                    data = [d[:6] for d in data]
+                max_num = 45 if lottery_type == "mega" else 55
+                engine = RuleEngine(max_num, 6)
+                result = engine.predict(data, n_portfolio=30)
+                st.session_state[f"rule_result_{lottery_type}"] = result
+                # Save prediction for tracking
+                if result.get('primary'):
+                    next_date = _estimate_next_draw_date(lottery_type)
+                    save_prediction(lottery_type, 'Rule Engine', result['primary'], next_date)
+            except Exception as e:
+                st.error(f"❌ Error: {e}")
+                import traceback
+                st.code(traceback.format_exc())
+
+    if f"rule_result_{lottery_type}" in st.session_state:
+        rr = st.session_state[f"rule_result_{lottery_type}"]
+        primary = rr['primary']
+        portfolio = rr.get('portfolio', [])
+        rules_fired = rr.get('n_rules_fired', 0)
+        rules_total = rr.get('n_rules_total', 0)
+        
+        balls_html = render_balls(primary, 'data-ball master')
+        st.markdown(f"""
+        <div class="result-card" style="border-color:#f97316;box-shadow:0 0 60px rgba(249,115,22,0.25);">
+            <div style="font-size:0.9rem;color:#94a3b8;margin-bottom:8px;">Rule Engine — Validated Statistical Patterns</div>
+            <div style="font-size:1.1rem;font-weight:700;color:#f97316;margin-bottom:12px;">📐 69 Rules | Walk-Forward Validated | +27% vs Random</div>
+            <div class="ball-row">{balls_html}</div>
+            <div class="metric-row">
+                <div class="metric-item">
+                    <div class="metric-value" style="color:#f97316;">{rules_fired}</div>
+                    <div class="metric-label">Rules Fired</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-value" style="color:#6366f1;">{rules_total}</div>
+                    <div class="metric-label">Total Rules</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-value" style="color:#22c55e;">{len(portfolio)}</div>
+                    <div class="metric-label">Portfolio</div>
+                </div>
+            </div>
         </div>
         """, unsafe_allow_html=True)
         
-        col1, col2, col3 = st.columns([1,2,1])
-        with col2:
-            password_input = st.text_input("🔑 Mật khẩu truy cập:", type="password", key="password_field", placeholder="Nhập mật khẩu...")
-            login_btn = st.button("🚀 ĐĂNG NHẬP", use_container_width=True)
-            
-            if login_btn or password_input:
-                if password_input == "1991":
-                    st.session_state.logged_in = True
-                    st.rerun()
-                elif password_input:
-                    st.error("❌ Mật khẩu không chính xác! Tự động khóa hệ thống.")
+        # Show which rules fired
+        rules_applied = rr.get('rules_applied', [])
+        if rules_applied:
+            rules_html = ''.join(f'<div style="padding:4px 8px;margin:2px 0;background:rgba(249,115,22,0.1);border-radius:4px;font-size:0.75rem;color:#fb923c;font-family:JetBrains Mono,monospace;">✦ {r}</div>' for r in rules_applied[:10])
+            st.markdown(f'<div class="glass-card"><div class="card-title-row">📐 Active Rules</div>{rules_html}</div>', unsafe_allow_html=True)
         
-        st.stop()  # QUAN TRỌNG: Dừng hoàn toàn app, không render gì thêm
-        return False
-    return True
+        # Portfolio
+        if portfolio:
+            port_html = f'<div class="glass-card" style="border-color:#f97316;">'
+            port_html += f'<div class="card-title-row">🎯 Rule Engine Portfolio ({len(portfolio)} sets)</div>'
+            for idx, p in enumerate(portfolio[:15]):
+                badge = '⭐' if idx == 0 else f'#{idx+1}'
+                balls = ''.join(f'<span style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#f97316,#ea580c);color:white;font-weight:700;font-size:0.85rem;font-family:JetBrains Mono,monospace;margin:1px;">{str(n).zfill(2)}</span>' for n in p['numbers'])
+                port_html += f'<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;margin:3px 0;background:rgba(0,0,0,0.2);border-radius:8px;"><span style="font-size:0.8rem;min-width:28px;color:#f97316;font-weight:700;">{badge}</span><div style="display:flex;gap:2px;flex-wrap:wrap;">{balls}</div><span style="margin-left:auto;font-family:JetBrains Mono,monospace;font-size:0.7rem;color:#64748b;">{p["score"]}</span></div>'
+            port_html += '</div>'
+            st.markdown(port_html, unsafe_allow_html=True)
 
-# ==========================================
-# CRAWLER: QUÉT DỮ LIỆU THẬT 100%
-# ==========================================
-@st.cache_data(ttl=300)
-def fetch_real_data(game_type):
-    """
-    Cào dữ liệu THẬT 100% TOÀN BỘ CÁC KỲ từ ketquadientoan và các nguồn khác.
-    """
-    try:
-        import cloudscraper
-        scraper = cloudscraper.create_scraper(delay=5, browser={'browser': 'chrome', 'platform': 'windows', 'mobile': False})
-    except ImportError:
-        scraper = requests.Session()
-        
-    today_str = datetime.now().strftime('%d-%m-%Y')
-    
-    urls = [
-        # Ưu tiên lấy TOÀN BỘ từ trước tới nay từ ketquadientoan
-        f"https://www.ketquadientoan.com/tat-ca-ky-xo-so-mega-6-45.html?datef=18-07-2016&datet={today_str}" if game_type == "Mega 6/45" else f"https://www.ketquadientoan.com/tat-ca-ky-xo-so-power-655.html?datef=01-01-2018&datet={today_str}",
-        "https://xskt.com.vn/ket-qua-xo-so-vietlott-mega-6-45" if game_type == "Mega 6/45" else "https://xskt.com.vn/ket-qua-xo-so-vietlott-power-6-55",
-        "https://xoso.me/kqxs-mega-645.html" if game_type == "Mega 6/45" else "https://xoso.me/kqxs-power-655.html",
-        "https://ketqua.vn/vietlott-mega-6-45" if game_type == "Mega 6/45" else "https://ketqua.vn/vietlott-power-6-55"
-    ]
-    
-    max_num = 45 if game_type == "Mega 6/45" else 55
-    
-    for url in urls:
-        try:
-            response = scraper.get(url, timeout=30)
-            if response.status_code == 200:
-                html = response.text
-                
-                history = []
-                detailed_history = []
-                
-                if "ketquadientoan.com" in url:
-                    rows = re.findall(r'<tr.*?>(.*?)</tr>', html, re.DOTALL | re.IGNORECASE)
-                    for row in rows:
-                        date_match = re.search(r'<td>.*?((\d{2})/(\d{2})/(\d{4}))</td>', row)
-                        if not date_match:
-                            continue
-                        date_str = date_match.group(1)
-                        
-                        nums = re.findall(r'class="home-mini-whiteball">\s*(\d{2})\s*<', row)
-                        if len(nums) < 6:
-                            continue
-                        chunk = [int(n) for n in nums[:6]]
-                        if len(set(chunk)) != 6 or not all(1 <= n <= max_num for n in chunk):
-                            continue
-                            
-                        # Tìm giải Jackpot bằng regex lấy cả thuộc tính thẻ span để xét màu
-                        jp_spans = re.findall(r"<span class='hidden-xs'([^>]*)>([\d\.]+)</span>", row)
-                        jp1_val = jp_spans[0][1] if len(jp_spans) > 0 else "0"
-                        
-                        if game_type == "Power 6/55" and len(jp_spans) > 1:
-                            jp2_val = jp_spans[1][1]
-                            if jp2_val != "0":
-                                jp1_val = f"JP1: {jp1_val} | JP2: {jp2_val}"
-                        
-                        has_winner = False
-                        # Chỉ bôi đỏ nếu trúng giải ĐẶC BIỆT (JP1) - Tức là span đầu tiên có màu đỏ
-                        if len(jp_spans) > 0:
-                            if "COLOR:#F00" in jp_spans[0][0].upper() or "COLOR:RED" in jp_spans[0][0].upper():
-                                has_winner = True
-                            
-                        sorted_chunk = sorted(chunk)
-                        if sorted_chunk not in history:
-                            history.append(sorted_chunk)
-                            detailed_history.append({
-                                "Ngày": date_str,
-                                "Bóng 1": sorted_chunk[0], "Bóng 2": sorted_chunk[1], "Bóng 3": sorted_chunk[2],
-                                "Bóng 4": sorted_chunk[3], "Bóng 5": sorted_chunk[4], "Bóng 6": sorted_chunk[5],
-                                "Jackpot": jp1_val,
-                                "Trúng Giải": "🚨 CÓ" if has_winner else ""
-                            })
-                else:
-                    nums = re.findall(r'>\s*(\d{2})\s*<', html)
-                    for i in range(0, len(nums) - 5):
-                        chunk = [int(n) for n in nums[i:i+6]]
-                        if chunk == sorted(chunk) and len(set(chunk)) == 6 and all(1 <= n <= max_num for n in chunk):
-                            if chunk not in history:
-                                history.append(chunk)
-                                detailed_history.append({
-                                    "Ngày": "N/A",
-                                    "Bóng 1": chunk[0], "Bóng 2": chunk[1], "Bóng 3": chunk[2],
-                                    "Bóng 4": chunk[3], "Bóng 5": chunk[4], "Bóng 6": chunk[5],
-                                    "Jackpot": "N/A",
-                                    "Trúng Giải": ""
-                                })
-
-                if history:
-                    history.reverse()
-                    detailed_history.reverse()
-                    for i, d in enumerate(detailed_history):
-                        d["Kỳ"] = f"Kỳ {i+1}"
-                    # Sắp xếp lại thứ tự cột cho đẹp
-                    detailed_history = [{"Kỳ": d["Kỳ"], "Ngày": d["Ngày"], "Bóng 1": d["Bóng 1"], "Bóng 2": d["Bóng 2"], "Bóng 3": d["Bóng 3"], "Bóng 4": d["Bóng 4"], "Bóng 5": d["Bóng 5"], "Bóng 6": d["Bóng 6"], "Jackpot": d["Jackpot"], "Trúng Giải": d["Trúng Giải"]} for d in detailed_history]
-                    return history, detailed_history
-        except Exception as e:
-            continue
-            
-    # GITHUB FALLBACK
-    try:
-        github_url = "https://raw.githubusercontent.com/vietvudanh/vietlott-data/main/data/power645.jsonl" if game_type == "Mega 6/45" else "https://raw.githubusercontent.com/vietvudanh/vietlott-data/main/data/power655.jsonl"
-        response = requests.get(github_url, timeout=10)
-        history = []
-        detailed_history = []
-        if response.status_code == 200:
-            import json
-            for line in response.text.strip().split('\n'):
-                if line:
-                    data = json.loads(line)
-                    if 'result' in data and len(data['result']) >= 6:
-                        draw = sorted([int(n) for n in data['result'][:6]])
-                        history.append(draw)
-                        detailed_history.append({
-                            "Ngày": "N/A", "Bóng 1": draw[0], "Bóng 2": draw[1], "Bóng 3": draw[2], "Bóng 4": draw[3], "Bóng 5": draw[4], "Bóng 6": draw[5], "Jackpot": "N/A", "Trúng Giải": ""
-                        })
-            if history:
-                for i, d in enumerate(detailed_history):
-                    d["Kỳ"] = f"Kỳ {i+1}"
-                detailed_history = [{"Kỳ": d["Kỳ"], "Ngày": d["Ngày"], "Bóng 1": d["Bóng 1"], "Bóng 2": d["Bóng 2"], "Bóng 3": d["Bóng 3"], "Bóng 4": d["Bóng 4"], "Bóng 5": d["Bóng 5"], "Bóng 6": d["Bóng 6"], "Jackpot": d["Jackpot"], "Trúng Giải": d["Trúng Giải"]} for d in detailed_history]
-                return history, detailed_history
-    except Exception:
-        pass
-        
-    st.error("⚠️ Không thể kết nối máy chủ xổ số. Đang sử dụng dữ liệu giả lập dự phòng.")
-    fake_data = [sorted(random.sample(range(1, max_num + 1), 6)) for _ in range(50)]
-    detailed_history = [{"Kỳ": f"Kỳ {i+1}", "Ngày": "N/A", "Bóng 1": d[0], "Bóng 2": d[1], "Bóng 3": d[2], "Bóng 4": d[3], "Bóng 5": d[4], "Bóng 6": d[5], "Jackpot": "N/A", "Trúng Giải": ""} for i, d in enumerate(fake_data)]
-    return fake_data, detailed_history
-
-
-# ==========================================
-# AI ENGINE: TOÁN HỌC THỰC TẾ
-# ==========================================
-class RealWorldAIEngine:
-    def __init__(self, data, max_number):
-        self.data = data
-        self.max_number = max_number
-        self.all_numbers = list(range(1, max_number + 1))
-        
-    def _get_frequency(self, lookback=None):
-        subset = self.data[-lookback:] if lookback else self.data
-        all_nums = [n for draw in subset for n in draw]
-        return Counter(all_nums)
-
-    def model_markov_chain(self):
-        """Ma trận chuyển đổi trạng thái Markov dựa trên lịch sử thật"""
-        transitions = defaultdict(Counter)
-        for i in range(len(self.data) - 1):
-            current = tuple(sorted(self.data[i]))
-            next_draw = self.data[i + 1]
-            for num in next_draw:
-                transitions[current][num] += 1
-                
-        if len(self.data) > 0:
-            last_draw = tuple(sorted(self.data[-1]))
-            if last_draw in transitions and transitions[last_draw]:
-                next_probs = transitions[last_draw]
-                return [num for num, _ in next_probs.most_common(6)]
-        
-        return [n for n, c in self._get_frequency(20).most_common(6)]
-
-    def model_gap_overdue(self, top_n=6):
-        """Phân tích các số ĐÃ ĐẾN HẠN NỔ (Overdue Analysis)"""
-        last_seen = {num: -1 for num in self.all_numbers}
-        for i, draw in enumerate(self.data):
-            for num in draw:
-                last_seen[num] = i
-                
-        current_idx = len(self.data)
-        # Tính khoảng cách từ lần cuối xuất hiện đến hiện tại
-        gaps = {num: current_idx - last_seen[num] for num in self.all_numbers}
-        
-        # Phân tích chu kỳ trung bình của mỗi số
-        avg_gaps = defaultdict(list)
-        last_idx = {}
-        for i, draw in enumerate(self.data):
-            for num in draw:
-                if num in last_idx:
-                    avg_gaps[num].append(i - last_idx[num])
-                last_idx[num] = i
-                
-        due_scores = {}
-        for num in self.all_numbers:
-            if avg_gaps[num]:
-                mean_gap = np.mean(avg_gaps[num])
-                current_gap = gaps[num]
-                # Điểm nổ = (Khoảng cách hiện tại / Khoảng cách trung bình)
-                # Điểm càng cao (> 1) nghĩa là đã quá hạn, khả năng nổ cao
-                due_scores[num] = current_gap / (mean_gap + 0.1)
-            else:
-                due_scores[num] = 0
-                
-        sorted_due = sorted(due_scores.items(), key=lambda x: x[1], reverse=True)
-        return [num for num, score in sorted_due[:top_n]]
-
-    def model_momentum_neural(self):
-        """Neural Weights - Tính toán động lượng tăng trưởng"""
-        weights = {num: 0.0 for num in self.all_numbers}
-        total_draws = len(self.data)
-        
-        # Hàm sigmoid tối ưu hóa trọng số kỳ gần đây
-        for i, draw in enumerate(self.data):
-            decay = 1 / (1 + np.exp(-(i - total_draws + 20) / 5)) 
-            for num in draw:
-                weights[num] += decay
-                
-        sorted_weights = sorted(weights.items(), key=lambda x: x[1], reverse=True)
-        return [num for num, w in sorted_weights[:6]]
-
-    def model_knn_mirror(self):
-        """KNN Mirror V3: 4-draw fingerprint + stronger recency + higher threshold"""
-        if len(self.data) < 20:
-            return self.model_momentum_neural()
-        
-        # V720: 4 kỳ gần nhất làm fingerprint (rộng hơn V2)
-        pattern = set(self.data[-1]) | set(self.data[-2]) | set(self.data[-3])
-        if len(self.data) > 3:
-            pattern |= set(self.data[-4])
-        n = len(self.data)
-        similarities = []
-        for i in range(3, n - 3):
-            past_pattern = set(self.data[i]) | set(self.data[i-1]) | set(self.data[i-2]) | set(self.data[i-3])
-            intersect = len(pattern & past_pattern)
-            recency = 1.0 + 0.5 * (i / n)  # Stronger recency
-            if intersect >= 5:  # Higher threshold
-                similarities.append((intersect * recency, i + 1))
-            
-        similarities.sort(key=lambda x: -x[0])
-        from collections import Counter
-        mirror_votes = Counter()
-        for score, next_idx in similarities[:30]:  # Top 30 neighbors
-            if next_idx < n:
-                for num in self.data[next_idx]:
-                    mirror_votes[num] += score
-                    
-        if not mirror_votes:
-            return self.model_momentum_neural()
-            
-        return [n for n, s in mirror_votes.most_common(20)]
-
-    def model_pair_matrix(self):
-        """Pair Co-occurrence Matrix: Phát hiện các cặp số hay xuất hiện cùng nhau"""
-        if len(self.data) < 30:
-            return self.model_gap_overdue()
-        
-        from collections import Counter
-        from itertools import combinations
-        
-        # Xây dựng ma trận đồng xuất hiện với decay theo thời gian
-        pair_scores = Counter()
-        n = len(self.data)
-        for idx, draw in enumerate(self.data):
-            decay = 0.3 + 0.7 * (idx / n)  # Kỳ gần đây trọng số cao hơn
-            for p in combinations(sorted(draw[:6]), 2):
-                pair_scores[p] += decay
-        
-        # Với 6 số kỳ gần nhất, tìm các số hay đi kèm chúng
-        last_draw = set(self.data[-1][:6])
-        candidate_scores = Counter()
-        
-        for num in self.all_numbers:
-            if num in last_draw:
-                continue
-            for anchor in last_draw:
-                key = tuple(sorted([num, anchor]))
-                candidate_scores[num] += pair_scores.get(key, 0)
-        
-        # Thêm: Tìm triplet pattern (3 số đi cùng nhau)
-        triplet_bonus = Counter()
-        for idx in range(max(0, n - 100), n):
-            draw = self.data[idx]
-            for trip in combinations(sorted(draw[:6]), 3):
-                trip_set = set(trip)
-                overlap = trip_set & last_draw
-                if len(overlap) >= 2:  # Có ít nhất 2 số trùng với kỳ trước
-                    for num in trip_set - last_draw:
-                        triplet_bonus[num] += 1.5
-        
-        for num in triplet_bonus:
-            candidate_scores[num] += triplet_bonus[num]
-        
-        return [n for n, s in candidate_scores.most_common(15)]
-
-    def model_delta_momentum(self):
-        """Delta Momentum: Phát hiện xu hướng tăng/giảm tần suất ngắn hạn"""
-        if len(self.data) < 30:
-            return self.model_momentum_neural()
-        
-        # So sánh tần suất 5 kỳ gần nhất vs 5 kỳ trước đó (delta)
-        scores = {}
-        for num in self.all_numbers:
-            f5 = sum(1 for d in self.data[-5:] if num in d[:6]) / 5
-            f5_prev = sum(1 for d in self.data[-10:-5] if num in d[:6]) / 5
-            f15 = sum(1 for d in self.data[-15:] if num in d[:6]) / 15
-            f15_prev = sum(1 for d in self.data[-30:-15] if num in d[:6]) / 15
-            
-            # Delta ngắn hạn (5 kỳ) và trung hạn (15 kỳ)
-            delta_short = f5 - f5_prev
-            delta_mid = f15 - f15_prev
-            
-            # Số đang tăng momentum ở cả 2 scale => cực kỳ hot
-            momentum = delta_short * 3 + delta_mid * 2
-            
-            # Bonus cho số vừa xuất hiện (streak)
-            if num in self.data[-1][:6]:
-                momentum += 0.5
-            if len(self.data) >= 2 and num in self.data[-2][:6]:
-                momentum += 0.3
-            
-            scores[num] = momentum
-        
-        sorted_scores = sorted(scores.items(), key=lambda x: -x[1])
-        return [n for n, s in sorted_scores[:15]]
-
-    def model_advanced_ml(self):
-        """Machine Learning: Random Forest & K-Means Clustering"""
-        try:
-            from sklearn.ensemble import RandomForestRegressor
-            from sklearn.cluster import KMeans
-            import numpy as np
-            
-            if len(self.data) < 20:
-                return self.model_gap_overdue()
-                
-            X = []
-            y = []
-            window_size = 10
-            
-            # Huấn luyện mô hình tìm quy luật xuất hiện của 10 kỳ để đoán kỳ tiếp
-            for i in range(len(self.data) - window_size - 1):
-                window = self.data[i:i+window_size]
-                next_draw = self.data[i+window_size]
-                
-                features = np.zeros(self.max_number)
-                for draw in window:
-                    for num in draw:
-                        features[num-1] += 1
-                
-                targets = np.zeros(self.max_number)
-                for num in next_draw:
-                    targets[num-1] = 1
-                    
-                X.append(features)
-                y.append(targets)
-                
-            rf = RandomForestRegressor(n_estimators=150, max_depth=12, random_state=42)
-            rf.fit(X, y)
-            
-            recent_window = self.data[-window_size:]
-            recent_features = np.zeros(self.max_number)
-            for draw in recent_window:
-                for num in draw:
-                    recent_features[num-1] += 1
-                    
-            rf_predictions = rf.predict([recent_features])[0]
-            
-            # Phân cụm K-Means để tìm nhóm số có tần suất đi cùng nhau cao nhất
-            flat_data = np.array([num for draw in self.data for num in draw]).reshape(-1, 1)
-            kmeans = KMeans(n_clusters=6, random_state=42, n_init=10)
-            kmeans.fit(flat_data)
-            cluster_centers = [int(round(c[0])) for c in kmeans.cluster_centers_]
-            
-            combined_scores = {num: rf_predictions[num-1] for num in self.all_numbers}
-            for c in cluster_centers:
-                if 1 <= c <= self.max_number:
-                    combined_scores[c] += np.mean(rf_predictions) * 1.5 
-                    
-            top_indices = sorted(combined_scores.items(), key=lambda x: x[1], reverse=True)[:6]
-            return [idx for idx, score in top_indices]
-        except Exception as e:
-            return self.model_momentum_neural()
-
-    def model_cond_prob(self):
-        """V720: Conditional Probability — P(num | last draw numbers)"""
-        if len(self.data) < 30:
-            return []
-        last = set(self.data[-1])
-        cond_counts = defaultdict(lambda: defaultdict(int))
-        total_given = defaultdict(int)
-        for i in range(len(self.data) - 1):
-            for given in self.data[i]:
-                total_given[given] += 1
-                for next_num in self.data[i+1]:
-                    cond_counts[given][next_num] += 1
-        scores = {}
-        for num in self.all_numbers:
-            scores[num] = 0
-            for given in last:
-                if total_given[given] > 0:
-                    scores[num] += cond_counts[given].get(num, 0) / total_given[given]
-        sorted_s = sorted(scores.items(), key=lambda x: -x[1])
-        return [n for n, s in sorted_s[:15]]
-
-    def model_freq_gap_hybrid(self):
-        """V750: Freq-Gap Hybrid — numbers that are BOTH frequent AND overdue are explosive"""
-        if len(self.data) < 30:
-            return self.model_gap_overdue()
-        expected = 6 / len(self.all_numbers)
-        scores = {}
-        for num in self.all_numbers:
-            f5 = sum(1 for d in self.data[-5:] if num in d) / 5
-            f15 = sum(1 for d in self.data[-15:] if num in d) / 15
-            freq_score = (f5 / (expected + 0.01)) * 0.6 + (f15 / (expected + 0.01)) * 0.4
-            # Gap component
-            last_seen = -1
-            for i in range(len(self.data)-1, -1, -1):
-                if num in self.data[i]: last_seen = i; break
-            gap = len(self.data) - last_seen if last_seen >= 0 else len(self.data)
-            appearances = [i for i, d in enumerate(self.data) if num in d]
-            mean_gap = len(self.all_numbers) / 6
-            if len(appearances) >= 2:
-                gaps = [appearances[j+1]-appearances[j] for j in range(len(appearances)-1)]
-                mean_gap = sum(gaps) / len(gaps)
-            overdue = gap / (mean_gap + 0.1)
-            # Hybrid scoring
-            if freq_score > 0.8 and overdue > 0.7: scores[num] = freq_score * overdue * 3
-            elif overdue > 1.5: scores[num] = overdue * 1.5
-            elif freq_score > 1.3: scores[num] = freq_score * 2
-            else: scores[num] = freq_score * 0.5 + overdue * 0.5
-        return [n for n, _ in sorted(scores.items(), key=lambda x: -x[1])[:15]]
-
-    def _run_9model_ensemble(self, pool_size=20):
-        """V750A: Shared 9-Model Ensemble voting logic (used by both optimize_ensemble and backtest)."""
-        from collections import Counter
-        m1 = self.model_markov_chain()
-        m2 = self.model_gap_overdue(top_n=15)
-        m3 = self.model_momentum_neural()
-        m4 = self.model_advanced_ml()
-        m5 = self.model_knn_mirror()
-        m6 = self.model_pair_matrix()
-        m7 = self.model_delta_momentum()
-        m8 = self.model_cond_prob()
-        m9 = self.model_freq_gap_hybrid()
-        
-        votes = Counter()
-        for num in m5[:15]: votes[num] += 12
-        for num in m6[:15]: votes[num] += 8
-        for num in m8[:15]: votes[num] += 6
-        for num in m9[:15]: votes[num] += 5
-        for num in m4[:15]: votes[num] += 4
-        for num in m7[:15]: votes[num] += 4
-        for num in m2[:15]: votes[num] += 3
-        for num in m3[:6]:  votes[num] += 2
-        for num in m1[:6]:  votes[num] += 1
-        
-        strong_models = [set(m5[:12]), set(m6[:12]), set(m8[:12]), set(m7[:12])]
-        for num in self.all_numbers:
-            consensus = sum(1 for ml in strong_models if num in ml)
-            if consensus >= 3:
-                votes[num] += consensus * 5
-        
-        return [n for n, _ in votes.most_common(pool_size)]
-
-    def optimize_ensemble(self):
-        """V750A: 9-Model Ensemble + Agreement Filter + Sector Diversity (BEST 6/6 config)"""
-        ranked = self._run_9model_ensemble(pool_size=20)
-        best = ranked[:6]
-        
-        while len(best) < 6:
-            candidates = self.model_gap_overdue(top_n=15)
-            for c in candidates:
-                if c not in best:
-                    best.append(c)
-                    if len(best) == 6: break
-                    
-        return sorted(best)
-
-    def optimize_sniper_mode(self):
-        """V750: Sniper Mode (HyperKNN) — Extreme precision for EXACTLY 10 numbers."""
-        from collections import Counter
-        m5 = self.model_knn_mirror()
-        m6 = self.model_pair_matrix()
-        
-        votes = Counter()
-        for num in m5[:8]: votes[num] += 20   # Only absolute best KNN
-        for num in m6[:8]: votes[num] += 10   # Only absolute best Pairs
-        
-        top8s = [set(m5[:8]), set(m6[:8])]
-        for num in self.all_numbers:
-            c = sum(1 for s in top8s if num in s)
-            if c >= 2: votes[num] += 25       # Massive boost for overlap
-            
-        best = [num for num, count in votes.most_common(10)]
-        while len(best) < 10:
-            candidates = self.model_gap_overdue(top_n=15)
-            for c in candidates:
-                if c not in best:
-                    best.append(c)
-                    if len(best) == 10: break
-                    
-        return sorted(best)
-
-    def predict_head_tail(self):
-        """V750: Head-Tail Pinning (Chốt Đầu - Chốt Đuôi) based on user intuition."""
-        # Get raw signal scores to find the absolute strongest head and tail
-        from collections import Counter
-        m4 = self.model_advanced_ml()
-        m5 = self.model_knn_mirror()
-        m9 = self.model_freq_gap_hybrid()
-        
-        scores = Counter()
-        for num in m5[:20]: scores[num] += 15
-        for num in m9[:20]: scores[num] += 10
-        for num in m4[:20]: scores[num] += 5
-        
-        # --- TREND REVERSAL LOGIC (User Intuition) ---
-        # 65% of the time, if head goes UP, it will go DOWN next draw, and vice versa.
-        h_t1 = self.data[-1][0]
-        h_t2 = self.data[-2][0]
-        
-        t_t1 = self.data[-1][5]
-        t_t2 = self.data[-2][5]
-        
-        # HEAD filtering
-        valid_heads = list(range(1, 11))
-        if h_t1 > h_t2: # Trend was UP, expect DOWN (< h_t1)
-            valid_heads = [n for n in valid_heads if n < h_t1]
-        elif h_t1 < h_t2: # Trend was DOWN, expect UP (> h_t1)
-            valid_heads = [n for n in valid_heads if n > h_t1]
-            
-        if not valid_heads: valid_heads = list(range(1, 11))
-        
-        head_candidates = {n: scores[n] for n in valid_heads}
-        best_head = max(head_candidates.items(), key=lambda x: x[1])[0]
-        
-        # TAIL filtering
-        tail_start = self.max_number - 10
-        valid_tails = list(range(tail_start, self.max_number + 1))
-        if t_t1 > t_t2: # Trend was UP, expect DOWN (< t_t1)
-            valid_tails = [n for n in valid_tails if n < t_t1]
-        elif t_t1 < t_t2: # Trend was DOWN, expect UP (> t_t1)
-            valid_tails = [n for n in valid_tails if n > t_t1]
-            
-        if not valid_tails: valid_tails = list(range(tail_start, self.max_number + 1))
-            
-        tail_candidates = {n: scores[n] for n in valid_tails}
-        best_tail = max(tail_candidates.items(), key=lambda x: x[1])[0]
-        
-        return [best_head, best_tail]
-
-    def predict_middle_pair(self, pool):
-        """V750: Pinning the strongest Middle Pair based on Pair Co-occurrence."""
-        from itertools import combinations
-        from collections import Counter
-        
-        # We only want pairs that are strictly in the "middle" (not head, not tail)
-        mid_pool = [n for n in pool if n > 10 and n < self.max_number - 10]
-        if len(mid_pool) < 2:
-            return []
-            
-        # Get historical pair frequencies
-        pf = Counter()
-        for d in self.data[-150:]:
-            mid_d = [n for n in d if n > 10 and n < self.max_number - 10]
-            for p in combinations(sorted(mid_d), 2):
-                pf[p] += 1
-                
-        # Find the best pair within our mid_pool
-        best_pair = []
-        best_score = -1
-        for p in combinations(sorted(mid_pool), 2):
-            score = pf.get(p, 0)
-            # Boost if they are consecutive (e.g. 22-23)
-            if p[1] - p[0] == 1:
-                score += 5
-            if score > best_score:
-                best_score = score
-                best_pair = list(p)
-                
-        return best_pair
-
-# ==========================================
-# ỨNG DỤNG CHÍNH
-# ==========================================
-def main_app():
-    # --- CÀO DỮ LIỆU THỰC TẾ ---
-    # Determine game choice first from session_state or default to Mega 6/45 for initial load
-    game_choice_default = "Mega 6/45"
-    with st.spinner("📡 Đang quét dữ liệu THẬT 100% từ máy chủ Vietlott/XSKT..."):
-        # We fetch default data first for confidence calculation
-        real_data_mega, detailed_mega = fetch_real_data("Mega 6/45")
-        real_data_power, detailed_power = fetch_real_data("Power 6/55")
-        
-    with st.sidebar:
-        st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/a/ae/Vietlott_logo.svg/1200px-Vietlott_logo.svg.png", width=150)
-        st.markdown("### 🧬 V700.0 - QUANTUM SUPREME")
-        st.markdown("---")
-        game_choice = st.radio("CHỌN CHẾ ĐỘ QUÉT:", ["Mega 6/45", "Power 6/55"])
-        
-        real_data = real_data_mega if game_choice == "Mega 6/45" else real_data_power
-        detailed_data = detailed_mega if game_choice == "Mega 6/45" else detailed_power
-        
-        st.markdown("---")
-        st.markdown("### 🧠 V2000 CỐ VẤN TÀI CHÍNH (Kelly Criterion)")
-        
-        ai_conf = 0.0
-        if real_data:
-            # Re-initialize engine for the correct max_number to calculate confidence
-            temp_max = 45 if game_choice == "Mega 6/45" else 55
+    # ---- ULTIMATE ENGINE V9 (Block Puzzle) ----
+    if st.button("🏆 ULTIMATE V9 → BLOCK PUZZLE ENGINE", key=f"ultimate_{lottery_type}", type="primary", use_container_width=True):
+        with st.spinner("🏆 V9: Block Puzzle + Multi-Pool... (~0.5 sec)"):
             try:
-                from models.nexus_engine import NexusEngine
-                temp_eng = NexusEngine(temp_max, 6)
-                if hasattr(temp_eng, 'calculate_confidence'):
-                    ai_conf = temp_eng.calculate_confidence(real_data)
+                from models.ultimate_engine import UltimateEngine
+                if lottery_type == "mega":
+                    data = get_mega645_numbers()
+                    all_rows = get_mega645_all()
                 else:
-                    # Inline fallback: basic confidence from data quality + overlap patterns
-                    n = len(real_data)
-                    data_score = min(20, n // 25)
-                    recent_5 = real_data[-5:]
-                    overlaps = []
-                    for i in range(1, len(recent_5)):
-                        overlaps.append(len(set(recent_5[i][:6]) & set(recent_5[i-1][:6])))
-                    avg_ov = sum(overlaps) / max(len(overlaps), 1)
-                    momentum_score = 25 if 0.8 <= avg_ov <= 2.2 else 15
-                    ai_conf = max(15.0, min(95.0, float(data_score + momentum_score + 20)))
-            except Exception:
-                ai_conf = 35.0
-            
-        if ai_conf >= 80:
-            rec_tickets = 50
-            conf_color = "#00ff00"
-            msg = "🔥 XUNG LỰC HỘI TỤ ĐỈNH ĐIỂM! Đề xuất xuất kích 50 vé để tổng tiến công Jackpot."
-        elif ai_conf >= 60:
-            rec_tickets = 20
-            conf_color = "#ffaa00"
-            msg = "⚡ Tín hiệu rất rõ ràng. Đội hình 20 vé Radar tiêu chuẩn là lựa chọn tối ưu."
-        elif ai_conf >= 40:
-            rec_tickets = 10
-            conf_color = "#ffff00"
-            msg = "⚠️ Thị trường hơi nhiễu. Đề xuất lùi về phòng ngự với 10 vé."
-        else:
-            rec_tickets = 5
-            conf_color = "#ff0000"
-            msg = "🛑 CẢNH BÁO: Điểm đứt gãy cực đoan (Chaos). Đề xuất bảo toàn vốn, chỉ test 5 vé dò đường."
-            
-        st.markdown(f"<h3 style='text-align:center; color:{conf_color};'>Độ tự tin AI: {ai_conf:.1f}%</h3>", unsafe_allow_html=True)
-        st.info(msg)
-        
-        st.markdown(f"**Số vé AI chỉ định xuất kích:** `{rec_tickets} Vé` (Auto-Lock)")
-        num_tickets = rec_tickets
-        pool_size = st.selectbox("Kích thước Hồ Tiềm Năng (Mở rộng):", [10, 12, 15, 18, 20, 25, 30, 33, 35], index=4)
-        st.markdown("---")
-        st.markdown("### 🏆 CHIẾN THUẬT AI (TỰ ĐỘNG)")
-        strategy_mode = st.radio("Chọn Phương Pháp Chơi:", [
-            "🔥 Bắn Tỉa Tối Thượng (Khóa cứng 4 Số Lõi - Dành cho vốn ít)",
-            "🌊 Lưới Quét Diện Rộng (Bật Lọc Dây Thun - Dành cho vốn lớn)"
-        ], index=0)
-        
-        if "Bắn Tỉa" in strategy_mode:
-            head_tail_pin = True
-            middle_pair_pin = True
-            use_elastic_filter = False
-            hard_core_lock = 4
-            st.info("💡 Lối chơi: Ép cứng Đầu, Đuôi và 1 Cặp Số Giữa. Vô hiệu hóa Lọc Dây Thun (do khoảng cách đã bị khóa).")
-        else:
-            head_tail_pin = False
-            middle_pair_pin = False
-            use_elastic_filter = True
-            hard_core_lock = 0
-            st.info("💡 Lối chơi: Bao Lô 20 số, kích hoạt Bộ Lọc Hít Thở (Dây Thun) và Bộ Lọc Cạn Kiệt Nhóm để diệt hàng chục ngàn vé rác.")
-            
-        st.markdown("---")
-        st.markdown("<h3 style='color: #00ffcc;'>🎯 KHOANH VÙNG LƯỢNG TỬ (V2600 AI TIÊN TRI)</h3>", unsafe_allow_html=True)
-        st.info("💡 Nếu bạn để 'Tự động', AI V2600 sẽ tự tính xác suất Markov và Hồi quy để khóa cứng Không gian vé!")
-        
-        # Tiên tri AI
-        ai_preds = {'odd': None, 'overlap': None, 'delta': None}
-        if real_data:
-            try:
-                temp_max = 45 if game_choice == "Mega 6/45" else 55
-                from models.nexus_engine import NexusEngine
-                temp_eng = NexusEngine(temp_max, 6)
-                ai_preds = temp_eng.predict_micro_sector(real_data)
-            except Exception:
-                ai_preds = {'odd': 3, 'overlap': 1, 'delta': 38}
-            
-        col_ms1, col_ms2, col_ms3 = st.columns(3)
-        with col_ms1:
-            target_odd = st.selectbox("Tỷ lệ Chẵn/Lẻ", ["Tự động", "0 Lẻ", "1 Lẻ", "2 Lẻ", "3 Lẻ", "4 Lẻ", "5 Lẻ", "6 Lẻ"], index=0)
-            target_alphabet = st.text_input("Mật mã Chữ Cái", value="", placeholder="VD: ABCCDD")
-            target_delta = st.number_input("Giãn cách B6 - B1 (X Phụ)", min_value=0, max_value=44, value=0, help="Để 0 = Tự động")
-        with col_ms2:
-            target_high = st.selectbox("Tỷ lệ Cao/Thấp", ["Tự động", "0 Cao", "1 Cao", "2 Cao", "3 Cao", "4 Cao", "5 Cao", "6 Cao"], index=0)
-            target_mod_x = st.selectbox("Tọa độ Dư Đầu (Ngang)", ["Tự động", "Dư 0", "Dư 1", "Dư 2", "Dư 3", "Dư 4", "Dư 5", "Dư 6", "Dư 7"], index=0)
-            target_midsum = st.number_input("Tổng lõi B3 + B4 (Y Phụ)", min_value=0, max_value=90, value=0, help="Để 0 = Tự động")
-        with col_ms3:
-            target_overlap = st.selectbox("Rơi lại kỳ trước", ["Tự động", "0 Số", "1 Số", "2 Số", "3 Số trở lên"], index=0)
-            target_mod_y = st.selectbox("Tọa độ Dư Cuối (Dọc)", ["Tự động", "Dư 0", "Dư 1", "Dư 2", "Dư 3", "Dư 4", "Dư 5", "Dư 6", "Dư 7"], index=0)
-            
-        # V2600 AI OVERRIDE LOGIC
-        ai_msg = []
-        if target_odd == "Tự động" and ai_preds['odd'] is not None:
-            target_odd = f"{ai_preds['odd']} Lẻ"
-            ai_msg.append(f"Ép Chẵn/Lẻ: {target_odd}")
-            
-        if target_overlap == "Tự động" and ai_preds['overlap'] is not None:
-            target_overlap = f"{ai_preds['overlap']} Số"
-            ai_msg.append(f"Ép Rơi Lại: {target_overlap}")
-            
-        if target_delta == 0 and ai_preds['delta'] is not None:
-            target_delta = ai_preds['delta']
-            ai_msg.append(f"Ép Biên Độ Delta: {target_delta}")
-            
-        if ai_msg:
-            st.error("🔮 **V2600 AI TIÊN TRI ĐÃ KÍCH HOẠT:**")
-            st.markdown(f"**{', '.join(ai_msg)}**")
-            st.markdown("<p style='font-size: 11px; color:#ff00ff;'>🔥 Không gian sẽ sụp đổ, chỉ còn dưới 50 vé hợp lệ!</p>", unsafe_allow_html=True)
-            
-        st.markdown("---")
-        st.markdown("**Trạng thái:** 🟢 Kết nối API Thực Tế")
-        st.markdown(f"**Hôm nay:** {datetime.now().strftime('%d/%m/%Y')}")
-        st.markdown("---")
-        
-        if st.button("🔄 Cập nhật dữ liệu Xổ Số mới nhất"):
-            st.cache_data.clear()
-            st.rerun()
-            
-        if st.button("🚪 Đăng xuất"):
-            st.session_state.logged_in = False
-            st.rerun()
+                    data = get_power655_numbers()
+                    data = [d[:6] for d in data]
+                    all_rows = get_power655_all()
+                dates = [r['draw_date'] for r in all_rows]
+                engine = UltimateEngine(max_num, pick)
+                result = engine.predict(data, dates, n_portfolio=500)
+                st.session_state[f"ultimate_result_{lottery_type}"] = result
+                # Save prediction for tracking
+                if result.get('primary'):
+                    next_date = _estimate_next_draw_date(lottery_type)
+                    save_prediction(lottery_type, 'Ultimate V9', result['primary'], next_date)
+            except Exception as e:
+                st.error(f"❌ Error: {e}")
 
-    st.title(f"🧬 {game_choice.upper()} - V700.0 QUANTUM SUPREME")
-    max_number = 45 if game_choice == "Mega 6/45" else 55
-    ball_class = "mega-ball" if game_choice == "Mega 6/45" else "power-ball"
-    
-    if not real_data:
-        st.error("Không thể kết nối đến máy chủ lấy dữ liệu thực tế. Vui lòng thử lại sau.")
-        st.stop()
+    if f"ultimate_result_{lottery_type}" in st.session_state:
+        ult = st.session_state[f"ultimate_result_{lottery_type}"]
+        primary = ult['primary']
+        portfolio = ult['portfolio']
         
-    ai_engine = RealWorldAIEngine(real_data, max_number)
-    
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric("Dữ liệu Lịch sử cào được", f"{len(real_data)} kỳ")
-    with col2:
-        st.metric("Chế độ phân tích", "REAL WORLD DATA")
-    with col3:
-        st.metric("Ngưỡng tin cậy", "Tối đa")
+        coverage = ult.get('coverage', 0)
+        n_signals = ult.get('n_signals', 20)
         
-    st.markdown("<div class='card'>", unsafe_allow_html=True)
-    st.subheader("📌 KẾT QUẢ KỲ QUAY GẦN NHẤT (THỰC TẾ)")
-    last_draw = real_data[-1]
-    balls_html = "".join([f"<div class='ball {ball_class}'>{num:02d}</div>" for num in last_draw])
-    st.markdown(f"<div style='text-align: center; padding: 10px;'>{balls_html}</div>", unsafe_allow_html=True)
-    st.markdown("</div>", unsafe_allow_html=True)
-    
-    with st.expander(f"📚 XEM TOÀN BỘ LỊCH SỬ {len(real_data)} KỲ ĐÃ TẢI", expanded=False):
-        import pandas as pd
-        display_data = detailed_data[::-1] # Mới nhất lên trên
-        df = pd.DataFrame(display_data)
-        df.set_index("Kỳ", inplace=True)
-        
-        def highlight_row(row):
-            return ['background-color: rgba(255, 0, 0, 0.3)'] * len(row) if row['Trúng Giải'] == '🚨 CÓ' else [''] * len(row)
-            
-        st.dataframe(df.style.apply(highlight_row, axis=1), use_container_width=True)
-    
-    st.markdown("### 🧠 TÍNH TOÁN DÀN SỐ KỲ TIẾP THEO")
-    
-    if "prediction_ready" not in st.session_state:
-        st.session_state.prediction_ready = False
-    
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        run_btn = st.button("🧬 KÍCH HOẠT V700.0 QUANTUM SUPREME — 5-MODEL STACKING ML 🧬", use_container_width=True)
-        
-    tab1, tab2, tab3, tab4 = st.tabs(["🔮 Dự Đoán AI", "🎯 Chiến Lược Bao", "📈 Phân Tích Lồng Cầu", "🧪 Backtest & Validation"])
-
-    if run_btn:
-        st.session_state.prediction_ready = False
-        
-        progress_bar = st.progress(0)
-        status = st.empty()
-        
-        term_placeholder = st.empty()
-        term_text = ""
-        
-        status_steps = [
-            ("Khởi tạo cụm Mạng Nơ-ron Đa Tầng (MLP Regressor)...", 5, ["0x0000: INIT_NEURAL_CORE", "0x0001: ALLOCATING_GPU_TENSORS"]),
-            ("Trích xuất năng lượng chân không (Vacuum Energy Extract)...", 15, ["0x1A44: SCANNING_VOID", "0x1A45: ZERO_POINT_ENERGY_LOCKED"]),
-            ("Kích hoạt Mạng Lưới Đồ Thị (Neural Graph PageRank)...", 30, ["0x2B11: TIME_DILATION_ACTIVE", "0x2B12: GRAVITY_ISOLATED"]),
-            ("Huấn luyện 5-Model Stacking (HistGBR + GBR + RF + ExtraTrees + BayesianRidge)...", 50, ["0x3C99: TRAINING_5MODEL_STACK", "0x3C9A: BAYESIAN_META_LEARNER"]),
-            ("Tải 47 thuật toán AI + 5 Meta-Models (V700 Quantum Supreme)...", 75, ["0x4D01: STACKING_5_LAYERS", "0x4D02: ADAPTIVE_CALIBRATION"]),
-            ("Bẻ gãy xác suất 8.1 triệu tổ hợp (Shattering Probability Matrix)...", 90, ["0x5E88: MATRIX_CRITICAL_FAILURE", "0x5E89: BYPASSING_PHYSICS_LAW"]),
-            ("Trích xuất Vé Chân Lý từ Tương Lai (Extracting Truth Ticket)...", 100, ["0x6F10: TIME_PARADOX_RESOLVED", "0x6F11: ABSOLUTE_TRUTH_ACQUIRED"])
-        ]
-        
-        for step_text, prog_val, hex_codes in status_steps:
-            status.text(f"🌌 {step_text}")
-            progress_bar.progress(prog_val)
-            for hc in hex_codes:
-                term_text += f"> {hc}\n"
-                term_placeholder.markdown(f"<div style='background-color:black; color:#00ff00; padding:10px; font-family:monospace; border-radius:5px; height:150px; overflow-y:auto; border:1px solid #00ff00;'><pre>{term_text}</pre></div>", unsafe_allow_html=True)
-                time.sleep(0.3)
-        
-        time.sleep(0.5)
-        term_placeholder.empty()
-        
-        try:
-            from models.nexus_engine import NexusEngine
-            
-            engine = NexusEngine(max_number, 6)
-            try:
-                result_v11 = engine.predict(real_data, n_sets=5, use_elastic_filter=use_elastic_filter)
-            except TypeError:
-                result_v11 = engine.predict(real_data, n_sets=5)
-            
-            if result_v11['top_pool']:
-                if pool_size == 10:
-                    # Activate Sniper Mode
-                    st.session_state.v11_top_pool = ai_engine.optimize_sniper_mode()
-                    st.warning("🎯 ĐANG KÍCH HOẠT CHẾ ĐỘ SNIPER: Loại bỏ các bộ lọc lưới rộng, chỉ giữ lại KNN Fractal và Pair Co-occurrence mạnh nhất cho 10 số!")
-                else:
-                    st.session_state.v11_top_pool = result_v11['top_pool'][:pool_size] # Dynamic pool size
-                
-                # Determine Core Numbers for Lock
-                ai_top_core = []
-                pinned_msg = []
-                
-                if head_tail_pin:
-                    pinned_head_tail = ai_engine.predict_head_tail()
-                    ai_top_core.extend(pinned_head_tail)
-                    pinned_msg.append(f"Đầu Đuôi: {pinned_head_tail[0]:02d} & {pinned_head_tail[1]:02d}")
-                    
-                if middle_pair_pin:
-                    pinned_mid = ai_engine.predict_middle_pair(result_v11['top_pool'][:pool_size])
-                    if pinned_mid:
-                        ai_top_core.extend(pinned_mid)
-                        pinned_msg.append(f"Cặp Giữa: {pinned_mid[0]:02d} & {pinned_mid[1]:02d}")
-                        
-                if pinned_msg:
-                    st.success("🎯 AI đã Chốt Bạch Thủ: " + " | ".join(pinned_msg) + ". Sẽ được khóa cứng vào mọi vé!")
-                    # Fill the rest with normal top pool
-                    for n in result_v11['top_pool']:
-                        if n not in ai_top_core:
-                            ai_top_core.append(n)
-                else:
-                    ai_top_core = result_v11['top_pool'][:5]
-                
-                # Build micro-sector dictionary
-                micro_sector = {}
-                if "Tự động" not in target_odd:
-                    micro_sector['odd'] = int(target_odd[0])
-                if "Tự động" not in target_high:
-                    micro_sector['high'] = int(target_high[0])
-                if "Tự động" not in target_overlap:
-                    micro_sector['overlap'] = int(target_overlap[0])
-                if target_alphabet.strip() != "":
-                    micro_sector['alphabet'] = target_alphabet.strip().upper()
-                if "Tự động" not in target_mod_x:
-                    micro_sector['mod_x'] = int(target_mod_x.replace("Dư ", ""))
-                if "Tự động" not in target_mod_y:
-                    micro_sector['mod_y'] = int(target_mod_y.replace("Dư ", ""))
-                if target_delta > 0:
-                    micro_sector['sub_delta'] = target_delta
-                if target_midsum > 0:
-                    micro_sector['sub_midsum'] = target_midsum
-                
-                from models.wheeling_optimizer import WheelingOptimizer
-                wheel_opt = WheelingOptimizer(6, max_number)
-                try:
-                    res_tuple = wheel_opt.generate_wheel(
-                        st.session_state.v11_top_pool, 
-                        num_tickets,
-                        constraints=result_v11.get('constraints'),
-                        sum_mod7=result_v11.get('sum_mod7'),
-                        history_data=real_data,
-                        ai_top_core=ai_top_core,
-                        hard_core_lock=hard_core_lock,
-                        micro_sector=micro_sector
-                    )
-                except TypeError:
-                    try:
-                        res_tuple = wheel_opt.generate_wheel(
-                            st.session_state.v11_top_pool, 
-                            num_tickets,
-                            constraints=result_v11.get('constraints'),
-                            sum_mod7=result_v11.get('sum_mod7'),
-                            history_data=real_data,
-                            ai_top_core=ai_top_core,
-                            micro_sector=micro_sector
-                        )
-                    except TypeError:
-                        res_tuple = wheel_opt.generate_wheel(
-                            st.session_state.v11_top_pool, 
-                            num_tickets,
-                        )
-                
-                # Safely unpack the tuple which might have 2 or 4 elements
-                if len(res_tuple) == 4:
-                    tickets, coverage, filter_stats, total_generated = res_tuple
-                else:
-                    tickets, coverage = res_tuple[0], res_tuple[1]
-                    filter_stats = {}
-                    total_generated = 1
-                
-                st.session_state.filter_stats = filter_stats
-                st.session_state.total_generated = total_generated
-                
-                sniper_ticket = result_v11['predictions'][0]['numbers']
-                sniper_obj = {'numbers': sniper_ticket, 'strategy': '🌌 VÉ CHÂN LÝ (ABSOLUTE TRUTH - LẤY TỪ TƯƠNG LAI)'}
-                
-                # Check to avoid duplicate
-                filtered_tickets = [t for t in tickets if sorted(t['numbers']) != sorted(sniper_ticket)]
-                final_tickets = [sniper_obj] + filtered_tickets
-                
-                st.session_state.best_prediction = sniper_ticket
-                st.session_state.all_predictions = final_tickets
-                st.session_state.v11_weights = result_v11.get('weights', {})
-                st.session_state.v11_confidence = coverage
-                st.session_state.absolute_final_6 = result_v11.get('absolute_final_6', [])
-            else:
-                # Fallback to V10
-                from models.vulnerability_scanner import VulnerabilityScanner
-                from models.exploit_engine import ExploitEngine
-                scanner = VulnerabilityScanner(max_number, 6)
-                scan_results = scanner.scan_all(real_data)
-                eng10 = ExploitEngine(max_number, 6)
-                exploit = eng10.exploit(real_data, scan_results, n_sets=5)
-                if exploit['predictions']:
-                    st.session_state.best_prediction = exploit['predictions'][0]['numbers']
-                    st.session_state.all_predictions = exploit['predictions']
-                    st.session_state.v11_weights = {}
-                    st.session_state.v11_confidence = exploit['confidence']
-                    st.session_state.v11_top_pool = []
-                else:
-                    from models.ultimate_engine import UltimateEngine
-                    adv = UltimateEngine(max_number, 6)
-                    res = adv.predict(real_data)
-                    st.session_state.best_prediction = res['primary']
-                    st.session_state.all_predictions = []
-                    st.session_state.v11_weights = {}
-                    st.session_state.v11_confidence = 50
-                    st.session_state.v11_top_pool = []
-        except Exception as e:
-            st.error(f"Lỗi: {e}")
-            import traceback
-            st.code(traceback.format_exc())
-                
-        progress_bar.progress(100)
-        status.empty()
-        st.session_state.prediction_ready = True
-
-    if st.session_state.prediction_ready:
-        coverage = st.session_state.get('v11_confidence', 0)
-        top_pool = st.session_state.get('v11_top_pool', [])
-        st.success(f"✅ V700.0 QUANTUM SUPREME HOÀN TẤT — 5-Model Stacking + 12 Signals + Walk-Forward | Hồ Tiềm Năng: {len(top_pool)} số.")
-        
-        with tab1:
-            # === HỒ SỐ TIỀM NĂNG ===
-            st.markdown("<div class='card'>", unsafe_allow_html=True)
-            st.markdown(f"<h2 style='text-align: center; color: #00ffcc !important;'>🧬 HỒ SỐ ĐỘT BIẾN ({len(top_pool)} SỐ TỪ V700 QUANTUM SUPREME) 🧬</h2>", unsafe_allow_html=True)
-            st.markdown("<p style='text-align: center; color: #888;'><em>(5-Model Stacking: HistGBR + GBR + RF + ExtraTrees + BayesianRidge — 28 features/số, 12 tín hiệu)</em></p>", unsafe_allow_html=True)
-            if top_pool:
-                pool_html = "".join([f"<div class='ball special-ball'>{n:02d}</div>" for n in top_pool])
-                st.markdown(f"<div style='text-align:center; margin-bottom: 25px;'>{pool_html}</div>", unsafe_allow_html=True)
-                
-                # --- LÕI KIM CƯƠNG 10 SỐ ---
-                top_10_diamond = top_pool[:10]
-                top10_html = "".join([f"<div class='ball special-ball' style='background: linear-gradient(145deg, #ff00ff, #00ffff); box-shadow: 0 0 25px #ff00ff; border-color: #ff00ff;'>{n:02d}</div>" for n in top_10_diamond])
-                st.markdown("<div style='background-color: rgba(255, 0, 255, 0.05); border: 2px dashed #ff00ff; border-radius: 10px; padding: 20px; margin-top: 10px;'>", unsafe_allow_html=True)
-                st.markdown("<h3 style='text-align: center; color: #ff00ff !important; text-shadow: 0 0 10px #ff00ff;'>💎 LÕI KIM CƯƠNG: 10 SỐ CHUẨN NHẤT (Dành cho đánh BAO 10) 💎</h3>", unsafe_allow_html=True)
-                st.markdown("<p style='text-align: center; color: #bbb;'><em>(Hệ thống đã nén và trích xuất đúng 10 con số có Điểm Tương Quan Tổng Hợp cao nhất từ 47 thuật toán. Chuyên dùng để ghép Bao 7 đến Bao 10)</em></p>", unsafe_allow_html=True)
-                st.markdown(f"<div style='text-align:center;'>{top10_html}</div>", unsafe_allow_html=True)
-                st.markdown("</div>", unsafe_allow_html=True)
-                
-            st.markdown("</div>", unsafe_allow_html=True)
-            
-            # === 6 SỐ TUYÊN NGÔN CUỐI CÙNG (ABSOLUTE FINAL 6) ===
-            final_6 = st.session_state.get('absolute_final_6', [])
-            if final_6:
-                st.markdown("<div style='background: linear-gradient(135deg, rgba(255,0,85,0.15), rgba(0,255,204,0.1)); border: 2px solid #ff0055; border-radius: 12px; padding: 24px; margin-bottom: 20px; box-shadow: 0 0 30px rgba(255,0,85,0.4);'>", unsafe_allow_html=True)
-
-                st.markdown("<h2 style='text-align: center; color: #ff0055 !important; text-shadow: 0 0 20px #ff0055; font-size: 1.8em;'>🎯 6 SỐ TUYÊN NGÔN (TỪ V700 5-MODEL STACKING) 🎯</h2>", unsafe_allow_html=True)
-                st.markdown("<p style='text-align: center; color: #bbb;'><em>(5-Model Stacking: HistGBR + GBR + RF + ExtraTrees + BayesianRidge với 28 features/số. Walk-Forward validation — KHÔNG rò rỉ dữ liệu.)</em></p>", unsafe_allow_html=True)
-                f6_html = "".join([f"<div class='ball {ball_class}' style='width:65px;height:65px;font-size:24px; background: linear-gradient(145deg,#ff0055,#ff6600); border-color:#ff0055; box-shadow: 0 0 30px #ff0055;'>{n:02d}</div>" for n in final_6])
-                st.markdown(f"<div style='text-align:center; padding: 15px;'>{f6_html}</div>", unsafe_allow_html=True)
-                st.markdown("<p style='text-align:center; color:#ff0055; font-weight:bold;'>⚡ ĐÂY LÀ LỰA CHỌN SỐ 1 CỦA HỆ THỐNG. Nếu chỉ muốn mua 1 VÉ DUY NHẤT — hãy dùng 6 số này. ⚡</p>", unsafe_allow_html=True)
-                st.markdown("</div>", unsafe_allow_html=True)
-                
-            # === BẢNG ĐIỀU KHIỂN BỘ LỌC (FILTER DASHBOARD) ===
-            filter_stats = st.session_state.get('filter_stats')
-            total_gen = st.session_state.get('total_generated', 0)
-            if filter_stats and total_gen > 0:
-                st.markdown("<div class='card' style='border-color: #f1c40f;'>", unsafe_allow_html=True)
-                st.markdown("<h3 style='text-align: center; color: #f1c40f !important;'>🛡️ HIỆU SUẤT CÁC BỘ LỌC (FILTER DASHBOARD) 🛡️</h3>", unsafe_allow_html=True)
-                st.markdown(f"<p style='text-align: center;'>AI vừa khởi tạo <b>{total_gen:,}</b> tổ hợp nháp để tìm ra {num_tickets} vé hoàn hảo nhất. Dưới đây là bảng phong thần các bộ lọc:</p>", unsafe_allow_html=True)
-                if 'survival_pool_size' in filter_stats:
-                    sp_size = filter_stats['survival_pool_size']
-                    sp_pct = (sp_size / total_gen) * 100 if total_gen > 0 else 0
-                    st.success(f"🧬 **V2700 DARWINIAN SURVIVAL:** Trận chiến sinh tồn kết thúc! Lưới siêu lọc đã thiêu rụi hàng chục ngàn vé, chỉ còn đúng **{sp_size:,} vé** hợp lệ mang tín hiệu sống sót ({sp_pct:.2f}% không gian gốc). AI đã áp dụng luật Darwin để phân cụm và trích xuất lõi bầy đàn mạnh nhất cho bạn!")
-                
-                # Render metrics
-                fc1, fc2, fc3, fc4 = st.columns(4)
-                fc1.metric("Lọc Cột (Vị Trí)", f"{(filter_stats.get('col_bounds',0)/total_gen*100):.1f}%", f"-{filter_stats.get('col_bounds',0):,} vé")
-                fc2.metric("Lọc Tổng (Range)", f"{(filter_stats.get('sum_range',0)/total_gen*100):.1f}%", f"-{filter_stats.get('sum_range',0):,} vé")
-                fc3.metric("Lọc Khối Tổng", f"{(filter_stats.get('sum_block',0)/total_gen*100):.1f}%", f"-{filter_stats.get('sum_block',0):,} vé")
-                fc4.metric("Lọc Dây Thun", f"{(filter_stats.get('elastic',0)/total_gen*100):.1f}%", f"-{filter_stats.get('elastic',0):,} vé")
-                
-                fc5, fc6, fc7, fc8 = st.columns(4)
-                fc5.metric("Lọc Delta System", f"{(filter_stats.get('delta',0)/total_gen*100):.1f}%", f"-{filter_stats.get('delta',0):,} vé")
-                fc6.metric("Lọc Chữ Số", f"{(filter_stats.get('digit_freq',0)/total_gen*100):.1f}%", f"-{filter_stats.get('digit_freq',0):,} vé")
-                fc7.metric("Cặp Số Kề Nhau", f"{(filter_stats.get('adj_digits',0)/total_gen*100):.1f}%", f"-{filter_stats.get('adj_digits',0):,} vé")
-                fc8.metric("Điểm Ngắt Sóng", f"{(filter_stats.get('wave_break',0)/total_gen*100):.1f}%", f"-{filter_stats.get('wave_break',0):,} vé")
-                
-                fc9, fc10, fc11, fc12 = st.columns(4)
-                fc9.metric("Ma Trận Rubik", f"{(filter_stats.get('rubik_matrix',0)/total_gen*100):.1f}%", f"-{filter_stats.get('rubik_matrix',0):,} vé")
-                fc10.metric("Lọc Bảng Màu", f"{(filter_stats.get('color_palette',0)/total_gen*100):.1f}%", f"-{filter_stats.get('color_palette',0):,} vé")
-                fc11.metric("Lọc Địa Bàn (Cờ Vây)", f"{(filter_stats.get('go_board',0)/total_gen*100):.1f}%", f"-{filter_stats.get('go_board',0):,} vé")
-                fc12.metric("Lọc Chẵn/Lẻ", f"{(filter_stats.get('odd_even',0)/total_gen*100):.1f}%", f"-{filter_stats.get('odd_even',0):,} vé")
-                
-                fc13, fc14, fc15, fc16 = st.columns(4)
-                fc13.metric("Lọc Chu Kỳ (Sliding)", f"{(filter_stats.get('sliding_window',0)/total_gen*100):.1f}%", f"-{filter_stats.get('sliding_window',0):,} vé")
-                fc14.metric("Đường Rẽ (Markov)", f"{(filter_stats.get('markov_chain',0)/total_gen*100):.1f}%", f"-{filter_stats.get('markov_chain',0):,} vé")
-                fc15.metric("Mật Mã Hacker", f"{(filter_stats.get('hacker_cipher',0)/total_gen*100):.1f}%", f"-{filter_stats.get('hacker_cipher',0):,} vé")
-                fc16.metric("Cân Bằng Tần Suất", f"{(filter_stats.get('freq_polarity',0)/total_gen*100):.1f}%", f"-{filter_stats.get('freq_polarity',0):,} vé")
-                
-                fc17, fc18, fc19, fc20 = st.columns(4)
-                fc17.metric("Di Cư Cột (Migration)", f"{(filter_stats.get('col_migration',0)/total_gen*100):.1f}%", f"-{filter_stats.get('col_migration',0):,} vé")
-                fc18.metric("Mật Mã Chữ Cái", f"{(filter_stats.get('alphabet_cipher',0)/total_gen*100):.1f}%", f"-{filter_stats.get('alphabet_cipher',0):,} vé")
-                fc19.metric("Lọc Cao/Thấp", f"{(filter_stats.get('high_low',0)/total_gen*100):.1f}%", f"-{filter_stats.get('high_low',0):,} vé")
-                fc20.metric("Lọc Thập Kỷ", f"{(filter_stats.get('decade',0)/total_gen*100):.1f}%", f"-{filter_stats.get('decade',0):,} vé")
-                
-                fc21, fc22, fc23, fc24 = st.columns(4)
-                fc21.metric("Lọc Liên Tiếp", f"{(filter_stats.get('consec',0)/total_gen*100):.1f}%", f"-{filter_stats.get('consec',0):,} vé")
-                fc22.metric("Lọc Tâm Lý Học", f"{(filter_stats.get('psych',0)/total_gen*100):.1f}%", f"-{filter_stats.get('psych',0):,} vé")
-                fc23.metric("Lọc Mod 7", f"{(filter_stats.get('mod7',0)/total_gen*100):.1f}%", f"-{filter_stats.get('mod7',0):,} vé")
-                fc24.metric("Lọc Micro-Sector", f"{(filter_stats.get('micro_sector',0)/total_gen*100):.1f}%", f"-{filter_stats.get('micro_sector',0):,} vé")
-                
-                st.markdown("</div>", unsafe_allow_html=True)
-            
-            # === BÀN CỜ LƯỢNG TỬ 8x8 (QUANTUM CHESSBOARD MATRIX) ===
-            st.markdown("<div class='card' style='border-color: #ff00ff;'>", unsafe_allow_html=True)
-            st.markdown("<h2 style='text-align: center; color: #ff00ff !important; text-shadow: 0 0 10px #ff00ff;'>♟️ BÀN CỜ 64 Ô CÂN BẰNG TỔNG (MODULO MATRIX) ♟️</h2>", unsafe_allow_html=True)
-            st.markdown("<p style='text-align: center;'>AI đã áp dụng Toán học Modulo để chia <b>RẤT ĐỀU</b> 2 triệu vé vào 64 Ô (Không có ô nào rỗng).<br><b>Trục Ngang (Cột A-H)</b>: [Tổng 3 bóng Đầu] chia dư 8 | <b>Trục Dọc (Hàng 1-8)</b>: [Tổng 3 bóng Cuối] chia dư 8.</p>", unsafe_allow_html=True)
-            
-            def get_modulo_coord(balls):
-                return sum(balls) % 8
-            
-            def get_chess_notation(x, y):
-                cols = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
-                return f"{cols[x]}{y + 1}"
-                
-            if len(real_data) >= 2:
-                last_draw = real_data[-1][:6]
-                last_x = get_modulo_coord(last_draw[:3])
-                last_y = get_modulo_coord(last_draw[3:])
-                last_sq = get_chess_notation(last_x, last_y)
-                
-                # ========== TÍNH TOÀN BỘ DỮ LIỆU BÀN CỜ ==========
-                # Tính tần suất 64 ô + transition matrix + trajectory
-                cell_freq = {}
-                cell_last_seen = {}
-                cell_streak = {}  # Bao nhiêu kỳ chưa ra
-                trajectory = []
-                transition_map = {}
-                
-                for i in range(len(real_data)):
-                    d = real_data[i][:6]
-                    cx = get_modulo_coord(d[:3])
-                    cy = get_modulo_coord(d[3:])
-                    sq = get_chess_notation(cx, cy)
-                    
-                    cell_freq[sq] = cell_freq.get(sq, 0) + 1
-                    cell_last_seen[sq] = i
-                    
-                    if i >= len(real_data) - 20:
-                        trajectory.append(sq)
-                    
-                    if i > 0:
-                        p_d = real_data[i-1][:6]
-                        p_x = get_modulo_coord(p_d[:3])
-                        p_y = get_modulo_coord(p_d[3:])
-                        p_sq = get_chess_notation(p_x, p_y)
-                        if p_sq not in transition_map:
-                            transition_map[p_sq] = {}
-                        transition_map[p_sq][sq] = transition_map[p_sq].get(sq, 0) + 1
-                
-                current_idx = len(real_data)
-                for x in range(8):
-                    for y in range(8):
-                        sq = get_chess_notation(x, y)
-                        if sq in cell_last_seen:
-                            cell_streak[sq] = current_idx - cell_last_seen[sq]
-                        else:
-                            cell_streak[sq] = current_idx
-                
-                st.markdown(f"<h4 style='color:#fff;'>📍 Kỳ trước Jackpot nổ tại Tọa độ: <span style='color:#ff00ff; font-size:1.5em;'>{last_sq}</span> (Mod Ngang: {last_x} | Mod Dọc: {last_y})</h4>", unsafe_allow_html=True)
-                
-                # ========== HEATMAP BÀN CỜ 8x8 ==========
-                st.markdown("#### 🗺️ HEATMAP BÀN CỜ 8x8 (Tần suất lịch sử)")
-                
-                sort_mode = st.selectbox("🔀 Sắp xếp / Hiển thị theo:", [
-                    "Tần suất Jackpot (Nhiều → Ít)",
-                    "Kỳ ngủ đông (Lâu → Mới)",
-                    "Xác suất Markov (Từ ô hiện tại)"
-                ], key="chess_sort")
-                
-                max_freq = max(cell_freq.values()) if cell_freq else 1
-                max_streak = max(cell_streak.values()) if cell_streak else 1
-                
-                # Tính xác suất Markov từ ô hiện tại
-                markov_probs = {}
-                if last_sq in transition_map:
-                    total_transitions = sum(transition_map[last_sq].values())
-                    for sq_key, cnt in transition_map[last_sq].items():
-                        markov_probs[sq_key] = cnt / total_transitions
-                
-                # Render bảng 8x8 heatmap
-                heatmap_html = "<table style='width:100%; border-collapse: collapse; margin: 10px 0;'>"
-                heatmap_html += "<tr><th style='width:30px; color:#888;'></th>"
-                for col_idx in range(8):
-                    heatmap_html += f"<th style='text-align:center; color:#ff00ff; font-weight:bold; padding:5px;'>{chr(65+col_idx)}</th>"
-                heatmap_html += "</tr>"
-                
-                for row in range(8):
-                    heatmap_html += f"<tr><td style='text-align:center; color:#ff00ff; font-weight:bold; padding:5px;'>{row+1}</td>"
-                    for col in range(8):
-                        sq = get_chess_notation(col, row)
-                        freq = cell_freq.get(sq, 0)
-                        streak = cell_streak.get(sq, 0)
-                        mk_prob = markov_probs.get(sq, 0)
-                        
-                        # Chọn intensity và tooltip dựa trên sort mode
-                        if "Tần suất" in sort_mode:
-                            intensity = freq / max_freq if max_freq > 0 else 0
-                            tooltip_extra = f"Tần suất: {freq} kỳ"
-                        elif "ngủ đông" in sort_mode:
-                            intensity = streak / max_streak if max_streak > 0 else 0
-                            tooltip_extra = f"Ngủ đông: {streak} kỳ"
-                        else:
-                            intensity = mk_prob * 5  # Scale up for visibility
-                            tooltip_extra = f"Markov: {mk_prob*100:.1f}%"
-                        
-                        intensity = min(intensity, 1.0)
-                        
-                        # Màu gradient: đen → tím → hồng neon
-                        r_val = int(50 + intensity * 205)
-                        g_val = int(5 + intensity * 30)
-                        b_val = int(80 + intensity * 175)
-                        bg_color = f"rgb({r_val},{g_val},{b_val})"
-                        
-                        # Đánh dấu ô hiện tại và ô mục tiêu
-                        border = "2px solid #333"
-                        extra_style = ""
-                        if sq == last_sq:
-                            border = "3px solid #00ffcc"
-                            extra_style = "box-shadow: 0 0 15px #00ffcc;"
-                        elif mk_prob > 0 and mk_prob == max(markov_probs.values(), default=0):
-                            border = "3px solid #ff0055"
-                            extra_style = "box-shadow: 0 0 10px #ff0055;"
-                        
-                        font_size = "11px" if freq < 10 else "12px"
-                        heatmap_html += f"""<td style='text-align:center; background:{bg_color}; border:{border}; 
-                            padding:6px 2px; border-radius:4px; cursor:pointer; {extra_style}' 
-                            title='{sq}: {tooltip_extra} | Streak: {streak} kỳ'>
-                            <div style='font-size:13px; font-weight:bold; color:#fff;'>{sq}</div>
-                            <div style='font-size:{font_size}; color:#ccc;'>{freq}</div>
-                        </td>"""
-                    heatmap_html += "</tr>"
-                heatmap_html += "</table>"
-                
-                st.markdown(heatmap_html, unsafe_allow_html=True)
-                st.markdown("<p style='font-size:12px; color:#888; text-align:center;'>🟢 Viền xanh = Ô hiện tại | 🔴 Viền đỏ = Mục tiêu Markov #1 | Số trong ô = Tần suất lịch sử</p>", unsafe_allow_html=True)
-                
-                # ========== TRAJECTORY 20 KỲ GẦN NHẤT ==========
-                with st.expander("🛤️ ĐƯỜNG ĐI 20 KỲ GẦN NHẤT (Trajectory trên Bàn Cờ)", expanded=False):
-                    traj_html = "<div style='display:flex; flex-wrap:wrap; align-items:center; gap:5px; padding:10px;'>"
-                    for t_idx, t_sq in enumerate(trajectory):
-                        is_last = (t_idx == len(trajectory) - 1)
-                        bg = "linear-gradient(145deg, #ff0055, #ff00ff)" if is_last else "#333"
-                        border_t = "2px solid #ff0055" if is_last else "1px solid #666"
-                        traj_html += f"<div style='background:{bg}; border:{border_t}; padding:6px 10px; border-radius:8px; color:#fff; font-weight:bold; font-size:14px;'>{t_sq}</div>"
-                        if t_idx < len(trajectory) - 1:
-                            traj_html += "<span style='color:#ff00ff; font-size:16px;'>→</span>"
-                    traj_html += "</div>"
-                    st.markdown(traj_html, unsafe_allow_html=True)
-                    
-                    # Phân tích đường đi
-                    if len(trajectory) >= 2:
-                        revisit = len(trajectory) - len(set(trajectory))
-                        st.markdown(f"**Phân tích:** Trong 20 kỳ gần nhất, bàn cờ đi qua **{len(set(trajectory))}** ô khác nhau (có **{revisit}** lần quay lại ô cũ).")
-                
-                # ========== TOP 10 Ô NÓNG / LẠNH ==========
-                with st.expander("🏆 TOP 10 Ô NÓNG NHẤT & ❄️ TOP 10 Ô LẠNH NHẤT", expanded=False):
-                    sorted_by_freq = sorted(cell_freq.items(), key=lambda x: -x[1])
-                    sorted_by_streak = sorted(cell_streak.items(), key=lambda x: -x[1])
-                    
-                    col_hot, col_cold = st.columns(2)
-                    with col_hot:
-                        st.markdown("#### 🔥 Ô nóng nhất (Nhiều JP nhất)")
-                        for rank, (sq, freq) in enumerate(sorted_by_freq[:10]):
-                            streak_val = cell_streak.get(sq, 0)
-                            st.markdown(f"**#{rank+1}. {sq}** — {freq} lần nổ JP (ngủ đông: {streak_val} kỳ)")
-                    with col_cold:
-                        st.markdown("#### ❄️ Ô ngủ đông lâu nhất")
-                        for rank, (sq, streak_val) in enumerate(sorted_by_streak[:10]):
-                            freq_val = cell_freq.get(sq, 0)
-                            st.markdown(f"**#{rank+1}. {sq}** — Đã {streak_val} kỳ chưa ra (tổng: {freq_val} lần)")
-                
-                # ========== GỢI Ý MARKOV (3 Ô MỤC TIÊU) ==========
-                if last_sq in transition_map:
-                    next_moves = sorted(transition_map[last_sq].items(), key=lambda item: item[1], reverse=True)
-                    st.success("🤖 Dựa trên Chuỗi Markov, AI dò tìm thấy Tọa độ tiếp theo khả năng cao nhất rơi vào:")
-                    
-                    c_sq1, c_sq2, c_sq3 = st.columns(3)
-                    
-                    def render_target_sq(col, rank, sq_data):
-                        sq_name, count = sq_data
-                        x_idx = ord(sq_name[0]) - 65
-                        y_idx = int(sq_name[1]) - 1
-                        total_from_sq = sum(transition_map[last_sq].values())
-                        prob_pct = count / total_from_sq * 100
-                        
-                        col.markdown(f"""
-                        <div style='background: linear-gradient(145deg, #222, #111); border: 1px solid #ff00ff; padding: 15px; border-radius: 10px; text-align: center;'>
-                            <h3 style='color: #ff00ff; margin:0;'>MỤC TIÊU {rank}</h3>
-                            <h1 style='color: #fff; margin:10px 0; font-size: 3em; text-shadow: 0 0 15px #ff00ff;'>{sq_name}</h1>
-                            <p style='color: #888; font-size: 0.9em;'>Dư Đầu: <b>{x_idx}</b><br>Dư Cuối: <b>{y_idx}</b></p>
-                            <span style='color: #00ffcc;'>Lịch sử: {count} lần ({prob_pct:.1f}%)</span>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    
-                    if len(next_moves) > 0: render_target_sq(c_sq1, 1, next_moves[0])
-                    if len(next_moves) > 1: render_target_sq(c_sq2, 2, next_moves[1])
-                    if len(next_moves) > 2: render_target_sq(c_sq3, 3, next_moves[2])
-                    
-                    st.info("💡 BÍ KÍP ĐÁNH LƯỚI: Nhìn vào cấu trúc Trục Ngang (Đầu trận) và Trục Dọc (Cuối trận) của MỤC TIÊU 1 ở trên, nhập thủ công vào Bảng KHOANH VÙNG LƯỢNG TỬ ở phía trên cùng để ép AI bốc vé đúng vào Ô này!")
-                
-                # ========== BÀN CỜ CẤP 2: SUB-GRID VISUALIZATION ==========
-                st.markdown("---")
-                st.markdown("<h3 style='color: #ff00ff !important;'>🔬 BÀN CỜ CẤP 2 (ZOOM VÀO 1 Ô)</h3>", unsafe_allow_html=True)
-                st.markdown("*Khi bạn chọn 1 Ô ở Cấp 1, hệ thống sẽ \"zoom in\" bằng cách chẻ Ô đó theo 2 trục phụ:*")
-                st.markdown("- **Trục X Phụ**: Độ giãn cách (B6 - B1)")
-                st.markdown("- **Trục Y Phụ**: Tổng 2 bóng giữa (B3 + B4)")
-                
-                # Chọn ô để zoom (mặc định = MỤC TIÊU 1 từ Markov)
-                target_sq_options = [get_chess_notation(x, y) for x in range(8) for y in range(8)]
-                default_target = last_sq
-                if last_sq in transition_map:
-                    top_next = sorted(transition_map[last_sq].items(), key=lambda item: item[1], reverse=True)
-                    if top_next:
-                        default_target = top_next[0][0]
-                
-                default_idx = target_sq_options.index(default_target) if default_target in target_sq_options else 0
-                selected_cell = st.selectbox("Chọn Ô để Zoom:", target_sq_options, index=default_idx, key="subgrid_cell")
-                
-                sel_x = ord(selected_cell[0]) - 65
-                sel_y = int(selected_cell[1]) - 1
-                
-                # Thu thập dữ liệu lịch sử rơi vào ô này
-                subgrid_data = {}
-                subgrid_total = 0
-                for d in real_data:
-                    dx = get_modulo_coord(d[:3])
-                    dy = get_modulo_coord(d[3:])
-                    if dx == sel_x and dy == sel_y:
-                        subgrid_total += 1
-                        delta = d[5] - d[0]
-                        midsum = d[2] + d[3]
-                        key = (delta, midsum)
-                        subgrid_data[key] = subgrid_data.get(key, 0) + 1
-                
-                if subgrid_total > 0:
-                    st.success(f"📊 Ô **{selected_cell}** chứa **{subgrid_total}** JP lịch sử, phân bố vào **{len(subgrid_data)}** Ô Con (Sub-Squares).")
-                    
-                    # Tìm Top 5 ô con phổ biến nhất (= Auto-Suggest)
-                    sorted_subgrid = sorted(subgrid_data.items(), key=lambda x: -x[1])[:10]
-                    
-                    st.markdown("#### 🎯 AUTO-SUGGEST: Top 5 Ô Con khả năng cao nhất")
-                    sg_cols = st.columns(min(5, len(sorted_subgrid)))
-                    for idx, ((delta, midsum), count) in enumerate(sorted_subgrid[:5]):
-                        pct = count / subgrid_total * 100
-                        with sg_cols[idx]:
-                            st.markdown(f"""
-                            <div style='background: linear-gradient(145deg, #1a0030, #0d001a); border: 1px solid #ff00ff; 
-                                padding: 12px; border-radius: 10px; text-align: center; margin: 3px;'>
-                                <div style='color: #ff00ff; font-size: 11px; font-weight: bold;'>Ô Con #{idx+1}</div>
-                                <div style='color: #fff; font-size: 16px; margin: 5px 0;'>Δ={delta} | Σ={midsum}</div>
-                                <div style='color: #00ffcc; font-size: 13px;'>{count} lần ({pct:.0f}%)</div>
-                            </div>
-                            """, unsafe_allow_html=True)
-                    
-                    st.info(f"💡 **Cách dùng Auto-Suggest:** Nhập giá trị Δ (Giãn cách B6-B1) và Σ (Tổng B3+B4) của Ô Con #1 vào bảng **KHOANH VÙNG LƯỢNG TỬ** ở sidebar để ép AI bốc vé đúng vào micro-zone này!")
-                    
-                    # Hiển thị Sub-Grid heatmap nhỏ
-                    with st.expander("📊 Chi tiết phân bố Sub-Grid", expanded=False):
-                        import pandas as pd
-                        sg_rows = [{"Giãn cách (B6-B1)": d, "Tổng Giữa (B3+B4)": m, "Số lần JP": c, "Tỷ lệ (%)": f"{c/subgrid_total*100:.1f}"} 
-                                   for (d, m), c in sorted_subgrid]
-                        st.dataframe(pd.DataFrame(sg_rows), use_container_width=True, hide_index=True)
-                else:
-                    st.warning(f"Ô **{selected_cell}** chưa có Jackpot nào nổ trong lịch sử.")
-                
-            st.markdown("</div>", unsafe_allow_html=True)
-            
-            # ========== BACKTEST BÀN CỜ ==========
-            st.markdown("<div class='card' style='border-color: #f39c12;'>", unsafe_allow_html=True)
-            st.markdown("<h2 style='text-align: center; color: #f39c12 !important;'>🧪 BACKTEST BÀN CỜ (Kiểm tra hiệu quả ép Ô)</h2>", unsafe_allow_html=True)
-            st.markdown("<p style='text-align: center;'>Kiểm tra xem nếu bạn luôn ép vé vào Ô Markov #1, tỷ lệ đúng là bao nhiêu?</p>", unsafe_allow_html=True)
-            
-            if st.button("🚀 CHẠY BACKTEST BÀN CỜ", key="chess_bt_btn"):
-                if len(real_data) >= 50:
-                    chess_bt_prog = st.progress(0)
-                    test_range = range(30, len(real_data))
-                    correct_top1 = 0
-                    correct_top3 = 0
-                    total_tested = 0
-                    
-                    for step_idx, idx in enumerate(test_range):
-                        # Build transition map from data[:idx]
-                        t_map = {}
-                        for j in range(1, idx):
-                            pd_d = real_data[j-1][:6]
-                            cd_d = real_data[j][:6]
-                            p_sq_bt = get_chess_notation(get_modulo_coord(pd_d[:3]), get_modulo_coord(pd_d[3:]))
-                            c_sq_bt = get_chess_notation(get_modulo_coord(cd_d[:3]), get_modulo_coord(cd_d[3:]))
-                            if p_sq_bt not in t_map: t_map[p_sq_bt] = {}
-                            t_map[p_sq_bt][c_sq_bt] = t_map[p_sq_bt].get(c_sq_bt, 0) + 1
-                        
-                        # Predict from last known draw
-                        prev_d = real_data[idx-1][:6]
-                        prev_sq = get_chess_notation(get_modulo_coord(prev_d[:3]), get_modulo_coord(prev_d[3:]))
-                        
-                        actual_d = real_data[idx][:6]
-                        actual_sq = get_chess_notation(get_modulo_coord(actual_d[:3]), get_modulo_coord(actual_d[3:]))
-                        
-                        if prev_sq in t_map:
-                            predictions_bt = sorted(t_map[prev_sq].items(), key=lambda x: -x[1])
-                            pred_top1 = predictions_bt[0][0] if predictions_bt else ""
-                            pred_top3 = [p[0] for p in predictions_bt[:3]]
-                            
-                            if pred_top1 == actual_sq: correct_top1 += 1
-                            if actual_sq in pred_top3: correct_top3 += 1
-                            total_tested += 1
-                        
-                        if step_idx % 20 == 0:
-                            chess_bt_prog.progress(min((step_idx + 1) / len(test_range), 1.0))
-                    
-                    chess_bt_prog.progress(1.0)
-                    
-                    if total_tested > 0:
-                        rate1 = correct_top1 / total_tested * 100
-                        rate3 = correct_top3 / total_tested * 100
-                        
-                        cb1, cb2, cb3 = st.columns(3)
-                        cb1.metric("Tổng kỳ test", f"{total_tested}")
-                        cb2.metric("Trúng Top-1 Markov", f"{rate1:.1f}%", f"{correct_top1}/{total_tested}")
-                        cb3.metric("Trúng Top-3 Markov", f"{rate3:.1f}%", f"{correct_top3}/{total_tested}")
-                        
-                        expected_random = 1/64 * 100
-                        if rate1 > expected_random * 2:
-                            st.success(f"🔥 **XUẤT SẮC!** Tỷ lệ trúng Top-1 ({rate1:.1f}%) vượt xa ngẫu nhiên ({expected_random:.1f}%). Bàn Cờ Markov thực sự có sức mạnh!")
-                        elif rate1 > expected_random * 1.3:
-                            st.info(f"✅ Tỷ lệ trúng Top-1 ({rate1:.1f}%) cao hơn ngẫu nhiên ({expected_random:.1f}%). Bàn Cờ có hiệu quả.")
-                        else:
-                            st.warning(f"⚠️ Tỷ lệ trúng Top-1 ({rate1:.1f}%) gần với ngẫu nhiên ({expected_random:.1f}%). Nên kết hợp nhiều bộ lọc.")
-                else:
-                    st.error("Cần tối thiểu 50 kỳ dữ liệu để chạy backtest bàn cờ.")
-            
-            st.markdown("</div>", unsafe_allow_html=True)
-            
-            # === PHÂN TÍCH CHUYÊN SÂU TỪ KỲ LIỀN KỀ ===
-            st.markdown("<div class='card' style='border-color: #00ffcc;'>", unsafe_allow_html=True)
-            st.markdown("<h2 style='text-align: center; color: #00ffcc !important;'>🔮 DỰ ĐOÁN CHUYÊN SÂU TỪ KỲ LIỀN KỀ 🔮</h2>", unsafe_allow_html=True)
-            
-            last_draw_balls = real_data[-1][:6]
-            balls_html_last = "".join([f"<div class='ball {ball_class}' style='width:30px;height:30px;font-size:12px;'>{num:02d}</div>" for num in last_draw_balls])
-            st.markdown(f"Dựa vào 6 quả bóng vừa nổ ở kỳ trước: <div style='display:inline-block;'>{balls_html_last}</div>", unsafe_allow_html=True)
-            st.markdown("Hệ thống đã trích xuất dữ liệu Chuỗi Markov (Markov Chain) để tìm ra những con số có xác suất **NỔ THEO ĐUÔI** các quả bóng này cao nhất trong lịch sử:")
-            
-            # Calculate trailing balls (Transition Matrix)
-            follow_counts = {}
-            for i in range(len(real_data) - 1):
-                intersect = set(real_data[i][:6]) & set(last_draw_balls)
-                if intersect:
-                    weight = len(intersect) ** 2  # Exponential weight for more matches
-                    for n in real_data[i+1][:6]:
-                        if n not in last_draw_balls:
-                            follow_counts[n] = follow_counts.get(n, 0) + weight
-                            
-            top_followers = sorted(follow_counts.items(), key=lambda x: -x[1])[:10]
-            
-            col_f1, col_f2 = st.columns(2)
-            with col_f1:
-                st.markdown("#### TOP 5 Số Dễ Rơi Nhất Kỳ Này")
-                for rank, (num, score) in enumerate(top_followers[:5]):
-                    st.markdown(f"**#{rank+1}. Số {num:02d}** (Điểm tương quan: {score})")
-            with col_f2:
-                st.markdown("#### Các số bám đuôi tiếp theo")
-                for rank, (num, score) in enumerate(top_followers[5:10]):
-                    st.markdown(f"**#{rank+6}. Số {num:02d}** (Điểm tương quan: {score})")
-                    
-            st.info("💡 BÍ KÍP TỰ CHƠI: Nếu bạn không muốn mua theo Dàn Bao của AI, bạn có thể tự bốc 6 số từ danh sách TOP 10 Bóng Theo Đuôi ở trên để mua 1 vé duy nhất. Xác suất rơi của chúng cực kỳ cao!")
-            st.markdown("</div>", unsafe_allow_html=True)
-            
-            # === V18.0: QUẢN TRỊ VỐN KELLY ===
-            st.markdown("<div class='card' style='border-color: #ff9900;'>", unsafe_allow_html=True)
-            st.markdown(f"<h2 style='text-align: center; color: #ff9900 !important;'>⚖️ AI QUẢN TRỊ RỦI RO (KELLY CRITERION) ⚖️</h2>", unsafe_allow_html=True)
-            
-            v11_weights = st.session_state.get('v11_weights', {})
-            if v11_weights:
-                weight_values = list(v11_weights.values())
-                if weight_values:
-                    max_w = max(weight_values)
-                    avg_w = sum(weight_values) / len(weight_values)
-                    coherence = min(100, max(0, int((max_w / (avg_w + 1e-5) - 1) * 25)))
-                    
-                    st.metric("Độ Nhất Quán Tín Hiệu (Signal Coherence)", f"{coherence}%")
-                    
-                    if coherence < 30:
-                        st.error("⚠️ TÍN HIỆU NHIỄU LOẠN: Các thuật toán AI đang mâu thuẫn dữ dội. Lồng cầu đang ở trạng thái cực kỳ hỗn loạn và phi logic. KHUYẾN NGHỊ: Dừng mua vé kỳ này để bảo toàn vốn, hoặc chỉ đánh 1-2 vé dò đường.")
-                    elif coherence < 60:
-                        st.warning("⚠️ TÍN HIỆU TRUNG BÌNH: Đã xuất hiện xu hướng nhưng chưa thực sự bứt phá. KHUYẾN NGHỊ: Đánh ở mức an toàn (10-20% quỹ mạo hiểm).")
-                    else:
-                        st.success("🔥 TÍN HIỆU ĐỒNG THUẬN CAO (SINGULARITY): 32 Thuật toán lượng tử hội tụ về cùng một lưới xác suất. Đây là 'Điểm Rơi' hoàn hảo của lồng cầu. KHUYẾN NGHỊ: Tấn công mạnh, mua đủ danh sách vé AI đề xuất.")
-            st.markdown("</div>", unsafe_allow_html=True)
-        
-        with tab2:
-            # === DÀN VÉ RÚT GỌN ===
-            all_preds = st.session_state.get('all_predictions', [])
-            st.markdown("<div class='card' style='border-color: #00ff00;'>", unsafe_allow_html=True)
-            st.markdown(f"<h2 style='text-align: center; color: #00ff00 !important;'>🎯 DÀN {len(all_preds)} VÉ BAO RÚT GỌN CHỐT SỐ 🎯</h2>", unsafe_allow_html=True)
-            st.markdown(f"<p style='text-align: center; color: #888;'><em>(Ma trận tổ hợp bao phủ chéo giúp tiết kiệm tiền mà vẫn vét được lưới xác suất)</em></p>", unsafe_allow_html=True)
-        
-            # === BẢNG VÉ THEO CHIỀU DỌC (Dễ nhìn khi ghi vé) ===
-            if all_preds:
-                # Highlight vé tốt nhất
-                best_pred = all_preds[0]
-                best_nums = sorted(best_pred['numbers'])
-                best_html = "".join([f"<div class='ball {ball_class}' style='width:50px;height:50px;font-size:20px;font-weight:bold;'>{n:02d}</div>" for n in best_nums])
-                st.markdown(f"<h3 style='text-align:center; color:#ff0055;'>⭐ VÉ SỐ 1 — TỐT NHẤT ⭐</h3>", unsafe_allow_html=True)
-                st.markdown(f"<div style='display:flex;justify-content:center;gap:10px;padding:15px;'>{best_html}</div>", unsafe_allow_html=True)
-                st.markdown(f"<p style='text-align:center;color:#ffd700;font-size:18px;'><b>{' - '.join([f'{n:02d}' for n in best_nums])}</b></p>", unsafe_allow_html=True)
-                st.markdown("---")
-                
-                # === BẢNG DỌC: Mỗi cột = 1 vé, mỗi hàng = vị trí B1-B6 ===
-                st.markdown("<h3 style='text-align:center; color:#00ffcc;'>📋 BẢNG GHI VÉ (Nhìn theo cột dọc)</h3>", unsafe_allow_html=True)
-                st.markdown("<p style='text-align:center; color:#aaa;'>Mỗi <b>cột</b> là 1 vé. Ghi theo chiều dọc từ trên xuống.</p>", unsafe_allow_html=True)
-                
-                # Build vertical table HTML
-                n_tickets = len(all_preds)
-                
-                # Table header: Vé #1, Vé #2, ...
-                header_cells = "<th style='padding:8px;text-align:center;background:#1a1a2e;color:#ffd700;border:1px solid #333;font-size:14px;'>Vị trí</th>"
-                for i in range(n_tickets):
-                    color = '#ff0055' if i == 0 else '#00ff00'
-                    star = '⭐' if i == 0 else f'#{i+1}'
-                    header_cells += f"<th style='padding:8px;text-align:center;background:#1a1a2e;color:{color};border:1px solid #333;font-size:14px;min-width:55px;'>Vé {star}</th>"
-                
-                # Table body: B1-B6 rows
-                rows_html = ""
-                ball_labels = ['B1', 'B2', 'B3', 'B4', 'B5', 'B6']
-                for row_idx in range(6):
-                    row_cells = f"<td style='padding:8px;text-align:center;background:#111827;color:#00ffcc;border:1px solid #333;font-weight:bold;'>{ball_labels[row_idx]}</td>"
-                    for t_idx, pred in enumerate(all_preds):
-                        nums = sorted(pred['numbers'])
-                        num = nums[row_idx] if row_idx < len(nums) else '--'
-                        bg = '#2d1f3d' if t_idx == 0 else '#0d1117'
-                        row_cells += f"<td style='padding:10px;text-align:center;background:{bg};color:#fff;border:1px solid #333;font-size:18px;font-weight:bold;font-family:monospace;'>{num:02d}</td>"
-                    rows_html += f"<tr>{row_cells}</tr>"
-                
-                table_html = f"""
-                <div style='overflow-x:auto;margin:10px 0;'>
-                <table style='border-collapse:collapse;width:100%;'>
-                <thead><tr>{header_cells}</tr></thead>
-                <tbody>{rows_html}</tbody>
-                </table>
+        # Primary
+        balls_html = render_balls(primary, 'data-ball master')
+        st.markdown(f"""
+        <div class="result-card" style="border-color:#f59e0b;box-shadow:0 0 60px rgba(245,158,11,0.25);">
+            <div style="font-size:0.9rem;color:#94a3b8;margin-bottom:8px;">Ultimate Engine V9 — Block Puzzle</div>
+            <div style="font-size:1.1rem;font-weight:700;color:#f59e0b;margin-bottom:12px;">🏆 {n_signals} Signals | Block Puzzle | ≥4/6=47.6% | 5/6=3.9%</div>
+            <div class="ball-row">{balls_html}</div>
+            <div class="metric-row">
+                <div class="metric-item">
+                    <div class="metric-value" style="color:#6366f1;">{n_signals}</div>
+                    <div class="metric-label">Signals</div>
                 </div>
-                """
-                st.markdown(table_html, unsafe_allow_html=True)
-                
-                # === DANH SÁCH DÃY SỐ (Copy/Paste) ===
-                st.markdown("---")
-                st.markdown("### 📋 SAO CHÉP & TẢI XUỐNG ĐỂ GHI VÉ")
-                st.info("💡 Copy dán trực tiếp vào SMS Vietlott, hoặc ghi ra giấy theo từng dòng.")
-                
-                ticket_texts = []
-                for i, pred in enumerate(all_preds):
-                    nums = sorted(pred['numbers'])
-                    line = f"Vé {i+1:02d}: {' - '.join([f'{n:02d}' for n in nums])}"
-                    ticket_texts.append(line)
-                
-                full_text = "\n".join(ticket_texts)
-                st.code(full_text, language='text')
-                
-                st.download_button(
-                    label="💾 Tải danh sách vé (.txt)",
-                    data=full_text,
-                    file_name=f"vietlott_{game_choice.replace(' ', '_')}_dan_{len(all_preds)}_ve.txt",
-                    mime="text/plain"
-                )
-            else:
-                st.warning("Chưa có dữ liệu vé. Hãy bấm 'XUẤT KÍCH' ở tab 1 trước.")
-            
-            st.markdown("</div>", unsafe_allow_html=True)
-            
-    with tab3:
-        st.markdown("### 📊 THEO DÕI ĐIỂM NỔ (OVERDUE GAP)")
-        with st.expander("Bấm để xem Phân tích Số Quá Hạn"):
-            st.info("💡 Điểm nổ > 1 nghĩa là con số đó đã quá chu kỳ nghỉ trung bình, xác suất rơi vào kỳ tới rất cao.")
-            gap_scores = ai_engine.model_gap_overdue()
-            st.markdown(f"**Các số đang ở ngưỡng nổ cao nhất:** {gap_scores}")
-    
-        st.markdown("---")
-        st.markdown("### 🔍 PHÂN TÍCH NGƯỢC TOÀN DIỆN (REVERSE FORENSIC)")
-        with st.expander("Bấm để xem Phân tích Lịch sử từ kỳ đầu tiên đến nay"):
-            st.info("Hệ thống sẽ tính toán lại tỷ lệ bóng ra của TOÀN BỘ lịch sử để phát hiện sự thiên lệch vật lý. Tính năng này giúp trả lời câu hỏi: Có sự trùng hợp hay 'chỉ định' nào trong lồng quay không?")
-            if st.button("📊 CHẠY PHÂN TÍCH NGƯỢC TOÀN BỘ LỊCH SỬ"):
-                import pandas as pd
-                import numpy as np
-                import altair as alt
-                from collections import Counter
-                
-                with st.spinner("Đang lục lại toàn bộ dữ liệu từ kỳ 1 đến nay..."):
-                    # Tính toán tần suất
-                    all_numbers = [num for draw in real_data for num in draw]
-                    freq_counts = Counter(all_numbers)
-                    
-                    # Tính toán Gap
-                    last_seen = {}
-                    max_gap = {}
-                    for i, draw in enumerate(real_data):
-                        for num in draw:
-                            if num in last_seen:
-                                gap = i - last_seen[num]
-                                if gap > max_gap.get(num, 0):
-                                    max_gap[num] = gap
-                            last_seen[num] = i
-                    
-                    current_gaps = {n: len(real_data) - 1 - last_seen.get(n, 0) for n in range(1, max_number + 1)}
-                    
-                    # Tạo DataFrame
-                    df_data = []
-                    expected_prob = 6 / max_number
-                    expected_count = len(real_data) * expected_prob
-                    
-                    for n in range(1, max_number + 1):
-                        count = freq_counts.get(n, 0)
-                        z_score = (count - expected_count) / np.sqrt(len(real_data) * expected_prob * (1 - expected_prob))
-                        df_data.append({
-                            "Số": n,
-                            "Lần xuất hiện": count,
-                            "Độ lệch (Z-Score)": round(z_score, 2),
-                            "Ngủ đông Max (Kỳ)": max_gap.get(n, 0),
-                            "Hiện chưa ra (Kỳ)": current_gaps.get(n, 0)
-                        })
-                        
-                    df = pd.DataFrame(df_data)
-                    
-                    st.markdown("#### 1. Biểu Đồ Tần Suất & Bất Thường Tổng Thể")
-                    st.markdown("*(Đỏ: Cố tình ra nhiều bất thường / Xanh: Bị gìm lại / Xám: Nằm trong vùng ngẫu nhiên công bằng)*")
-                    
-                    chart = alt.Chart(df).mark_bar().encode(
-                        x=alt.X('Số:O', sort=None),
-                        y='Lần xuất hiện:Q',
-                        color=alt.condition(
-                            alt.datum['Độ lệch (Z-Score)'] > 1.5,
-                            alt.value('#ff4b4b'),  # Red for hot
-                            alt.condition(alt.datum['Độ lệch (Z-Score)'] < -1.5, alt.value('#0068c9'), alt.value('#888888'))
-                        ),
-                        tooltip=['Số', 'Lần xuất hiện', 'Độ lệch (Z-Score)', 'Hiện chưa ra (Kỳ)']
-                    ).properties(height=400)
-                    st.altair_chart(chart, use_container_width=True)
-                    
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        st.markdown("#### 🔥 TOP 5 Số Nóng Nhất (Ra Nhiều)")
-                        st.dataframe(df.nlargest(5, 'Độ lệch (Z-Score)')[['Số', 'Lần xuất hiện', 'Độ lệch (Z-Score)']], use_container_width=True)
-                    with col2:
-                        st.markdown("#### ❄️ TOP 5 Số Lạnh Nhất (Bị Gìm)")
-                        st.dataframe(df.nsmallest(5, 'Độ lệch (Z-Score)')[['Số', 'Lần xuất hiện', 'Độ lệch (Z-Score)']], use_container_width=True)
-                        
-                    st.warning("**Kết luận từ hệ thống:** Nếu biểu đồ trên có nhiều cột Đỏ/Xanh (Z-Score vượt quá ±2.5), lồng cầu có thể đang có sự thiên lệch vật lý (bóng nặng/nhẹ, trục quay nghiêng). Nếu đa số là cột Xám, lồng quay hoàn toàn ngẫu nhiên và không có sự 'chỉ định' nào.")
-                    
-                    st.markdown("---")
-                    st.markdown("#### 📋 BẢNG XẾP HẠNG TOÀN BỘ CÁC QUẢ BÓNG (Từ cao xuống thấp)")
-                    st.info("Bảng liệt kê chính xác tỷ lệ xuất hiện của tất cả các quả bóng từ kỳ đầu tiên đến nay. Bạn có thể bấm vào tiêu đề cột để sắp xếp.")
-                    df['Tỷ lệ rơi (%)'] = (df['Lần xuất hiện'] / len(real_data) * 100).round(2)
-                    df_sorted = df.sort_values(by='Lần xuất hiện', ascending=False).reset_index(drop=True)
-                    # Đánh số thứ tự hạng (Rank)
-                    df_sorted.index = df_sorted.index + 1
-                    st.dataframe(df_sorted[['Số', 'Lần xuất hiện', 'Tỷ lệ rơi (%)', 'Độ lệch (Z-Score)', 'Ngủ đông Max (Kỳ)', 'Hiện chưa ra (Kỳ)']], use_container_width=True)
-    
-    with tab4:
-        st.markdown("### 🧪 KIỂM THỬ ĐỘ CHÍNH XÁC DÀN BAO (WHEELING BACKTEST)")
-        with st.expander("Bấm để chạy Backtest (Kiểm thử thực tế với thuật toán Dàn Bao)"):
-            st.warning(f"⚠️ Hệ thống sẽ tua ngược thời gian, ẩn đi kết quả thật và dùng AI tạo Dàn Bao {num_tickets} vé từ Hồ {pool_size} số ở các kỳ quá khứ, sau đó đối chiếu với kết quả ĐÃ XẢY RA để tính lãi/lỗ.")
-            
-            test_mode = st.radio("Chọn chế độ kiểm thử:", [
-                "Test 1 kỳ cụ thể (Tính lùi)", 
-                "Test 50 kỳ liên tiếp gần nhất",
-                "Test một khối kỳ tùy chọn (Chọn khoảng)"
-            ])
-            
-            total_draws = len(real_data)
-            
-            if test_mode == "Test 1 kỳ cụ thể (Tính lùi)":
-                target_draw = st.slider("Chọn kỳ để test (Tính lùi từ hiện tại về quá khứ, 1 = Kỳ trước):", 1, min(1000, total_draws-60), 1)
-            elif test_mode == "Test một khối kỳ tùy chọn (Chọn khoảng)":
-                range_vals = st.slider(
-                    "Chọn khối kỳ muốn Test (Theo số thứ tự kỳ quay thực tế):",
-                    min_value=60, 
-                    max_value=total_draws,
-                    value=(total_draws-50, total_draws)
-                )
-                st.info(f"Sẽ chạy kiểm thử trên {range_vals[1] - range_vals[0] + 1} kỳ. Lưu ý: Chạy càng nhiều kỳ sẽ càng tốn thời gian.")
-                
-            if st.button("🚀 CHẠY KIỂM THỬ DÀN BAO"):
-                test_progress = st.progress(0)
-                test_status = st.empty()
-                
-                if total_draws < 60:
-                    st.error("Không đủ dữ liệu để backtest.")
-                else:
-                    from models.mega_exploit_v15 import MegaExploitV15
-                    from models.wheeling_optimizer import WheelingOptimizer
-                    
-                    match_counts = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0}
-                    total_spent = 0
-                    total_won = 0 
-                    winning_draws_count = 0
-                    
-                    test_indices = []
-                    if test_mode == "Test 50 kỳ liên tiếp gần nhất":
-                        test_indices = range(total_draws - 50, total_draws)
-                    elif test_mode == "Test một khối kỳ tùy chọn (Chọn khoảng)":
-                        test_indices = range(range_vals[0] - 1, range_vals[1])
+                <div class="metric-item">
+                    <div class="metric-value" style="color:#f59e0b;">{len(portfolio)}</div>
+                    <div class="metric-label">Portfolio Sets</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-value" style="color:#22c55e;">{coverage}/{max_num}</div>
+                    <div class="metric-label">Coverage</div>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Signal weights bar chart
+        sig_weights = ult.get('weights', {})
+        if sig_weights:
+            weight_html = ''
+            sorted_w = sorted(sig_weights.items(), key=lambda x: -x[1])
+            max_w = max(v for _, v in sorted_w) if sorted_w else 1
+            for name, w in sorted_w:
+                bar_pct = min(w / max_w * 100, 100)
+                color = '#22c55e' if w > 1.5 else '#f59e0b' if w > 1.0 else '#64748b'
+                weight_html += f'<div style="display:flex;align-items:center;gap:8px;margin:3px 0;"><span style="min-width:110px;font-size:0.72rem;color:#94a3b8;">{name}</span><div style="flex:1;height:14px;background:rgba(255,255,255,0.05);border-radius:4px;overflow:hidden;"><div style="height:100%;width:{bar_pct}%;background:{color};border-radius:4px;"></div></div><span style="min-width:36px;text-align:right;font-family:JetBrains Mono,monospace;font-size:0.7rem;color:{color};font-weight:700;">{w:.2f}</span></div>'
+            st.markdown(f'<div class="glass-card"><div class="card-title-row">📊 Signal Weights (Auto-Calibrated)</div>{weight_html}</div>', unsafe_allow_html=True)
+        
+        # Strategy breakdown
+        strat_count = Counter(p['strategy'] for p in portfolio)
+        strat_html = ' | '.join(f'<span style="color:#94a3b8;">{s}: <span style="color:#f59e0b;font-weight:700;">{c}</span></span>' for s, c in strat_count.most_common())
+        
+        # Portfolio
+        port_html = f'<div class="glass-card" style="border-color:#f59e0b;">'
+        port_html += f'<div class="card-title-row">🎯 Ultimate V2 Portfolio ({len(portfolio)} sets)</div>'
+        port_html += f'<div style="font-size:0.65rem;color:#94a3b8;text-align:center;margin-bottom:8px;">{strat_html}</div>'
+        for idx, p in enumerate(portfolio):
+            badge = '⭐' if idx == 0 else f'#{idx+1}'
+            balls = ''.join(f'<span style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;font-weight:700;font-size:0.85rem;font-family:JetBrains Mono,monospace;margin:1px;">{str(n).zfill(2)}</span>' for n in p['numbers'])
+            strat_badge = f'<span style="font-size:0.6rem;padding:2px 6px;border-radius:8px;background:rgba(99,102,241,0.15);color:#818cf8;">{p["strategy"]}</span>'
+            port_html += f'<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;margin:3px 0;background:rgba(0,0,0,0.2);border-radius:8px;"><span style="font-size:0.8rem;min-width:28px;color:#f59e0b;font-weight:700;">{badge}</span><div style="display:flex;gap:2px;flex-wrap:wrap;">{balls}</div>{strat_badge}<span style="margin-left:auto;font-family:JetBrains Mono,monospace;font-size:0.7rem;color:#64748b;">{p["score"]}</span></div>'
+        port_html += '</div>'
+        st.markdown(port_html, unsafe_allow_html=True)
+
+    # ---- VULNERABILITY SCAN ----
+    with st.expander("🔍 Vulnerability Scanner (12 RNG Tests)..."):
+        if st.button("🔍 SCAN RNG", key=f"scan_{lottery_type}", use_container_width=True):
+            with st.spinner("🔍 Scanning 12 vulnerability tests... (~10 sec)"):
+                try:
+                    from models.vulnerability_scanner import VulnerabilityScanner
+                    if lottery_type == "mega":
+                        data = get_mega645_numbers()
+                        all_rows = get_mega645_all()
                     else:
-                        test_indices = [total_draws - target_draw - 1]
-                        
-                    test_size = len(test_indices)
-                    
-                    for step, current_idx in enumerate(test_indices):
-                        historical_data_for_test = real_data[:current_idx]
-                        actual_next_draw = set(real_data[current_idx])
-                        
-                        test_status.text(f"Đang phân tích kỳ {current_idx} / {total_draws}...")
-                        
-                        # 1. AI tạo hồ tiềm năng
-                        engine = MegaExploitV15(max_number, 6)
-                        res = engine.predict(historical_data_for_test, n_sets=1)
-                        if res['top_pool']:
-                            pool = res['top_pool'][:pool_size]
-                        else:
-                            pool = list(range(1, pool_size + 1))
-                            
-                        # 2. Sinh dàn bao
-                        wheel_opt = WheelingOptimizer(6, max_number)
+                        data = get_power655_numbers()
+                        data = [d[:6] for d in data]
+                        all_rows = get_power655_all()
+                    dates = [r['draw_date'] for r in all_rows]
+                    scanner = VulnerabilityScanner(max_num, pick)
+                    result = scanner.scan_all(data, dates)
+                    st.session_state[f"scan_result_{lottery_type}"] = result
+                except Exception as e:
+                    st.error(f"❌ Error: {e}")
+
+        if f"scan_result_{lottery_type}" in st.session_state:
+            render_scan_results(st.session_state[f"scan_result_{lottery_type}"])
+
+            scan_result = st.session_state[f"scan_result_{lottery_type}"]
+            biases = scan_result['summary']['exploitable_biases']
+            if biases:
+                if st.button(f"⚡ EXPLOIT {len(biases)} BIASES", key=f"exploit_{lottery_type}", use_container_width=True):
+                    with st.spinner("⚡ Generating bias-based predictions..."):
                         try:
-                            res_tuple = wheel_opt.generate_wheel(
-                                pool, 
-                                num_tickets,
-                                constraints=res.get('constraints'),
-                                sum_mod7=res.get('sum_mod7'),
-                                history_data=historical_data_for_test
-                            )
-                        except TypeError:
-                            res_tuple = wheel_opt.generate_wheel(
-                                pool, 
-                                num_tickets,
-                            )
-                            
-                        # Safely unpack the tuple which might have 2 or 4 elements
-                        tickets = res_tuple[0]
-                        
-                        # 3. Đối chiếu kết quả các vé
-                        draw_best_match = 0
-                        draw_won_any = False
-                        
-                        for t_obj in tickets:
-                            t = t_obj['numbers']
-                            hits = len(set(t) & actual_next_draw)
-                            match_counts[hits] += 1
-                            total_spent += 10000
-                            
-                            # Tính tiền thưởng giả lập (Mega 6/45)
-                            if hits == 3: total_won += 30000; draw_won_any = True
-                            elif hits == 4: total_won += 300000; draw_won_any = True
-                            elif hits == 5: total_won += 10000000; draw_won_any = True
-                            elif hits == 6: total_won += 12000000000; draw_won_any = True
-                            
-                            if hits > draw_best_match:
-                                draw_best_match = hits
-                                
-                        if draw_won_any:
-                            winning_draws_count += 1
-                                
-                        test_progress.progress((step + 1) / test_size)
-                        test_status.text(f"Đã test xong. Thành tích cao nhất trong dàn vé: {draw_best_match}/6")
-                        
-                    test_status.empty()
-                    st.success(f"✅ Hoàn thành Backtest trên {test_size} kỳ quay!")
-                    
-                    st.markdown(f"**Tổng kết Dàn Bao {num_tickets} vé (Dựa trên {test_size} kỳ):**")
-                    col_a, col_b = st.columns(2)
-                    with col_a:
-                        st.metric("Tổng vốn đầu tư", f"{total_spent:,} VNĐ")
-                        st.metric("Tổng tiền trúng thưởng", f"{total_won:,} VNĐ", delta=total_won-total_spent)
-                        
-                        win_rate = (winning_draws_count / test_size) * 100
-                        st.metric("Tỉ lệ kỳ quay có lãi/trúng (Win Rate)", f"{win_rate:.1f}%", help=f"Có {winning_draws_count} kỳ chiến thắng trên tổng {test_size} kỳ test.")
-                    with col_b:
-                        st.markdown("**Chi tiết số vé trúng giải:**")
-                        st.markdown(f"- 🏆 Trúng Jackpot (6/6): **{match_counts[6]} vé**")
-                        st.markdown(f"- 🥇 Trúng giải Nhất (5/6): **{match_counts[5]} vé**")
-                        st.markdown(f"- 🥈 Trúng giải Nhì (4/6): **{match_counts[4]} vé**")
-                        st.markdown(f"- 🥉 Trúng giải Ba (3/6): **{match_counts[3]} vé**")
-                        st.markdown(f"- Không trúng (0-2/6): **{match_counts[0]+match_counts[1]+match_counts[2]} vé**")
-                    
-    
-        # =====================================================================
-        # FULL HISTORICAL WIN-RATE TEST (dùng RealWorldAIEngine — NHANH)
-        # =====================================================================
-        with tab4:
-            st.markdown("---")
-            st.markdown("### 🏆 TOÀN BỘ LỊCH SỬ — TỶ LỆ TRÚNG THỰC TẾ (FULL BACKTEST)")
-        with st.expander("📊 Bấm để kiểm tra tỷ lệ AI trúng trên TẤT CẢ các kỳ lịch sử"):
-            st.info(
-                "⚡ **Chế độ quét nhanh toàn lịch sử:** Hệ thống sẽ tua ngược về từng kỳ (từ kỳ 60 đến nay), "
-                "dùng AI dự đoán Top-6 / Top-10 / Top-15 số, sau đó so sánh với kết quả THỰC TẾ đã xảy ra. "
-                "Đây là bài kiểm tra TRUNG THỰC nhất về độ chính xác của AI."
-            )
-    
-            col_bt1, col_bt2 = st.columns(2)
-            with col_bt1:
-                bt_start_pct = st.slider("Bắt đầu từ % lịch sử (0 = kỳ đầu tiên):", 0, 80, 0, step=5,
-                                         help="0% = test từ kỳ 60, 50% = chỉ test nửa sau lịch sử")
-            with col_bt2:
-                bt_step = st.selectbox("Bước nhảy (Mỗi bao nhiêu kỳ test 1 lần):", [1, 2, 5, 10], index=0,
-                                       help="Bước=1 test mọi kỳ (chính xác nhất nhưng chậm hơn). Bước=5 test 1/5 số kỳ (nhanh 5x).")
-    
-            st.caption(
-                f"📌 Ước tính số kỳ sẽ test: **{max(0, (len(real_data) - 60 - int(len(real_data) * bt_start_pct / 100)) // bt_step)}** kỳ "
-                f"(từ {int(len(real_data) * bt_start_pct / 100) + 60} → {len(real_data)})"
-            )
-    
-            if st.button("🚀 CHẠY KIỂM TRA TOÀN BỘ LỊCH SỬ", key="full_bt_btn"):
-                total_draws_bt = len(real_data)
-                if total_draws_bt < 60:
-                    st.error("Không đủ dữ liệu để backtest (cần tối thiểu 60 kỳ).")
-                else:
-                    start_idx = 60 + int(total_draws_bt * bt_start_pct / 100)
-                    test_indices_bt = list(range(start_idx, total_draws_bt, bt_step))
-                    n_test = len(test_indices_bt)
-    
-                    if n_test == 0:
-                        st.error("Không có kỳ nào để test với cài đặt hiện tại.")
+                            from models.exploit_engine import ExploitEngine
+                            if lottery_type == "mega":
+                                data = get_mega645_numbers()
+                            else:
+                                data = get_power655_numbers()
+                                data = [d[:6] for d in data]
+                            engine = ExploitEngine(max_num, pick)
+                            exploit = engine.exploit(data, scan_result, n_sets=20)
+                            st.session_state[f"exploit_result_{lottery_type}"] = exploit
+                        except Exception as e:
+                            st.error(f"❌ Error: {e}")
+
+                if f"exploit_result_{lottery_type}" in st.session_state:
+                    render_exploit_results(st.session_state[f"exploit_result_{lottery_type}"])
+
+    # ---- DAN PREDICTION ----
+    dan_col1, dan_col2 = st.columns(2)
+    with dan_col1:
+        if st.button("📊 DAN V1 - FULL", key=f"dan_v1_{lottery_type}", use_container_width=True):
+            with st.spinner("📊 Generating DAN V1..."):
+                try:
+                    from models.dan_predictor import predict_dan
+                    nums = get_mega645_numbers() if lottery_type == "mega" else get_power655_numbers()
+                    is_mega = (lottery_type == "mega")
+                    cands, combos, info = predict_dan(nums, max_num, pick, is_mega, version="v1")
+                    st.session_state[f"dan_result_v1_{lottery_type}"] = {
+                        "candidates": cands, "combos": combos[:200], "info": info, "total": len(combos)
+                    }
+                    # Save prediction for tracking
+                    if combos:
+                        next_date = _estimate_next_draw_date(lottery_type)
+                        save_prediction(lottery_type, 'DAN V1', list(combos[0]), next_date)
+                except Exception as e:
+                    st.error(f"❌ {e}")
+    with dan_col2:
+        if st.button("⚡ DAN V2 - OPTIMIZED", key=f"dan_v2_{lottery_type}", use_container_width=True):
+            with st.spinner("⚡ Generating DAN V2..."):
+                try:
+                    from models.dan_predictor import predict_dan
+                    nums = get_mega645_numbers() if lottery_type == "mega" else get_power655_numbers()
+                    is_mega = (lottery_type == "mega")
+                    cands, combos, info = predict_dan(nums, max_num, pick, is_mega, version="v2")
+                    st.session_state[f"dan_result_v2_{lottery_type}"] = {
+                        "candidates": cands, "combos": combos[:200], "info": info, "total": len(combos)
+                    }
+                    # Save prediction for tracking
+                    if combos:
+                        next_date = _estimate_next_draw_date(lottery_type)
+                        save_prediction(lottery_type, 'DAN V2', list(combos[0]), next_date)
+                except Exception as e:
+                    st.error(f"❌ {e}")
+
+    for ver in ["v1", "v2"]:
+        skey = f"dan_result_{ver}_{lottery_type}"
+        if skey in st.session_state:
+            dan_data = st.session_state[skey]
+            if isinstance(dan_data, dict) and "candidates" in dan_data:
+                render_dan_result(dan_data, ver)
+
+    # ---- BACKTEST ----
+    with st.expander("🧪 Backtest (test prediction methods against history)..."):
+        bt_col1, bt_col2 = st.columns([3, 1])
+        with bt_col1:
+            bt_tests = st.selectbox("Test iterations", [50, 100, 200, 500], index=1, key=f"bt_tests_{lottery_type}")
+        with bt_col2:
+            st.markdown("<br>", unsafe_allow_html=True)
+            run_bt = st.button("🚀 Run", key=f"run_bt_{lottery_type}", use_container_width=True)
+
+        if run_bt:
+            with st.spinner(f"🧪 Running backtest {bt_tests} iterations..."):
+                try:
+                    from models.backtester import BacktestEngine
+                    if lottery_type == "mega":
+                        data = get_mega645_numbers()
+                        bt_engine = BacktestEngine(45, 6)
                     else:
-                        bt_prog = st.progress(0)
-                        bt_status = st.empty()
-    
-                        # Bộ đếm match cho Top-6 / Top-10 / Top-15
-                        counts6  = {k: 0 for k in range(7)}   # match = 0..6
-                        counts10 = {k: 0 for k in range(7)}   # ≥k match vào top-10
-                        counts15 = {k: 0 for k in range(7)}   # ≥k match vào top-15
-                        counts20 = {k: 0 for k in range(7)}   # ≥k match vào top-20
-    
-                        detail_rows = []   # lưu chi tiết 50 kỳ gần nhất để hiển thị bảng
-    
-                        for step_i, cur_idx in enumerate(test_indices_bt):
-                            hist = real_data[:cur_idx]
-                            actual = set(real_data[cur_idx])
-    
-                            bt_status.text(
-                                f"⏳ Đang test kỳ {cur_idx}/{total_draws_bt} "
-                                f"({step_i+1}/{n_test}) — {int((step_i+1)/n_test*100)}%"
-                            )
-                            bt_prog.progress((step_i + 1) / n_test)
-    
-                            try:
-                                eng = RealWorldAIEngine(hist, max_number)
-                                ranked_pool = eng._run_9model_ensemble(pool_size=20)
-                                # V19.0: JACKPOT LOCK EVALUATION
-                                # Pool-15 takes the top 15 numbers
-                                top6  = set(ranked_pool[:6])
-                                top10 = set(ranked_pool[:10])
-                                top15 = set(ranked_pool[:15])
-                                top20 = set(ranked_pool[:20]) # Expanded wheeling bounds
-    
-                                hit6  = len(top6  & actual)
-                                hit10 = len(top10 & actual)
-                                hit15 = len(top15 & actual)
-                                hit20 = len(top20 & actual)
-    
-                                counts6[hit6]   += 1
-                                counts10[hit10] += 1
-                                counts15[hit15] += 1
-                                counts20[hit20] += 1
-    
-                                # Lưu 50 kỳ gần nhất vào detail
-                                if step_i >= n_test - 50:
-                                    detail_rows.append({
-                                        "Kỳ": cur_idx,
-                                        "Kết quả thật": " ".join(f"{n:02d}" for n in sorted(actual)),
-                                        "Top-6 AI": " ".join(f"{n:02d}" for n in sorted(top6)),
-                                        "Trúng/6": hit6,
-                                        "Trúng/10": hit10,
-                                        "Trúng/15": hit15,
-                                    })
-                            except Exception:
-                                continue
-    
-                        bt_prog.progress(1.0)
-                        bt_status.empty()
-    
-                        st.success(f"✅ Hoàn tất! Đã kiểm tra **{n_test} kỳ** từ kỳ {start_idx} đến kỳ {total_draws_bt}.")
-    
-                        # ---- KẾT QUẢ TỔNG HỢP ----
-                        st.markdown("---")
-                        st.markdown("## 📊 KẾT QUẢ TỔNG HỢP")
-    
-                        def pct(c, total):
-                            return f"{c/total*100:.1f}%" if total > 0 else "0%"
-    
-                        c1, c2, c3, c4 = st.columns(4)
-                        with c1:
-                            st.markdown("### 🎯 Top-6 Số")
-                            for k in range(6, -1, -1):
-                                emoji = {6:"🏆",5:"🥇",4:"🥈",3:"🥉",2:"",1:"",0:""}.get(k,"")
-                                st.markdown(f"**{emoji} {k}/6**: {counts6[k]} ({pct(counts6[k], n_test)})")
-    
-                        with c2:
-                            st.markdown("### 🔟 Top-10 Số")
-                            for k in range(6, -1, -1):
-                                above = sum(counts10[i] for i in range(k, 7))
-                                emoji = {6:"🏆",5:"🥇",4:"🥈",3:"🥉",2:"",1:"",0:""}.get(k,"")
-                                st.markdown(f"**{emoji} ≥{k}/6**: {above} ({pct(above, n_test)})")
-    
-                        with c3:
-                            st.markdown("### 🎱 Top-15 Số")
-                            for k in range(6, -1, -1):
-                                above = sum(counts15[i] for i in range(k, 7))
-                                emoji = {6:"🏆",5:"🥇",4:"🥈",3:"🥉",2:"",1:"",0:""}.get(k,"")
-                                st.markdown(f"**{emoji} ≥{k}/6**: {above} ({pct(above, n_test)})")
-                                
-                        with c4:
-                            st.markdown("### 🚀 Top-20 (Mở rộng)")
-                            for k in range(6, -1, -1):
-                                above = sum(counts20[i] for i in range(k, 7))
-                                emoji = {6:"🏆",5:"🥇",4:"🥈",3:"🥉",2:"",1:"",0:""}.get(k,"")
-                                st.markdown(f"**{emoji} ≥{k}/6**: {above} ({pct(above, n_test)})")
-                                
-                        st.markdown("---")
-                        st.markdown("### 💎 SỨC MẠNH KHÓA KIM CƯƠNG (QUANTUM SUPREME V700)")
-                        st.info("Nhờ thuật toán **KNN Fractal V3** + **5-Model Stacking** và cơ chế **Khóa Kim Cương**, tỷ lệ bắt trúng 5-6 số đã được cải thiện đáng kể! Cột **Top-20 (Mở rộng)** phản ánh chính xác khả năng của hệ thống nếu bạn sử dụng tính năng ép Dàn Bao 20 số, mang lại tỷ lệ trúng 5-6 số cao nhất hiện tại.")
-    
-                        # ---- METRIC NỔI BẬT ----
-                        st.markdown("---")
-                        st.markdown("## 🔑 CHỈ SỐ QUAN TRỌNG NHẤT")
-                        m1c, m2c, m3c, m4c = st.columns(4)
-                        with m1c:
-                            v = counts6[3] + counts6[4] + counts6[5] + counts6[6]
-                            st.metric("Top-6 trúng ≥3/6", f"{pct(v, n_test)}", f"{v}/{n_test} kỳ")
-                        with m2c:
-                            v4 = counts6[4] + counts6[5] + counts6[6]
-                            st.metric("Top-6 trúng ≥4/6", f"{pct(v4, n_test)}", f"{v4}/{n_test} kỳ")
-                        with m3c:
-                            v3_10 = sum(counts10[i] for i in range(3, 7))
-                            st.metric("Pool-10 có ≥3 số trúng", f"{pct(v3_10, n_test)}", f"{v3_10}/{n_test} kỳ",
-                                      help="Tức là trong 10 số dự đoán, ít nhất 3 số khớp với kết quả thật")
-                        with m4c:
-                            v4_10 = sum(counts10[i] for i in range(4, 7))
-                            st.metric("Pool-10 có ≥4 số trúng", f"{pct(v4_10, n_test)}", f"{v4_10}/{n_test} kỳ")
-    
-                        # ---- BIỂU ĐỒ ----
-                        st.markdown("---")
-                        st.markdown("#### 📈 Phân bố Số Trúng trong Top-6 Dự Đoán")
-                        try:
-                            import altair as alt
-                            chart_data = pd.DataFrame({
-                                "Số trúng": [f"{k}/6" for k in range(7)],
-                                "Số kỳ": [counts6[k] for k in range(7)],
-                                "Màu": ["#ff0055" if k >= 4 else "#ffaa00" if k == 3 else "#444" for k in range(7)]
-                            })
-                            bar = alt.Chart(chart_data).mark_bar(cornerRadiusTopLeft=4, cornerRadiusTopRight=4).encode(
-                                x=alt.X("Số trúng:O", sort=None, title="Số trúng (Top-6)"),
-                                y=alt.Y("Số kỳ:Q", title="Số kỳ"),
-                                color=alt.Color("Màu:N", scale=None, legend=None),
-                                tooltip=["Số trúng", "Số kỳ"]
-                            ).properties(height=300)
-                            st.altair_chart(bar, use_container_width=True)
-                        except Exception:
-                            pass
-    
-                        # ---- BẢNG CHI TIẾT 50 KỲ GẦN NHẤT ----
-                        if detail_rows:
-                            st.markdown("---")
-                            st.markdown(f"#### 📋 Chi tiết {len(detail_rows)} kỳ gần nhất được test")
-                            df_detail = pd.DataFrame(detail_rows)
-    
-                            def color_hits(val):
-                                if val >= 4: return "background-color: rgba(255,0,85,0.4); font-weight:bold"
-                                if val == 3: return "background-color: rgba(255,170,0,0.3)"
-                                return ""
-    
-                            try:
-                                styled = df_detail.style.map(color_hits, subset=["Trúng/6", "Trúng/10", "Trúng/15"])
-                            except AttributeError:
-                                # Fallback for older pandas versions
-                                styled = df_detail.style.applymap(color_hits, subset=["Trúng/6", "Trúng/10", "Trúng/15"])
-                            st.dataframe(styled, use_container_width=True, hide_index=True)
-    
-                        # ---- NHẬN XÉT AI ----
-                        st.markdown("---")
-                        rate3 = (counts6[3] + counts6[4] + counts6[5] + counts6[6]) / max(n_test, 1) * 100
-                        rate_pool10_3 = sum(counts10[i] for i in range(3, 7)) / max(n_test, 1) * 100
-                        if rate_pool10_3 >= 60:
-                            st.success(f"🔥 **AI ĐÁNH GIÁ: XUẤT SẮC** — Pool 10 số bao phủ ≥3 số trúng đến {rate_pool10_3:.1f}% kỳ. Chiến lược BAO-10 cực kỳ hiệu quả!")
-                        elif rate_pool10_3 >= 40:
-                            st.warning(f"⚠️ **AI ĐÁNH GIÁ: KHÁ** — Pool 10 số bao phủ ≥3 số trúng {rate_pool10_3:.1f}% kỳ. Nên dùng dàn bao 10-15 vé.")
-                        else:
-                            st.error(f"📉 **AI ĐÁNH GIÁ: TRUNG BÌNH** — Pool 10 số bao phủ {rate_pool10_3:.1f}% kỳ. Lý do: Xổ số có độ ngẫu nhiên rất cao. Hãy dùng pool 15 số để tăng coverage.")
-    
-    
-if check_password():
-    main_app()
+                        data = get_power655_numbers()
+                        data = [d[:6] for d in data]
+                        bt_engine = BacktestEngine(55, 6)
+                    step_size = max(1, (len(data) - 50) // bt_tests)
+                    result = bt_engine.run_backtest(data, start_from=50, step=step_size, max_tests=bt_tests)
+                    st.session_state[f"backtest_result_{lottery_type}"] = result
+                except Exception as e:
+                    st.error(f"❌ Backtest error: {e}")
+
+        if f"backtest_result_{lottery_type}" in st.session_state:
+            bt = st.session_state[f"backtest_result_{lottery_type}"]
+            if 'models' in bt:
+                rows_html = ""
+                for m in bt['models'][:14]:
+                    imp = ((m['avg_matches'] / (pick * pick / max_num)) - 1) * 100
+                    imp_cls = "good" if imp > 0 else "bad"
+                    rows_html += f'<tr><td>#{m["rank"]}</td><td><strong>{m["model"]}</strong></td><td><strong>{m["avg_matches"]}</strong></td><td>{m["best_score"]}/6</td><td>{m["at_least_3"]}%</td><td><span class="{imp_cls}">{"+" if imp > 0 else ""}{imp:.1f}%</span></td></tr>'
+                st.markdown(f"""
+                <div class="glass-card">
+                    <div class="card-title-row">🏆 Backtest Results ({bt['total_iterations']} iterations)</div>
+                    <div style="overflow-x:auto;">
+                        <table class="strat-table">
+                            <thead><tr><th>#</th><th>Method</th><th>Avg/6</th><th>Max</th><th>3+</th><th>vs Random</th></tr></thead>
+                            <tbody>{rows_html}</tbody>
+                        </table>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+    # ---- PREDICTION TRACKING ----
+    with st.expander("📊 Theo Dõi Dự Đoán (Predicted vs Actual)", expanded=False):
+        # Update matches first
+        try:
+            update_prediction_results(lottery_type)
+        except Exception:
+            pass
+        
+        preds = get_predictions_history(lottery_type, 100)
+        if preds:
+            # Summary stats
+            matched = [p for p in preds if p['matches'] >= 0]
+            if matched:
+                avg_m = sum(p['matches'] for p in matched) / len(matched)
+                max_m = max(p['matches'] for p in matched)
+                pct_3plus = sum(1 for p in matched if p['matches'] >= 3) / len(matched) * 100
+                st.markdown(f'''
+                <div class="glass-card" style="text-align:center;">
+                    <div style="display:flex;justify-content:center;gap:30px;flex-wrap:wrap;">
+                        <div><div style="font-size:1.6rem;font-weight:900;color:#f59e0b;">{avg_m:.2f}/6</div><div style="font-size:0.7rem;color:#64748b;">Avg Matches</div></div>
+                        <div><div style="font-size:1.6rem;font-weight:900;color:#22c55e;">{max_m}/6</div><div style="font-size:0.7rem;color:#64748b;">Best</div></div>
+                        <div><div style="font-size:1.6rem;font-weight:900;color:#ec4899;">{pct_3plus:.0f}%</div><div style="font-size:0.7rem;color:#64748b;">3+ Matches</div></div>
+                        <div><div style="font-size:1.6rem;font-weight:900;color:#6366f1;">{len(matched)}</div><div style="font-size:0.7rem;color:#64748b;">Verified</div></div>
+                    </div>
+                </div>
+                ''', unsafe_allow_html=True)
+            
+            # Prediction table
+            rows_html = ""
+            for p in preds[:30]:
+                pred_balls = ' '.join(f'<span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:white;font-weight:700;font-size:0.7rem;margin:1px;">{str(p[f"n{i}"]).zfill(2)}</span>' for i in range(1,7))
+                
+                if p['matches'] >= 0 and p.get('actual_n1'):
+                    pred_set = {p[f'n{i}'] for i in range(1,7)}
+                    actual_balls = ''
+                    for i in range(1,7):
+                        an = p.get(f'actual_n{i}', 0)
+                        color = '#22c55e' if an in pred_set else '#334155'
+                        actual_balls += f'<span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:{color};color:white;font-weight:700;font-size:0.7rem;margin:1px;">{str(an).zfill(2)}</span>'
+                    match_badge = f'<span style="padding:2px 8px;border-radius:10px;font-size:0.7rem;font-weight:700;background:{"#22c55e" if p["matches"]>=3 else "#f59e0b" if p["matches"]>=2 else "#64748b"};color:white;">{p["matches"]}/6</span>'
+                else:
+                    actual_balls = '<span style="color:#64748b;font-size:0.7rem;">⏳ Chờ kết quả</span>'
+                    match_badge = ''
+                
+                date_str = p.get('created_at', '')[:10]
+                rows_html += f'<tr><td style="font-size:0.7rem;">{date_str}</td><td style="font-size:0.7rem;">{p["method"]}</td><td>{pred_balls}</td><td>{actual_balls}</td><td>{match_badge}</td></tr>'
+            
+            st.markdown(f'''
+            <div class="glass-card">
+                <div class="card-title-row">📊 Lịch Sử Dự Đoán</div>
+                <div style="overflow-x:auto;">
+                    <table class="strat-table">
+                        <thead><tr><th>Ngày</th><th>Method</th><th>Dự đoán</th><th>Thực tế</th><th>Kết quả</th></tr></thead>
+                        <tbody>{rows_html}</tbody>
+                    </table>
+                </div>
+            </div>
+            ''', unsafe_allow_html=True)
+        else:
+            st.info("📭 Chưa có dự đoán nào. Bấm nút dự đoán bên trên để bắt đầu theo dõi!")
+
+    # ---- HISTORY TABLE ----
+    total_draws = get_count(lottery_type)
+    first_date = get_first_date(lottery_type) or 'N/A'
+    latest_date = get_latest_date(lottery_type) or 'N/A'
+    st.markdown(f"""
+    <div class="glass-card" style="text-align:center;">
+        <div style="font-size:1.2rem;font-weight:700;color:#f1f5f9;margin-bottom:8px;">📋 Lịch Sử Kết Quả</div>
+        <div style="display:flex;justify-content:center;gap:20px;flex-wrap:wrap;">
+            <div style="text-align:center;"><div style="font-size:1.6rem;font-weight:900;color:#f59e0b;font-family:JetBrains Mono,monospace;">{total_draws}</div><div style="font-size:0.75rem;color:#64748b;">Tổng kỳ quay</div></div>
+            <div style="text-align:center;"><div style="font-size:1rem;font-weight:700;color:#22c55e;font-family:JetBrains Mono,monospace;">{first_date}</div><div style="font-size:0.75rem;color:#64748b;">Kỳ đầu tiên</div></div>
+            <div style="text-align:center;"><div style="font-size:1rem;font-weight:700;color:#ec4899;font-family:JetBrains Mono,monospace;">{latest_date}</div><div style="font-size:0.75rem;color:#64748b;">Kỳ mới nhất</div></div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    limit = st.selectbox(
+        "Hiển thị", [20, 50, 200, 500, 9999],
+        format_func=lambda x: f"Tất cả ({total_draws} kỳ)" if x == 9999 else f"{x} kỳ gần nhất",
+        key=f"limit_{lottery_type}"
+    )
+    rows = get_recent(lottery_type, limit)
+    if rows:
+        render_history_table(rows, lottery_type)
+    else:
+        st.info("📭 Chưa có data. Bấm Update Data để cập nhật!")
+
+
+# ============================================
+# MAIN APP
+# ============================================
+def main():
+    if not check_password():
+        return
+
+    st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
+
+    # Auto-update
+    if "auto_update_done" not in st.session_state:
+        st.session_state.auto_update_done = False
+        st.session_state.auto_update_result = None
+
+    if not st.session_state.auto_update_done:
+        with st.spinner("🔄 Checking for new data..."):
+            try:
+                from scraper.auto_updater import auto_update_data
+                result = auto_update_data()
+                st.session_state.auto_update_result = result
+                st.session_state.auto_update_done = True
+                if result['status'] == 'updated' and (result['mega_new'] > 0 or result['power_new'] > 0):
+                    st.rerun()
+            except Exception as e:
+                st.session_state.auto_update_result = {'status': 'error', 'message': f'⚠️ {str(e)[:100]}'}
+                st.session_state.auto_update_done = True
+
+    update_result = st.session_state.get("auto_update_result")
+    if update_result:
+        status = update_result.get('status', '')
+        msg = update_result.get('message', '')
+        if status == 'updated' and (update_result.get('mega_new', 0) > 0 or update_result.get('power_new', 0) > 0):
+            st.success(f"🔄 {msg}")
+        elif status == 'error':
+            st.warning(f"{msg}")
+        else:
+            st.info(f"📊 {msg}")
+
+    # Header
+    mega_count = get_count("mega")
+    power_count = get_count("power")
+    mega_latest = get_latest_date("mega")
+
+    power_latest = get_latest_date("power")
+    mega_first = get_first_date("mega")
+    power_first = get_first_date("power")
+
+    st.markdown('<div class="main-title">🏆 TinNam AI V2.0 — Golden Set</div>', unsafe_allow_html=True)
+    st.markdown('<div class="subtitle">30+ Signal Consensus Engine | Walk-Forward Calibrated | RNG Exploit</div>', unsafe_allow_html=True)
+
+    st.markdown(f"""
+    <div class="stat-row">
+        <div class="stat-badge">📊 Mega 6/45: <span class="val">{mega_count}</span> kỳ ({mega_first or '?'} → {mega_latest or '?'})</div>
+        <div class="stat-badge">⚡ Power 6/55: <span class="val">{power_count}</span> kỳ ({power_first or '?'} → {power_latest or '?'})</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Tabs
+    tab_mega, tab_power = st.tabs(["🟢 Bo A (6/45)", "🔴 Bo B (6/55)"])
+    with tab_mega:
+        render_lottery_tab("mega")
+    with tab_power:
+        render_lottery_tab("power")
+
+    # ==========================================
+    # FORENSIC RULES PANEL — Toggle Button
+    # ==========================================
+    st.markdown("""
+    <div style="text-align:center;margin:32px 0 8px;">
+        <div style="width:60%;margin:0 auto;height:1px;background:linear-gradient(90deg,transparent,rgba(139,92,246,0.4),transparent);"></div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    col_f1, col_f2, col_f3 = st.columns([1, 2, 1])
+    with col_f2:
+        show_rules = st.toggle(
+            "🔬 Forensic Master Rules — 58 Quy Luật & Lỗ Hổng",
+            value=False,
+            help="Bật để xem toàn bộ quy luật và lỗ hổng RNG đã phát hiện từ phân tích V1→V9"
+        )
+
+    if show_rules:
+        try:
+            from models.forensic_rules import render_forensic_rules
+            render_forensic_rules(st)
+        except Exception as e:
+            st.error(f"❌ Lỗi load Forensic Rules: {e}")
+
+    # Sidebar
+    with st.sidebar:
+        st.markdown("### ⚙️ Settings")
+        if st.button("🔄 Cập Nhật Data", use_container_width=True):
+            with st.spinner("🔄 Đang tải dữ liệu mới..."):
+                try:
+                    # Try light scraper first (works on Streamlit Cloud)
+                    from scraper.light_scraper import scrape_all_light
+                    mega_new, power_new = scrape_all_light()
+                    mega_c = get_count('mega')
+                    power_c = get_count('power')
+                    if mega_new > 0 or power_new > 0:
+                        st.success(f"✅ Cập nhật thành công! Mega: {mega_c} (+{mega_new}) | Power: {power_c} (+{power_new})")
+                    else:
+                        st.info(f"📊 Không có kỳ mới. Mega: {mega_c} | Power: {power_c}")
+                    st.session_state.auto_update_done = False
+                    st.session_state.auto_update_result = None
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"❌ Lỗi: {e}")
+                    try:
+                        # Fallback: Selenium scraper
+                        from scraper.scraper import scrape_all
+                        scrape_all()
+                        st.success(f"✅ Mega: {get_count('mega')} | Power: {get_count('power')}")
+                        st.session_state.auto_update_done = False
+                        st.rerun()
+                    except Exception:
+                        pass
+
+        if st.button("🚪 Logout", use_container_width=True):
+            st.session_state.authenticated = False
+            st.rerun()
+
+    # Footer
+    st.markdown("""
+    <div class="footer-text">
+        🏆 TinNam AI V2.0 — Golden Set Consensus Engine © 2026
+        <div class="warn">⚠️ Statistical analysis tool for research purposes only.</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+
+if __name__ == "__main__":
+    main()

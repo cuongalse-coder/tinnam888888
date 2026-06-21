@@ -1,8 +1,8 @@
 """
-Deep Forensic Analysis — Mine every possible pattern from Vietlott data.
+Deep Forensic Analysis V2 — Mine every possible pattern from Vietlott data.
 Goes beyond basic PASS/FAIL tests to extract ACTIONABLE intelligence.
 
-Investigates:
+V2 Investigates (15 Signals):
 1. Conditional transition matrices (what follows what)
 2. Multi-scale temporal patterns (hot/cold streaks by window)
 3. Day-specific number preferences
@@ -13,6 +13,17 @@ Investigates:
 8. Even/Odd and High/Low sequential patterns
 9. Sum-range lock (narrow the sum range for next draw)
 10. Triplet/pair co-occurrence network (which combos are "due")
+--- V2 NEW ---
+11. Wavelet Multi-Scale decomposition
+12. Markov Order-2 transition chains
+13. Delta Pattern (change tracking between draws)
+14. Cluster Momentum (co-moving number groups)
+15. Decade Flow (cross-decade transition patterns)
+
+V2 Improvements:
+- Adaptive anti-repeat (learns from data, replaces hardcode -2.0)
+- Wider pool (top-40 instead of top-30)
+- Proper walk-forward weight calibration
 """
 import sys
 import os
@@ -29,7 +40,7 @@ sys.path.insert(0, PROJECT_ROOT)
 
 
 class DeepForensic:
-    """Mine ALL actionable patterns from lottery data."""
+    """Mine ALL actionable patterns from lottery data. V2 — 15 signals."""
     
     def __init__(self, max_number, pick_count):
         self.max_number = max_number
@@ -40,66 +51,47 @@ class DeepForensic:
         n = len(data)
         last = set(data[-1])
         
-        # Accumulate scoring signals
-        signals = {}  # signal_name -> {number: score}
-        reports = {}  # signal_name -> report_dict
+        # Accumulate scoring signals via helper
+        signals = self._compute_all_signals(data, draw_dates)
         
-        # === 1. Conditional Transition Matrix ===
-        sig, rep = self._transition_matrix(data)
-        signals['transition'] = sig
+        # Build reports (separate from signals for reporting purposes)
+        reports = {}
+        _, rep = self._transition_matrix(data)
         reports['transition'] = rep
-        
-        # === 2. Multi-Scale Momentum ===
-        sig, rep = self._multi_scale_momentum(data)
-        signals['momentum'] = sig
+        _, rep = self._multi_scale_momentum(data)
         reports['momentum'] = rep
-        
-        # === 3. Day-of-Week Profile ===
         if draw_dates:
-            sig, rep = self._day_profile(data, draw_dates)
-            signals['day_profile'] = sig
+            _, rep = self._day_profile(data, draw_dates)
             reports['day_profile'] = rep
-        
-        # === 4. Lag-N Repeat Analysis ===
-        sig, rep = self._lag_repeat(data)
-        signals['lag_repeat'] = sig
+        _, rep = self._lag_repeat(data)
         reports['lag_repeat'] = rep
-        
-        # === 5. Co-occurrence Network ===
-        sig, rep = self._cooccurrence_network(data)
-        signals['cooccurrence'] = sig
+        _, rep = self._cooccurrence_network(data)
         reports['cooccurrence'] = rep
-        
-        # === 6. Position Frequency ===
-        sig, rep = self._position_frequency(data)
-        signals['position'] = sig
+        _, rep = self._position_frequency(data)
         reports['position'] = rep
-        
-        # === 7. Gap Timing (overdue by cycle) ===
-        sig, rep = self._gap_timing(data)
-        signals['gap_timing'] = sig
+        _, rep = self._gap_timing(data)
         reports['gap_timing'] = rep
-        
-        # === 8. Sum/Odd/Range Constraints ===
-        sig, rep = self._structural_constraints(data)
-        signals['structure'] = sig
+        _, rep = self._structural_constraints(data)
         reports['structure'] = rep
-        
-        # === 9. Streak Analysis ===
-        sig, rep = self._streak_analysis(data)
-        signals['streak'] = sig
+        _, rep = self._streak_analysis(data)
         reports['streak'] = rep
-        
-        # === 10. KNN History Match ===
-        sig, rep = self._knn_match(data)
-        signals['knn'] = sig
+        _, rep = self._knn_match(data)
         reports['knn'] = rep
+        _, rep = self._wavelet_multiscale(data)
+        reports['wavelet'] = rep
+        _, rep = self._markov_order2(data)
+        reports['markov2'] = rep
+        _, rep = self._delta_pattern(data)
+        reports['delta'] = rep
+        _, rep = self._cluster_momentum(data)
+        reports['cluster'] = rep
+        _, rep = self._decade_flow(data)
+        reports['decade_flow'] = rep
         
         # =============================================
-        # COMBINE ALL SIGNALS
+        # COMBINE ALL SIGNALS (V2 — Walk-Forward Calibrated)
         # =============================================
-        # Weight each signal by its backtest performance
-        weights = self._calibrate_weights(data, signals)
+        weights = self._walk_forward_calibrate(data, draw_dates)
         
         final_scores = {n: 0.0 for n in range(1, self.max_number + 1)}
         for sig_name, sig_scores in signals.items():
@@ -110,29 +102,30 @@ class DeepForensic:
             for num, score in sig_scores.items():
                 final_scores[num] += (score / max(max_s, 0.001)) * w
         
-        # Anti-repeat: penalize numbers from last draw
+        # V2: Adaptive anti-repeat (learn from data instead of hardcode -2.0)
+        repeat_penalty = self._learn_repeat_penalty(data)
         for num in last:
-            final_scores[num] -= 2.0
+            final_scores[num] += repeat_penalty  # Typically negative
         
-        # Rank
+        # Rank — V2: wider pool (top-40)
         ranked = sorted(final_scores.items(), key=lambda x: -x[1])
-        pool = [n for n, _ in ranked[:30]]
+        pool = [n for n, _ in ranked[:40]]
         
         # Find best constraint-valid combo
         constraints = reports.get('structure', {}).get('constraints', {})
         primary = self._find_best_combo(pool, final_scores, constraints)
         
-        # Generate portfolio (20 diverse sets)
-        portfolio = self._generate_portfolio(pool, final_scores, constraints, 20)
+        # Generate portfolio (V2: 30 diverse sets, up from 20)
+        portfolio = self._generate_portfolio(pool, final_scores, constraints, 30)
         
         return {
             'primary': primary,
             'portfolio': portfolio,
-            'scores': {n: round(s, 3) for n, s in ranked[:30]},
+            'scores': {n: round(s, 3) for n, s in ranked[:40]},
             'weights': weights,
             'reports': reports,
             'n_signals': len(signals),
-            'top_30': [n for n, _ in ranked[:30]],
+            'top_30': [n for n, _ in ranked[:40]],
         }
     
     # ================================================================
@@ -626,56 +619,347 @@ class DeepForensic:
         }
     
     # ================================================================
-    # WEIGHT CALIBRATION (mini-backtest each signal)
+    # V2 SIGNAL 11: Wavelet Multi-Scale Decomposition
     # ================================================================
-    def _calibrate_weights(self, data, signals):
-        """Quick backtest each signal to determine optimal weights."""
+    def _wavelet_multiscale(self, data):
+        """Haar wavelet-like multi-scale frequency decomposition."""
         n = len(data)
-        test_range = range(max(70, n - 50), n - 1)
+        if n < 64:
+            return ({num: 0 for num in range(1, self.max_number + 1)},
+                    {'name': 'Wavelet Multi-Scale', 'status': 'insufficient data'})
         
-        signal_hits = {name: 0 for name in signals}
-        signal_total = {name: 0 for name in signals}
-        
-        for test_idx in test_range:
-            actual = set(data[test_idx + 1])
-            train = data[:test_idx + 1]
-            
-            for sig_name, sig_func_scores in signals.items():
-                # Use the existing scores (they're computed on full data, but this is approximate)
-                if not sig_func_scores:
+        scores = {}
+        hot_scales = []
+        for num in range(1, self.max_number + 1):
+            seq = np.array([1.0 if num in d[:self.pick_count] else 0.0 for d in data[-64:]])
+            scale_signals = []
+            for scale in [4, 8, 16, 32]:
+                if len(seq) < scale:
                     continue
-                top_6 = sorted(sig_func_scores.items(), key=lambda x: -x[1])[:self.pick_count]
-                predicted = set(n for n, _ in top_6)
-                hits = len(predicted & actual)
-                signal_hits[sig_name] += hits
-                signal_total[sig_name] += self.pick_count
-        
-        # Convert to weights (relative performance)
-        weights = {}
-        base = self.pick_count / self.max_number  # Random expectation
-        
-        for name in signals:
-            if signal_total[name] > 0:
-                avg = signal_hits[name] / (len(test_range) if test_range else 1)
-                lift = avg / (base * self.pick_count) if base > 0 else 1.0
-                weights[name] = max(lift, 0.1)  # At least 0.1 weight
+                n_blocks = len(seq) // scale
+                block_means = [np.mean(seq[i * scale:(i + 1) * scale])
+                               for i in range(n_blocks)]
+                if len(block_means) >= 2:
+                    trend = block_means[-1] - block_means[-2]
+                    scale_signals.append(trend)
+            
+            if scale_signals:
+                weights_s = [4, 3, 2, 1][:len(scale_signals)]
+                weighted = sum(s * w for s, w in zip(scale_signals, weights_s))
+                scores[num] = weighted * 5
+                if weighted > 0.3:
+                    hot_scales.append({'number': num, 'signal': round(weighted, 3)})
             else:
-                weights[name] = 1.0
+                scores[num] = 0
         
+        hot_scales.sort(key=lambda x: -x['signal'])
+        return scores, {
+            'name': 'Wavelet Multi-Scale',
+            'hot_at_all_scales': hot_scales[:10],
+        }
+    
+    # ================================================================
+    # V2 SIGNAL 12: Markov Order-2
+    # ================================================================
+    def _markov_order2(self, data):
+        """Markov Order-2: P(X | last 2 draws)."""
+        n = len(data)
+        if n < 10:
+            return ({num: 0 for num in range(1, self.max_number + 1)},
+                    {'name': 'Markov Order-2', 'status': 'insufficient data'})
+        
+        last1 = set(data[-1][:self.pick_count])
+        last2 = set(data[-2][:self.pick_count])
+        
+        both_count = Counter()
+        either_count = Counter()
+        total_both = 0
+        total_either = 0
+        
+        for i in range(2, n):
+            prev2 = set(data[i - 2][:self.pick_count])
+            prev1 = set(data[i - 1][:self.pick_count])
+            curr = set(data[i][:self.pick_count])
+            for num in range(1, self.max_number + 1):
+                in_prev2 = num in prev2
+                in_prev1 = num in prev1
+                in_curr = num in curr
+                if in_prev2 and in_prev1:
+                    total_both += 1
+                    if in_curr:
+                        both_count[num] += 1
+                elif in_prev2 or in_prev1:
+                    total_either += 1
+                    if in_curr:
+                        either_count[num] += 1
+        
+        scores = {}
+        base_p = self.pick_count / self.max_number
+        markov_report = []
+        for num in range(1, self.max_number + 1):
+            in_l1 = num in last1
+            in_l2 = num in last2
+            if in_l1 and in_l2:
+                p = both_count[num] / max(total_both / self.max_number, 1)
+            elif in_l1 or in_l2:
+                p = either_count[num] / max(total_either / self.max_number, 1)
+            else:
+                p = 0
+            sc = (p - base_p) * 10
+            scores[num] = sc
+            if abs(sc) > 1.0:
+                markov_report.append({'number': num, 'score': round(sc, 2),
+                                       'in_both': in_l1 and in_l2})
+        
+        markov_report.sort(key=lambda x: -x['score'])
+        return scores, {
+            'name': 'Markov Order-2',
+            'top_predictions': markov_report[:10],
+        }
+    
+    # ================================================================
+    # V2 SIGNAL 13: Delta Pattern
+    # ================================================================
+    def _delta_pattern(self, data):
+        """Track number-level change patterns between consecutive draws."""
+        n = len(data)
+        if n < 20:
+            return ({num: 0 for num in range(1, self.max_number + 1)},
+                    {'name': 'Delta Pattern', 'status': 'insufficient data'})
+        
+        scores = {}
+        regression_candidates = []
+        for num in range(1, self.max_number + 1):
+            deltas = [1 if num in d[:self.pick_count] else -1 for d in data[-20:]]
+            recent_sum = sum(deltas[-5:])
+            mid_sum = sum(deltas[-10:-5])
+            
+            if recent_sum <= -4:
+                scores[num] = 2.0  # Very absent → regression expected
+                regression_candidates.append({'number': num, 'absent_streak': -recent_sum})
+            elif recent_sum >= 3:
+                seq = [1 if num in d[:self.pick_count] else 0 for d in data]
+                streak_cont = 0
+                streak_total = 0
+                s = 0
+                for i in range(len(seq) - 1):
+                    if seq[i]:
+                        s += 1
+                    else:
+                        s = 0
+                    if s >= 3:
+                        streak_total += 1
+                        if seq[i + 1]:
+                            streak_cont += 1
+                p_cont = streak_cont / max(streak_total, 1)
+                scores[num] = (p_cont - self.pick_count / self.max_number) * 5
+            else:
+                accel = recent_sum - mid_sum
+                scores[num] = accel * 0.3
+        
+        regression_candidates.sort(key=lambda x: -x['absent_streak'])
+        return scores, {
+            'name': 'Delta Pattern',
+            'regression_candidates': regression_candidates[:8],
+        }
+    
+    # ================================================================
+    # V2 SIGNAL 14: Cluster Momentum
+    # ================================================================
+    def _cluster_momentum(self, data):
+        """Groups of numbers that move together (co-momentum)."""
+        n = len(data)
+        if n < 30:
+            return ({num: 0 for num in range(1, self.max_number + 1)},
+                    {'name': 'Cluster Momentum', 'status': 'insufficient data'})
+        
+        recent = data[-30:]
+        window = 5
+        momentum = {}
+        for num in range(1, self.max_number + 1):
+            f_recent = sum(1 for d in recent[-window:] if num in d[:self.pick_count]) / window
+            f_older = sum(1 for d in recent[:window] if num in d[:self.pick_count]) / window
+            momentum[num] = f_recent - f_older
+        
+        rising = [num for num, m in momentum.items() if m > 0]
+        scores = {}
+        
+        if rising:
+            pair_boost = Counter()
+            for d in recent:
+                ds = set(d[:self.pick_count])
+                rising_in = [r for r in rising if r in ds]
+                for a in rising_in:
+                    for b in rising_in:
+                        if a != b:
+                            pair_boost[a] += 1
+            
+            for num in range(1, self.max_number + 1):
+                cluster_score = pair_boost.get(num, 0) * 0.1
+                scores[num] = momentum.get(num, 0) * 3 + cluster_score
+        else:
+            scores = {num: momentum.get(num, 0) * 3
+                      for num in range(1, self.max_number + 1)}
+        
+        rising_report = sorted(
+            [{'number': num, 'momentum': round(momentum[num], 3)} for num in rising],
+            key=lambda x: -x['momentum']
+        )[:10]
+        
+        return scores, {
+            'name': 'Cluster Momentum',
+            'rising_group': rising_report,
+        }
+    
+    # ================================================================
+    # V2 SIGNAL 15: Decade Flow
+    # ================================================================
+    def _decade_flow(self, data):
+        """Cross-decade transition patterns (1-9, 10-19, 20-29, 30-39, 40+)."""
+        n = len(data)
+        if n < 20:
+            return ({num: 0 for num in range(1, self.max_number + 1)},
+                    {'name': 'Decade Flow', 'status': 'insufficient data'})
+        
+        def get_decade(num):
+            if num <= 9: return 0
+            elif num <= 19: return 1
+            elif num <= 29: return 2
+            elif num <= 39: return 3
+            else: return 4
+        
+        transition = defaultdict(Counter)
+        for i in range(1, n):
+            prev_dec = tuple(sorted(get_decade(x) for x in data[i - 1][:self.pick_count]))
+            curr_dec = Counter(get_decade(x) for x in data[i][:self.pick_count])
+            for d, c in curr_dec.items():
+                transition[prev_dec][d] += c
+        
+        this_pattern = tuple(sorted(get_decade(x) for x in data[-1][:self.pick_count]))
+        expected_dec = transition.get(this_pattern, Counter())
+        
+        scores = {}
+        total_exp = sum(expected_dec.values()) or 1
+        decade_probs = {}
+        for num in range(1, self.max_number + 1):
+            d = get_decade(num)
+            dec_prob = expected_dec.get(d, 0) / total_exp
+            avg_prob = 1.0 / 5
+            scores[num] = (dec_prob - avg_prob) * 5
+            decade_probs[d] = round(dec_prob, 3)
+        
+        return scores, {
+            'name': 'Decade Flow',
+            'current_pattern': str(this_pattern),
+            'expected_decade_probs': decade_probs,
+        }
+    
+    # ================================================================
+    # V2: HELPER — Compute all signals from data (no reports)
+    # ================================================================
+    def _compute_all_signals(self, data, draw_dates=None):
+        """Compute all 15 signals from data. Returns dict of signal_name -> {number: score}."""
+        signals = {}
+        signals['transition'], _ = self._transition_matrix(data)
+        signals['momentum'], _ = self._multi_scale_momentum(data)
+        if draw_dates:
+            signals['day_profile'], _ = self._day_profile(data, draw_dates)
+        signals['lag_repeat'], _ = self._lag_repeat(data)
+        signals['cooccurrence'], _ = self._cooccurrence_network(data)
+        signals['position'], _ = self._position_frequency(data)
+        signals['gap_timing'], _ = self._gap_timing(data)
+        signals['structure'], _ = self._structural_constraints(data)
+        signals['streak'], _ = self._streak_analysis(data)
+        signals['knn'], _ = self._knn_match(data)
+        signals['wavelet'], _ = self._wavelet_multiscale(data)
+        signals['markov2'], _ = self._markov_order2(data)
+        signals['delta'], _ = self._delta_pattern(data)
+        signals['cluster'], _ = self._cluster_momentum(data)
+        signals['decade_flow'], _ = self._decade_flow(data)
+        return signals
+    
+    # ================================================================
+    # V2: WALK-FORWARD WEIGHT CALIBRATION (proper, no data leakage)
+    # ================================================================
+    def _walk_forward_calibrate(self, data, draw_dates=None):
+        """Proper walk-forward: recompute signals on training data only,
+        then evaluate against out-of-sample test draws. No data leakage."""
+        n = len(data)
+        test_count = min(50, n - 70)
+        
+        # Need enough data for meaningful calibration
+        if test_count < 10:
+            # Fall back to uniform weights — compute signal names from full data
+            all_signals = self._compute_all_signals(data, draw_dates)
+            return {name: 1.0 for name in all_signals}
+
+        # Split: train on data[:-test_count], test on last test_count draws
+        train_data = data[:-test_count]
+        train_dates = draw_dates[:-test_count] if draw_dates else None
+        
+        # Compute signals ONLY on training data (no leakage)
+        train_signals = self._compute_all_signals(train_data, train_dates)
+        
+        signal_hits = {name: 0 for name in train_signals}
+        total = 0
+
+        # Evaluate: for each test draw, check how many of signal's top picks hit
+        for idx in range(n - test_count, n):
+            actual = set(data[idx])
+            total += 1
+            for sig_name, sig_scores in train_signals.items():
+                if not sig_scores:
+                    continue
+                top = sorted(sig_scores.items(),
+                             key=lambda x: -x[1])[:self.pick_count]
+                predicted = set(num for num, _ in top)
+                signal_hits[sig_name] += len(predicted & actual)
+
+        base = self.pick_count / self.max_number
+        weights = {}
+        for name in train_signals:
+            if total > 0 and signal_hits[name] > 0:
+                avg = signal_hits[name] / total
+                lift = avg / (base * self.pick_count)
+                weights[name] = max(lift, 0.1)
+            else:
+                weights[name] = 0.5
         return weights
+    
+    # ================================================================
+    # V2: ADAPTIVE ANTI-REPEAT (learns optimal penalty from data)
+    # ================================================================
+    def _learn_repeat_penalty(self, data):
+        """Learn repeat rate from historical data instead of hardcoding -2.0."""
+        n = len(data)
+        if n < 20:
+            return -2.0  # Fallback
+        
+        repeat_counts = []
+        for i in range(1, n):
+            prev = set(data[i - 1][:self.pick_count])
+            curr = set(data[i][:self.pick_count])
+            repeat_counts.append(len(prev & curr))
+        
+        avg_repeat = np.mean(repeat_counts)
+        # avg_repeat typically 0.5-1.2 for 6/45
+        # If avg_repeat is high, penalty should be light
+        # If avg_repeat is low, penalty should be strong
+        penalty = (avg_repeat - 1.0) * 1.5  # Range: typically -0.75 to +0.3
+        return penalty
     
     # ================================================================
     # COMBO SELECTION
     # ================================================================
     def _find_best_combo(self, pool, scores, constraints):
-        """Find highest-scoring valid combo."""
+        """Find highest-scoring valid combo. V2: search top-18 from wider pool."""
         if not constraints:
             return sorted(pool[:self.pick_count])
         
         best = None
         best_score = -float('inf')
         
-        search_pool = pool[:16]
+        search_pool = pool[:18]
         for combo in combinations(search_pool, self.pick_count):
             if not self._validate(combo, constraints):
                 continue
@@ -687,14 +971,14 @@ class DeepForensic:
         return best if best else sorted(pool[:self.pick_count])
     
     def _generate_portfolio(self, pool, scores, constraints, n_sets):
-        """Generate diverse portfolio."""
+        """Generate diverse portfolio. V2: uses wider pool top-30."""
         portfolio = []
         best = self._find_best_combo(pool, scores, constraints)
         if best:
             portfolio.append(best)
         
         used = {tuple(best)} if best else set()
-        extended_pool = pool[:25]
+        extended_pool = pool[:30]
         
         weights = np.array([max(scores.get(n, 0.01), 0.01) for n in extended_pool])
         weights = weights / weights.sum()
